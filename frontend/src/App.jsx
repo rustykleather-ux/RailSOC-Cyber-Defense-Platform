@@ -18,7 +18,10 @@ function App() {
       .then((res) => setDevices(res.data))
       .catch((err) => console.error("Devices Error:", err));
     
-    
+    axios
+      .get("http://127.0.0.1:8000/vulnerabilities")
+      .then((res) => setVulnerabilities(res.data))
+      .catch((err) => console.error("Vulnerabilities Error:", err));
 
     axios
       .get("http://127.0.0.1:8000/dashboard")
@@ -107,6 +110,34 @@ function App() {
           ))}
         </tbody>
       </table>
+
+      <h2>Vulnerabilities</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>CVE</th>
+      <th>Title</th>
+      <th>Severity</th>
+      <th>CVSS</th>
+      <th>Status</th>
+      <th>Recommendation</th>
+    </tr>
+  </thead>
+
+  <tbody>
+    {vulnerabilities.map((vuln) => (
+      <tr key={vuln.id}>
+        <td>{vuln.cve_id}</td>
+        <td>{vuln.title}</td>
+        <td>{vuln.severity}</td>
+        <td>{vuln.cvss_score}</td>
+        <td>{vuln.status}</td>
+        <td>{vuln.recommendation}</td>
+      </tr>
+    ))}
+  </tbody>
+</table>
 
       {/* Security Alerts */}
       <h2>Active Security Alerts</h2>

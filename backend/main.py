@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
-
+from services.risk_engine import calculate_device_risk
 from database import Base, engine, SessionLocal
 from models import OTDevice, Alert, Vulnerability
 
@@ -33,7 +33,31 @@ def root():
 
 @app.get("/devices")
 def get_devices(db: Session = Depends(get_db)):
-    return db.query(OTDevice).all()
+    devices = db.query(OTDevice).all()
+    results = []
+
+    for device in devices:
+        device_alerts = db.query(Alert).filter(Alert.device_id == device.id).all()
+        device_vulns = db.query(Vulnerability).filter(Vulnerability.device_id == device.id).all()
+
+        risk = calculate_device_risk(device, device_alerts, device_vulns)
+
+        results.append({
+            "id": device.id,
+            "name": device.name,
+            "ip_address": device.ip_address,
+            "device_type": device.device_type,
+            "vendor": device.vendor,
+            "status": device.status,
+            "risk_level": device.risk_level,
+            "firmware_version": device.firmware_version,
+            "location": device.location,
+            "last_seen": device.last_seen,
+            "risk_score": risk["risk_score"],
+            "calculated_risk": risk["calculated_risk"]
+        })
+
+    return results
 
 
 @app.get("/alerts")

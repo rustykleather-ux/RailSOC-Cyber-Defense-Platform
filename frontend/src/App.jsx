@@ -84,6 +84,8 @@ function App() {
             <th>Vendor</th>
             <th>Status</th>
             <th>Risk</th>
+            <th>Risk Score</th>
+            <th>Calculated Risk</th>
             <th>Firmware</th>
             <th>Location</th>
             <th>Last Seen</th>
@@ -99,6 +101,8 @@ function App() {
               <td>{device.vendor}</td>
               <td>{device.status}</td>
               <td>{device.risk_level}</td>
+              <td>{device.risk_score}</td>
+              <td>{device.calculated_risk}</td>
               <td>{device.firmware_version}</td>
               <td>{device.location}</td>
               <td>

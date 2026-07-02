@@ -6,6 +6,7 @@ function App() {
   const [devices, setDevices] = useState([]);
   const [dashboard, setDashboard] = useState(null);
   const [alerts, setAlerts] = useState([]);
+  const [vulnerabilities, setVulnerabilities] = useState([]);
 
   useEffect(() => {
     loadData();
@@ -16,6 +17,8 @@ function App() {
       .get("http://127.0.0.1:8000/devices")
       .then((res) => setDevices(res.data))
       .catch((err) => console.error("Devices Error:", err));
+    
+    
 
     axios
       .get("http://127.0.0.1:8000/dashboard")
@@ -28,6 +31,7 @@ function App() {
       .catch((err) => console.error("Alerts Error:", err));
   };
 
+ 
   return (
     <div className="app">
       <h1>Industrial Cyber Defense Platform</h1>
@@ -35,29 +39,34 @@ function App() {
         OT / IT Security Monitoring Dashboard
       </p>
 
-      {/* Dashboard Cards */}
       {dashboard && (
-        <div className="cards">
-          <div className="card">
-            <span>Total Devices</span>
-            <strong>{dashboard.total_devices}</strong>
-          </div>
+  <div className="cards">
+    <div className="card">
+      <span>Total Devices</span>
+      <strong>{dashboard.total_devices}</strong>
+    </div>
 
-          <div className="card">
-            <span>Online Devices</span>
-            <strong>{dashboard.online_devices}</strong>
-          </div>
+    <div className="card">
+      <span>Online Devices</span>
+      <strong>{dashboard.online_devices}</strong>
+    </div>
 
-          <div className="card warning">
-            <span>Offline Devices</span>
-            <strong>{dashboard.offline_devices}</strong>
-          </div>
+    <div className="card warning">
+      <span>Offline Devices</span>
+      <strong>{dashboard.offline_devices}</strong>
+    </div>
 
-          <div className="card danger">
-            <span>High Risk Devices</span>
-            <strong>{dashboard.high_risk_devices}</strong>
-          </div>
-        </div>
+    <div className="card danger">
+      <span>High Risk Devices</span>
+      <strong>{dashboard.high_risk_devices}</strong>
+    </div>
+
+    <div className="card danger">
+      <span>Open Vulnerabilities</span>
+      <strong>{dashboard.open_vulnerabilities}</strong>
+    </div>
+  </div>
+
       )}
 
       {/* Device Inventory */}
@@ -111,7 +120,7 @@ function App() {
           alerts.map((alert) => (
             <div
               key={alert.id}
-              className={`alert ${alert.severity.toLowerCase()}`}
+              className={`alert ${(alert.severity || "low").toLowerCase()}`}
             >
               <h3>{alert.device}</h3>
 

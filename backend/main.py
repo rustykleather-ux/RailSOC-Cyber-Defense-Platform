@@ -333,6 +333,26 @@ def get_incidents(db: Session = Depends(get_db)):
 
     return incidents
 
+@app.post("/incidents/{incident_id}/acknowledge")
+def acknowledge_incident(incident_id: int, db: Session = Depends(get_db)):
+    alert = db.query(Alert).filter(Alert.id == incident_id).first()
+
+    if not alert:
+        return {"error": "Incident not found"}
+
+    alert.acknowledged = True
+    alert.status = "Acknowledged"
+
+    db.add(alert)
+    db.commit()
+    db.refresh(alert)
+
+    return {
+        "message": "Incident acknowledged",
+        "incident_id": alert.id,
+        "status": alert.status,
+        "acknowledged": alert.acknowledged
+    }
 
 def get_mitre_mapping(alert_type):
     mappings = {

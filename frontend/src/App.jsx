@@ -11,7 +11,10 @@ import VulnerabilityTable from "./components/VulnerabilityTable";
 import AlertsPanel from "./components/AlertsPanel";
 import IncidentCenter from "./components/IncidentCenter";
 
-import { getIncidents } from "./services/incidentService";
+import {
+  getIncidents,
+  acknowledgeIncidentRequest,
+} from "./services/incidentService";
 import { getDevices } from "./services/deviceService";
 import { getDashboard } from "./services/dashboardService";
 import { getAlerts } from "./services/alertService";
@@ -37,7 +40,7 @@ function App() {
   getIncidents()
   .then((res) => setIncidents(Array.isArray(res.data) ? res.data : []))
   .catch((err) => console.error("Incidents Error:", err));
-  
+
   useEffect(() => {
     const interval = setInterval(() => {
       loadPlantStatus();
@@ -88,6 +91,15 @@ function App() {
       .catch((err) => console.error("Reset Error:", err));
   };
 
+  const acknowledgeIncident = async (incidentId) => {
+  try {
+    console.log("Sending acknowledge request for:", incidentId);
+    await acknowledgeIncidentRequest(incidentId);
+    await loadData();
+  } catch (err) {
+    console.error("Acknowledge Error:", err);
+  }
+};
   return (
     <div className="app">
       <Header />
@@ -100,7 +112,9 @@ function App() {
 
       <LivePlantStatus plantStatus={plantStatus} />
       
-      <IncidentCenter incidents={incidents} />
+      <IncidentCenter  incidents={incidents}
+  acknowledgeIncident={acknowledgeIncident}
+/>
 
       <DeviceInventory devices={devices} />
 

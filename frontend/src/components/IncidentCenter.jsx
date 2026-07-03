@@ -1,7 +1,21 @@
 import { useState } from "react";
 
-function IncidentCenter({ incidents }) {
+function IncidentCenter({ incidents, acknowledgeIncident }) {
   const [selectedIncident, setSelectedIncident] = useState(null);
+
+  const handleAcknowledge = async () => {
+  if (!selectedIncident) return;
+
+  console.log("Clicked acknowledge:", selectedIncident.id);
+
+  await acknowledgeIncident(selectedIncident.id);
+
+  setSelectedIncident({
+    ...selectedIncident,
+    acknowledged: true,
+    status: "Acknowledged",
+  });
+};
 
   return (
     <>
@@ -68,19 +82,31 @@ function IncidentCenter({ incidents }) {
 
             <div className="drawer-section">
               <h3>Affected Asset</h3>
+
               <p>
                 <strong>Device:</strong> {selectedIncident.device}
               </p>
+
               <p>
                 <strong>Alert Type:</strong> {selectedIncident.alert_type}
               </p>
+
               <p>
                 <strong>Status:</strong> {selectedIncident.status}
               </p>
+
               <p>
                 <strong>Acknowledged:</strong>{" "}
                 {selectedIncident.acknowledged ? "Yes" : "No"}
               </p>
+
+                          <button
+                              className="ack-button"
+                              onClick={handleAcknowledge}
+                              disabled={selectedIncident.acknowledged}
+                          >
+                              {selectedIncident.acknowledged ? "Acknowledged" : "Acknowledge Incident"}
+                          </button>
             </div>
 
             <div className="drawer-section">

@@ -387,3 +387,23 @@ th {
 .drawer-section li {
   margin-bottom: 8px;
 }
+
+.ack-button {
+  margin-top: 12px;
+  background: #2563eb;
+  color: white;
+  border: none;
+  padding: 10px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.ack-button:hover {
+  background: #1d4ed8;
+}
+
+.ack-button:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}

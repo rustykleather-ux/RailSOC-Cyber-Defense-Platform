@@ -11,8 +11,6 @@ import VulnerabilityTable from "./components/VulnerabilityTable";
 import AlertsPanel from "./components/AlertsPanel";
 import IncidentCenter from "./components/IncidentCenter";
 
-
-
 import {
   getIncidents,
   acknowledgeIncidentRequest,
@@ -20,11 +18,13 @@ import {
   updateIncidentNotesRequest,
   closeIncidentRequest,
 } from "./services/incidentService";
+
 import { getDevices } from "./services/deviceService";
 import { getDashboard } from "./services/dashboardService";
 import { getAlerts } from "./services/alertService";
 import { getVulnerabilities } from "./services/vulnerabilityService";
 import { getPlantStatus } from "./services/telemetryService";
+
 import {
   simulateAttackRequest,
   resetDemoRequest,
@@ -37,39 +37,51 @@ function App() {
   const [vulnerabilities, setVulnerabilities] = useState([]);
   const [plantStatus, setPlantStatus] = useState([]);
   const [incidents, setIncidents] = useState([]);
-  const updateIncidentNotes = async (incidentId, notes) => {
-  try {
-    await updateIncidentNotesRequest(incidentId, notes);
-    await loadData();
-  } catch (err) {
-    console.error("Update Notes Error:", err);
-  }
-};
-  const assignIncident = async (incidentId, assignedTo) => {
-  try {
-    await assignIncidentRequest(incidentId, assignedTo);
-    await loadData();
-  } catch (err) {
-    console.error("Assign Incident Error:", err);
-  }
-};
-const closeIncident = async (incidentId, closedBy) => {
-  try {
-    await closeIncidentRequest(incidentId, closedBy);
-    await loadData();
-  } catch (err) {
-    console.error(err);
-  }
-};
 
+  const loadPlantStatus = async () => {
+    try {
+      const res = await getPlantStatus();
+      setPlantStatus(Array.isArray(res.data) ? res.data : []);
+    } catch (err) {
+      console.error("RailSOC Telemetry Error:", err);
+    }
+  };
+
+  const loadData = async () => {
+    try {
+      await loadPlantStatus();
+
+      const [
+        devicesRes,
+        vulnerabilitiesRes,
+        dashboardRes,
+        alertsRes,
+        incidentsRes,
+      ] = await Promise.all([
+        getDevices(),
+        getVulnerabilities(),
+        getDashboard(),
+        getAlerts(),
+        getIncidents(),
+      ]);
+
+      setDevices(Array.isArray(devicesRes.data) ? devicesRes.data : []);
+      setVulnerabilities(
+        Array.isArray(vulnerabilitiesRes.data)
+          ? vulnerabilitiesRes.data
+          : []
+      );
+      setDashboard(dashboardRes.data || null);
+      setAlerts(Array.isArray(alertsRes.data) ? alertsRes.data : []);
+      setIncidents(Array.isArray(incidentsRes.data) ? incidentsRes.data : []);
+    } catch (err) {
+      console.error("RailSOC Load Data Error:", err);
+    }
+  };
 
   useEffect(() => {
     loadData();
   }, []);
-
-  getIncidents()
-  .then((res) => setIncidents(Array.isArray(res.data) ? res.data : []))
-  .catch((err) => console.error("Incidents Error:", err));
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -79,82 +91,91 @@ const closeIncident = async (incidentId, closedBy) => {
     return () => clearInterval(interval);
   }, []);
 
-  const loadPlantStatus = () => {
-    getPlantStatus()
-      .then((res) => setPlantStatus(Array.isArray(res.data) ? res.data : []))
-      .catch((err) => console.error("Plant Status Error:", err));
+  const simulateAttack = async (attackType) => {
+    try {
+      await simulateAttackRequest(attackType);
+      await loadData();
+    } catch (err) {
+      console.error("RailSOC Simulation Error:", err);
+    }
   };
 
-  const loadData = () => {
-    loadPlantStatus();
-
-
-    getDevices()
-      .then((res) => setDevices(Array.isArray(res.data) ? res.data : []))
-      .catch((err) => console.error("Devices Error:", err));
-
-    getVulnerabilities()
-      .then((res) =>
-        setVulnerabilities(Array.isArray(res.data) ? res.data : [])
-      )
-      .catch((err) => console.error("Vulnerabilities Error:", err));
-
-    getDashboard()
-      .then((res) => setDashboard(res.data || null))
-      .catch((err) => console.error("Dashboard Error:", err));
-
-    getAlerts()
-      .then((res) => setAlerts(Array.isArray(res.data) ? res.data : []))
-      .catch((err) => console.error("Alerts Error:", err));
-  };
-   
-
-  const simulateAttack = (attackType) => {
-    simulateAttackRequest(attackType)
-      .then(() => loadData())
-      .catch((err) => console.error("Simulation Error:", err));
-  };
-
-  const resetDemo = () => {
-    resetDemoRequest()
-      .then(() => loadData())
-      .catch((err) => console.error("Reset Error:", err));
+  const resetDemo = async () => {
+    try {
+      await resetDemoRequest();
+      await loadData();
+    } catch (err) {
+      console.error("RailSOC Reset Error:", err);
+    }
   };
 
   const acknowledgeIncident = async (incidentId) => {
-  try {
-    console.log("Sending acknowledge request for:", incidentId);
-    await acknowledgeIncidentRequest(incidentId);
-    await loadData();
-  } catch (err) {
-    console.error("Acknowledge Error:", err);
-  }
-};
+    try {
+      await acknowledgeIncidentRequest(incidentId);
+      await loadData();
+    } catch (err) {
+      console.error("RailSOC Acknowledge Error:", err);
+    }
+  };
+
+  const assignIncident = async (incidentId, assignedTo) => {
+    try {
+      await assignIncidentRequest(incidentId, assignedTo);
+      await loadData();
+    } catch (err) {
+      console.error("RailSOC Assign Incident Error:", err);
+    }
+  };
+
+  const updateIncidentNotes = async (incidentId, notes) => {
+    try {
+      await updateIncidentNotesRequest(incidentId, notes);
+      await loadData();
+    } catch (err) {
+      console.error("RailSOC Update Notes Error:", err);
+    }
+  };
+
+  const closeIncident = async (incidentId, closedBy) => {
+    try {
+      await closeIncidentRequest(incidentId, closedBy);
+      await loadData();
+    } catch (err) {
+      console.error("RailSOC Close Incident Error:", err);
+    }
+  };
+
   return (
     <div className="app">
       <Header />
 
-      <DashboardCards dashboard={dashboard} />
+      <main className="railsoc-main">
+        <DashboardCards dashboard={dashboard} />
 
-      <DemoControls simulateAttack={simulateAttack} resetDemo={resetDemo} />
+        <DemoControls simulateAttack={simulateAttack} resetDemo={resetDemo} />
 
-      <NetworkTopology devices={devices} />
+        <NetworkTopology devices={devices} />
 
-      <LivePlantStatus plantStatus={plantStatus} />
-      
-      <IncidentCenter  
-      incidents={incidents}
-      acknowledgeIncident={acknowledgeIncident}
-      assignIncident={assignIncident}
-      updateIncidentNotes={updateIncidentNotes}
-      closeIncident={closeIncident}
-/>
+        <LivePlantStatus plantStatus={plantStatus} />
 
-      <DeviceInventory devices={devices} />
+        <IncidentCenter
+          incidents={incidents}
+          acknowledgeIncident={acknowledgeIncident}
+          assignIncident={assignIncident}
+          updateIncidentNotes={updateIncidentNotes}
+          closeIncident={closeIncident}
+        />
 
-      <VulnerabilityTable vulnerabilities={vulnerabilities} />
+        <DeviceInventory devices={devices} />
 
-      <AlertsPanel alerts={alerts} />
+        <VulnerabilityTable vulnerabilities={vulnerabilities} />
+
+        <AlertsPanel alerts={alerts} />
+      </main>
+
+      <footer className="app-footer">
+        RailSOC v1.0 · Railroad OT Cyber Defense Platform · Portfolio Demonstration
+      </footer>
     </div>
   );
 }

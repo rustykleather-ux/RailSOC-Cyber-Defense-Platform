@@ -11,6 +11,38 @@ function IncidentCenter({
   const [notes, setNotes] = useState("");
   const [assignedTo, setAssignedTo] = useState("Unassigned");
 
+  const displayAsset = (name) => {
+    switch (name) {
+      case "SCADA Server":
+        return "Dispatch SCADA Server";
+      case "PLC-1":
+        return "Signal Controller 14A";
+      case "PLC-2":
+        return "Grade Crossing Controller MP 82.4";
+      case "Solar Inverter":
+        return "PTC Radio Gateway";
+      case "Engineering Workstation":
+        return "Rail Engineering Workstation";
+      default:
+        return name || "Unknown Rail Asset";
+    }
+  };
+
+  const displayAlertType = (type) => {
+    switch (type) {
+      case "Communication Loss":
+        return "Signal Communication Loss";
+      case "Firmware Change":
+        return "Unauthorized Logic Modification";
+      case "Failed Logins":
+        return "Unauthorized Engineering Login";
+      case "Network Scan":
+        return "OT Network Reconnaissance";
+      default:
+        return type || "Rail OT Incident";
+    }
+  };
+
   const openIncident = (incident) => {
     setSelectedIncident(incident);
     setAssignedTo(incident.assigned_to || "Unassigned");
@@ -54,10 +86,7 @@ function IncidentCenter({
   const handleCloseIncident = async () => {
     if (!selectedIncident) return;
 
-    const analyst =
-      assignedTo === "Unassigned" ? "SOC Analyst" : assignedTo;
-
-    console.log("Close button clicked:", selectedIncident.id, analyst);
+    const analyst = assignedTo === "Unassigned" ? "SOC Analyst" : assignedTo;
 
     await closeIncident(selectedIncident.id, analyst);
 
@@ -66,11 +95,16 @@ function IncidentCenter({
 
   return (
     <>
-      <h2>Incident Center</h2>
+      <h2>RailSOC Incident Center</h2>
+
+      <p className="simulation-subtitle">
+        Manage simulated railroad OT security incidents, analyst assignments,
+        investigation notes, MITRE ATT&CK for ICS mapping, and resolution status.
+      </p>
 
       <div className="incident-center">
         {(incidents || []).length === 0 ? (
-          <div className="incident-empty">No active incidents.</div>
+          <div className="incident-empty">No active rail OT incidents.</div>
         ) : (
           (incidents || []).map((incident) => (
             <div
@@ -90,10 +124,10 @@ function IncidentCenter({
                 </small>
               </div>
 
-              <h3>{incident.alert_type || "Incident"}</h3>
+              <h3>{displayAlertType(incident.alert_type)}</h3>
 
               <p>
-                <strong>Device:</strong> {incident.device || "Unknown Device"}
+                <strong>Rail Asset:</strong> {displayAsset(incident.device)}
               </p>
 
               <p>
@@ -101,8 +135,7 @@ function IncidentCenter({
               </p>
 
               <p>
-                <strong>Assigned:</strong>{" "}
-                {incident.assigned_to || "Unassigned"}
+                <strong>Assigned:</strong> {incident.assigned_to || "Unassigned"}
               </p>
             </div>
           ))
@@ -125,7 +158,7 @@ function IncidentCenter({
               ×
             </button>
 
-            <h2>Incident #{selectedIncident.id}</h2>
+            <h2>Rail OT Incident #{selectedIncident.id}</h2>
 
             <span
               className={`badge ${(selectedIncident.severity || "low").toLowerCase()}`}
@@ -134,26 +167,27 @@ function IncidentCenter({
             </span>
 
             <div className="drawer-section">
-              <h3>Summary</h3>
-              <p>{selectedIncident.message || "No summary available."}</p>
+              <h3>Operational Summary</h3>
+              <p>
+                {selectedIncident.message ||
+                  "RailSOC detected a simulated operational technology security event affecting railroad infrastructure."}
+              </p>
             </div>
 
             <div className="drawer-section">
-              <h3>Affected Asset</h3>
+              <h3>Affected Rail Asset</h3>
 
               <p>
-                <strong>Device:</strong>{" "}
-                {selectedIncident.device || "Unknown Device"}
+                <strong>Asset:</strong> {displayAsset(selectedIncident.device)}
               </p>
 
               <p>
-                <strong>Alert Type:</strong>{" "}
-                {selectedIncident.alert_type || "Unknown"}
+                <strong>Incident Type:</strong>{" "}
+                {displayAlertType(selectedIncident.alert_type)}
               </p>
 
               <p>
-                <strong>Status:</strong>{" "}
-                {selectedIncident.status || "Unknown"}
+                <strong>Status:</strong> {selectedIncident.status || "Unknown"}
               </p>
 
               <p>
@@ -176,7 +210,7 @@ function IncidentCenter({
                 {selectedIncident.assigned_to || "Unassigned"}
               </p>
 
-              <label className="assign-label">Assign Analyst</label>
+              <label className="assign-label">Assign Analyst / Team</label>
 
               <select
                 className="assign-select"
@@ -187,15 +221,15 @@ function IncidentCenter({
                 <option value="Rusty Folsom">Rusty Folsom</option>
                 <option value="SOC Analyst">SOC Analyst</option>
                 <option value="OT Engineer">OT Engineer</option>
+                <option value="Signal Engineering Team">
+                  Signal Engineering Team
+                </option>
                 <option value="Incident Response Team">
                   Incident Response Team
                 </option>
               </select>
 
-              <button
-                className="assign-button"
-                onClick={handleSaveAssignment}
-              >
+              <button className="assign-button" onClick={handleSaveAssignment}>
                 Save Assignment
               </button>
             </div>
@@ -206,18 +240,13 @@ function IncidentCenter({
             </div>
 
             <div className="drawer-section">
-              <h3>Recommended Actions</h3>
+              <h3>Recommended RailSOC Actions</h3>
               <ul>
-                <li>Validate the affected asset status with operations.</li>
-                <li>
-                  Review recent authentication and engineering workstation
-                  activity.
-                </li>
-                <li>
-                  Compare firmware/configuration against the approved baseline.
-                </li>
-                <li>Confirm network segmentation and firewall rules.</li>
-                <li>Document findings and preserve relevant logs.</li>
+                <li>Validate asset status with railroad operations.</li>
+                <li>Confirm whether the event impacts dispatch, signal, crossing, or PTC operations.</li>
+                <li>Review recent authentication and engineering workstation activity.</li>
+                <li>Compare configuration or firmware against the approved OT baseline.</li>
+                <li>Preserve logs, packet captures, and analyst notes for incident review.</li>
               </ul>
             </div>
 
@@ -228,7 +257,7 @@ function IncidentCenter({
                 className="notes-textarea"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="Document investigation steps, findings, actions taken, or next steps..."
+                placeholder="Document investigation steps, operational impact, analyst findings, and next actions..."
               />
 
               <button className="notes-button" onClick={handleSaveNotes}>
@@ -240,8 +269,7 @@ function IncidentCenter({
               <h3>Incident Resolution</h3>
 
               <p>
-                <strong>Status:</strong>{" "}
-                {selectedIncident.status || "Unknown"}
+                <strong>Status:</strong> {selectedIncident.status || "Unknown"}
               </p>
 
               {selectedIncident.closed_by && (
@@ -275,6 +303,10 @@ function IncidentCenter({
                 {selectedIncident.time
                   ? new Date(selectedIncident.time).toLocaleString()
                   : "Unknown"}
+              </p>
+              <p>
+                <strong>Current Phase:</strong>{" "}
+                {selectedIncident.status || "Triage"}
               </p>
             </div>
           </div>

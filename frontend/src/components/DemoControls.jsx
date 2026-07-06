@@ -1,28 +1,35 @@
 function DemoControls({ simulateAttack, resetDemo }) {
   return (
     <>
-      <h2>Simulated Attack Engine</h2>
+      <h2>Rail Operations Simulation Console</h2>
+
+      <p className="simulation-subtitle">
+        Generate simulated Operational Technology security events for analyst
+        training and incident response exercises.
+      </p>
 
       <div className="attack-buttons">
+
         <button onClick={() => simulateAttack("inverter-offline")}>
-          🔴 Inverter Offline
+          🚦 Signal Controller Communication Loss
         </button>
 
         <button onClick={() => simulateAttack("plc-firmware")}>
-          ⚠️ PLC Firmware Change
+          ⚙️ Unauthorized Logic Modification
         </button>
 
         <button onClick={() => simulateAttack("failed-logins")}>
-          🔑 Failed Logins
+          👤 Unauthorized Engineering Login
         </button>
 
         <button onClick={() => simulateAttack("network-scan")}>
-          🌐 Network Scan
+          📡 OT Network Reconnaissance
         </button>
 
         <button className="reset-button" onClick={resetDemo}>
-          Reset Demo Baseline
+          Restore Operational Baseline
         </button>
+
       </div>
     </>
   );

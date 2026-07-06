@@ -3,30 +3,32 @@ function DashboardCards({ dashboard }) {
 
   return (
     <div className="cards">
+
       <div className="card">
-        <span>Total Devices</span>
+        <span>Rail Assets</span>
         <strong>{dashboard.total_devices}</strong>
       </div>
 
       <div className="card">
-        <span>Online Devices</span>
+        <span>Operational Assets</span>
         <strong>{dashboard.online_devices}</strong>
       </div>
 
       <div className="card warning">
-        <span>Offline Devices</span>
+        <span>Assets Requiring Attention</span>
         <strong>{dashboard.offline_devices}</strong>
       </div>
 
       <div className="card danger">
-        <span>High Risk Devices</span>
+        <span>Critical Infrastructure Risk</span>
         <strong>{dashboard.high_risk_devices}</strong>
       </div>
 
       <div className="card danger">
-        <span>Open Vulnerabilities</span>
+        <span>Open Security Findings</span>
         <strong>{dashboard.open_vulnerabilities}</strong>
       </div>
+
     </div>
   );
 }

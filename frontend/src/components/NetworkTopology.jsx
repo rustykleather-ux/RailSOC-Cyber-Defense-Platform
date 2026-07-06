@@ -16,41 +16,70 @@ function NetworkTopology({ devices }) {
     return "healthy";
   };
 
+  const railNodes = [
+    {
+      backendName: "PLC-1",
+      displayName: "Signal Controller 14A",
+      detail: "East Signal District",
+    },
+    {
+      backendName: "PLC-2",
+      displayName: "Grade Crossing Controller MP 82.4",
+      detail: "Prairie Subdivision",
+    },
+    {
+      backendName: "Solar Inverter",
+      displayName: "PTC Radio Gateway",
+      detail: "Wayside Network",
+    },
+  ];
+
   return (
     <>
-      <h2>OT Network Topology</h2>
+      <h2>Railroad OT Network Topology</h2>
 
       <div className="topology">
-        <div className="topology-node firewall">Firewall</div>
+        <div className="topology-node firewall">
+          Enterprise / OT Firewall
+          <span>IT/OT Boundary</span>
+        </div>
 
         <div className="topology-line"></div>
 
         <div className={`topology-node ${getNodeClass(getDevice("SCADA Server"))}`}>
-          SCADA Server
+          Dispatch SCADA Server
           <span>{getDevice("SCADA Server")?.ip_address || "Unknown IP"}</span>
         </div>
 
         <div className="topology-branches">
-          {["PLC-1", "PLC-2", "Solar Inverter"].map((name) => (
-            <div className="branch" key={name}>
-              <div className="topology-line"></div>
-              <div className={`topology-node ${getNodeClass(getDevice(name))}`}>
-                {name}
-                <span>{getDevice(name)?.ip_address || "Unknown IP"}</span>
+          {railNodes.map((node) => {
+            const device = getDevice(node.backendName);
+
+            return (
+              <div className="branch" key={node.backendName}>
+                <div className="topology-line"></div>
+
+                <div className={`topology-node ${getNodeClass(device)}`}>
+                  {node.displayName}
+                  <span>{node.detail}</span>
+                  <span>{device?.ip_address || "Unknown IP"}</span>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         <div className="topology-branches">
           <div className="branch">
             <div className="topology-line"></div>
+
             <div
               className={`topology-node ${getNodeClass(
                 getDevice("Engineering Workstation")
               )}`}
             >
-              Engineering Workstation
+              Rail Engineering Workstation
+              <span>Remote Maintenance Access</span>
               <span>
                 {getDevice("Engineering Workstation")?.ip_address ||
                   "Unknown IP"}

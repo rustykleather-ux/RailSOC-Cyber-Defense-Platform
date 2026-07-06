@@ -1,8 +1,8 @@
 function Header() {
   return (
     <>
-      <h1>Industrial Cyber Defense Platform</h1>
-      <p className="subtitle">OT / IT Security Monitoring Dashboard</p>
+      <h1>RailSOC </h1>
+      <p className="subtitle">Railroad OT Security Operations Center</p>
     </>
   );
 }

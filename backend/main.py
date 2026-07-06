@@ -168,10 +168,12 @@ def simulate_attack(attack_type: str, db: Session = Depends(get_db)):
     attack_type = attack_type.lower()
 
     if attack_type == "inverter-offline":
-        device = db.query(OTDevice).filter(OTDevice.name == "Solar Inverter").first()
+        device = db.query(OTDevice).filter(
+            OTDevice.name == "PTC Radio Gateway"
+        ).first()
 
         if not device:
-            return {"error": "Solar Inverter not found"}
+            return {"error": "PTC Radio Gateway not found"}
 
         device.status = "Offline"
         device.risk_level = "High"
@@ -180,8 +182,8 @@ def simulate_attack(attack_type: str, db: Session = Depends(get_db)):
         alert = Alert(
             device_id=device.id,
             severity="High",
-            alert_type="Communication Loss",
-            message="Simulated attack: Solar inverter communication lost.",
+            alert_type="PTC Radio Failure",
+            message="Simulated rail OT event: PTC radio gateway communication loss detected from the wayside communications hut.",
             status="Open",
             acknowledged=False
         )
@@ -189,13 +191,15 @@ def simulate_attack(attack_type: str, db: Session = Depends(get_db)):
         db.add(alert)
         db.commit()
 
-        return {"message": "Simulated inverter communication loss created."}
+        return {"message": "Simulated PTC radio gateway communication loss created."}
 
     if attack_type == "plc-firmware":
-        device = db.query(OTDevice).filter(OTDevice.name == "PLC-2").first()
+        device = db.query(OTDevice).filter(
+            OTDevice.name == "Grade Crossing Controller MP 82.4"
+        ).first()
 
         if not device:
-            return {"error": "PLC-2 not found"}
+            return {"error": "Grade Crossing Controller MP 82.4 not found"}
 
         device.firmware_version = "UNKNOWN"
         device.risk_level = "Critical"
@@ -204,8 +208,8 @@ def simulate_attack(attack_type: str, db: Session = Depends(get_db)):
         alert = Alert(
             device_id=device.id,
             severity="Critical",
-            alert_type="Firmware Change",
-            message="Simulated attack: PLC firmware changed unexpectedly.",
+            alert_type="Unauthorized Logic Modification",
+            message="Simulated rail OT event: Unauthorized logic or firmware modification detected on grade crossing controller MP 82.4.",
             status="Open",
             acknowledged=False
         )
@@ -213,13 +217,15 @@ def simulate_attack(attack_type: str, db: Session = Depends(get_db)):
         db.add(alert)
         db.commit()
 
-        return {"message": "Simulated PLC firmware change created."}
+        return {"message": "Simulated unauthorized grade crossing logic modification created."}
 
     if attack_type == "failed-logins":
-        device = db.query(OTDevice).filter(OTDevice.name == "Engineering Workstation").first()
+        device = db.query(OTDevice).filter(
+            OTDevice.name == "Rail Engineering Workstation"
+        ).first()
 
         if not device:
-            return {"error": "Engineering Workstation not found"}
+            return {"error": "Rail Engineering Workstation not found"}
 
         device.risk_level = "Medium"
         device.last_seen = datetime.utcnow()
@@ -227,8 +233,8 @@ def simulate_attack(attack_type: str, db: Session = Depends(get_db)):
         alert = Alert(
             device_id=device.id,
             severity="Medium",
-            alert_type="Authentication",
-            message="Simulated attack: Multiple failed login attempts detected.",
+            alert_type="Unauthorized Engineering Login",
+            message="Simulated rail OT event: Multiple failed authentication attempts detected against the rail engineering workstation.",
             status="Open",
             acknowledged=False
         )
@@ -236,13 +242,15 @@ def simulate_attack(attack_type: str, db: Session = Depends(get_db)):
         db.add(alert)
         db.commit()
 
-        return {"message": "Simulated failed login attack created."}
+        return {"message": "Simulated unauthorized engineering login event created."}
 
     if attack_type == "network-scan":
-        device = db.query(OTDevice).filter(OTDevice.name == "SCADA Server").first()
+        device = db.query(OTDevice).filter(
+            OTDevice.name == "Dispatch SCADA Server"
+        ).first()
 
         if not device:
-            return {"error": "SCADA Server not found"}
+            return {"error": "Dispatch SCADA Server not found"}
 
         device.risk_level = "High"
         device.last_seen = datetime.utcnow()
@@ -250,8 +258,8 @@ def simulate_attack(attack_type: str, db: Session = Depends(get_db)):
         alert = Alert(
             device_id=device.id,
             severity="High",
-            alert_type="Network Reconnaissance",
-            message="Simulated attack: Network scan detected against SCADA environment.",
+            alert_type="OT Network Reconnaissance",
+            message="Simulated rail OT event: Network reconnaissance detected against the dispatch SCADA environment.",
             status="Open",
             acknowledged=False
         )
@@ -259,7 +267,7 @@ def simulate_attack(attack_type: str, db: Session = Depends(get_db)):
         db.add(alert)
         db.commit()
 
-        return {"message": "Simulated network scan created."}
+        return {"message": "Simulated OT network reconnaissance created."}
 
     return {
         "error": "Unknown attack type",
@@ -270,7 +278,6 @@ def simulate_attack(attack_type: str, db: Session = Depends(get_db)):
             "network-scan"
         ]
     }
-
 @app.get("/plant-status")
 def plant_status(db: Session = Depends(get_db)):
     devices = db.query(OTDevice).all()
@@ -284,23 +291,23 @@ def plant_status(db: Session = Depends(get_db)):
 
         alert_types = [alert.alert_type for alert in device_alerts]
 
-        if device.device_type == "PLC":
-            firmware_attack = "Firmware Change" in alert_types
+        if device.device_type in ["Signal Controller", "Grade Crossing Controller"]:
+            logic_attack = "Unauthorized Logic Modification" in alert_types
 
             status_data.append({
                 "device": device.name,
                 "type": device.device_type,
                 "status": device.status,
-                "temperature": random.randint(82, 105) if firmware_attack else random.randint(68, 88),
-                "cpu_usage": random.randint(75, 98) if firmware_attack else random.randint(15, 75),
-                "memory_usage": random.randint(70, 95) if firmware_attack else random.randint(25, 85),
-                "network_latency": random.randint(20, 80) if firmware_attack else random.randint(1, 15),
-                "condition": "Abnormal" if firmware_attack else "Normal",
+                "temperature": random.randint(82, 105) if logic_attack else random.randint(68, 88),
+                "cpu_usage": random.randint(75, 98) if logic_attack else random.randint(15, 75),
+                "memory_usage": random.randint(70, 95) if logic_attack else random.randint(25, 85),
+                "network_latency": random.randint(20, 80) if logic_attack else random.randint(1, 15),
+                "condition": "Configuration Drift" if logic_attack else "Normal",
                 "timestamp": datetime.utcnow().isoformat()
             })
 
-        elif device.device_type == "Inverter":
-            comm_loss = "Communication Loss" in alert_types
+        elif device.device_type == "PTC Communications Gateway":
+            comm_loss = "PTC Radio Failure" in alert_types
 
             status_data.append({
                 "device": device.name,
@@ -313,8 +320,8 @@ def plant_status(db: Session = Depends(get_db)):
                 "timestamp": datetime.utcnow().isoformat()
             })
 
-        elif device.device_type == "SCADA":
-            scan_detected = "Network Reconnaissance" in alert_types
+        elif device.device_type == "Dispatch SCADA":
+            scan_detected = "OT Network Reconnaissance" in alert_types
 
             status_data.append({
                 "device": device.name,
@@ -324,12 +331,12 @@ def plant_status(db: Session = Depends(get_db)):
                 "memory_usage": random.randint(65, 90) if scan_detected else random.randint(35, 80),
                 "active_sessions": random.randint(8, 20) if scan_detected else random.randint(1, 8),
                 "network_latency": random.randint(25, 90) if scan_detected else random.randint(1, 10),
-                "condition": "Network Scan Detected" if scan_detected else "Normal",
+                "condition": "Reconnaissance Detected" if scan_detected else "Normal",
                 "timestamp": datetime.utcnow().isoformat()
             })
 
-        elif device.device_type == "Workstation":
-            auth_attack = "Authentication" in alert_types
+        elif device.device_type == "Engineering Workstation":
+            auth_attack = "Unauthorized Engineering Login" in alert_types
 
             status_data.append({
                 "device": device.name,
@@ -465,34 +472,32 @@ def assign_incident(
 @app.post("/reset-demo")
 def reset_demo(db: Session = Depends(get_db)):
     baseline_devices = {
-        "PLC-1": {
+        "Signal Controller 14A": {
             "status": "Online",
             "risk_level": "Low",
-            "firmware_version": "1.0.3"
+            "firmware_version": "4.1.3"
         },
-        "PLC-2": {
+        "Grade Crossing Controller MP 82.4": {
             "status": "Online",
             "risk_level": "Low",
             "firmware_version": "3.2.1"
         },
-        "Solar Inverter": {
+        "PTC Radio Gateway": {
             "status": "Online",
             "risk_level": "Low",
             "firmware_version": "2.4.8"
         },
-        "Engineering Workstation": {
+        "Rail Engineering Workstation": {
             "status": "Online",
             "risk_level": "Low",
             "firmware_version": "Windows 11 24H2"
         },
-        "SCADA Server": {
+        "Dispatch SCADA Server": {
             "status": "Online",
             "risk_level": "Low",
             "firmware_version": "8.1.35"
         }
     }
-
-    
 
     for name, values in baseline_devices.items():
         device = db.query(OTDevice).filter(OTDevice.name == name).first()
@@ -502,12 +507,9 @@ def reset_demo(db: Session = Depends(get_db)):
             device.firmware_version = values["firmware_version"]
             device.last_seen = datetime.utcnow()
 
-    # Remove alerts so they no longer affect calculated risk/topology color
     db.query(Alert).delete()
-
-    # Remove vulnerabilities so reset returns topology to green baseline
     db.query(Vulnerability).delete()
 
     db.commit()
 
-    return {"message": "Demo environment reset to normal baseline."}
+    return {"message": "RailSOC environment restored to operational baseline."}

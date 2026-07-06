@@ -18,19 +18,16 @@ function NetworkTopology({ devices }) {
 
   const railNodes = [
     {
-      backendName: "PLC-1",
-      displayName: "Signal Controller 14A",
+      name: "Signal Controller 14A",
       detail: "East Signal District",
     },
     {
-      backendName: "PLC-2",
-      displayName: "Grade Crossing Controller MP 82.4",
+      name: "Grade Crossing Controller MP 82.4",
       detail: "Prairie Subdivision",
     },
     {
-      backendName: "Solar Inverter",
-      displayName: "PTC Radio Gateway",
-      detail: "Wayside Network",
+      name: "PTC Radio Gateway",
+      detail: "Wayside Communications Hut",
     },
   ];
 
@@ -46,21 +43,27 @@ function NetworkTopology({ devices }) {
 
         <div className="topology-line"></div>
 
-        <div className={`topology-node ${getNodeClass(getDevice("SCADA Server"))}`}>
+        <div
+          className={`topology-node ${getNodeClass(
+            getDevice("Dispatch SCADA Server")
+          )}`}
+        >
           Dispatch SCADA Server
-          <span>{getDevice("SCADA Server")?.ip_address || "Unknown IP"}</span>
+          <span>
+            {getDevice("Dispatch SCADA Server")?.ip_address || "Unknown IP"}
+          </span>
         </div>
 
         <div className="topology-branches">
           {railNodes.map((node) => {
-            const device = getDevice(node.backendName);
+            const device = getDevice(node.name);
 
             return (
-              <div className="branch" key={node.backendName}>
+              <div className="branch" key={node.name}>
                 <div className="topology-line"></div>
 
                 <div className={`topology-node ${getNodeClass(device)}`}>
-                  {node.displayName}
+                  {node.name}
                   <span>{node.detail}</span>
                   <span>{device?.ip_address || "Unknown IP"}</span>
                 </div>
@@ -75,13 +78,13 @@ function NetworkTopology({ devices }) {
 
             <div
               className={`topology-node ${getNodeClass(
-                getDevice("Engineering Workstation")
+                getDevice("Rail Engineering Workstation")
               )}`}
             >
               Rail Engineering Workstation
               <span>Remote Maintenance Access</span>
               <span>
-                {getDevice("Engineering Workstation")?.ip_address ||
+                {getDevice("Rail Engineering Workstation")?.ip_address ||
                   "Unknown IP"}
               </span>
             </div>

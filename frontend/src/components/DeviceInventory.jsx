@@ -1,67 +1,4 @@
 function DeviceInventory({ devices }) {
-  const displayName = (name) => {
-    switch (name) {
-      case "SCADA Server":
-        return "Dispatch SCADA Server";
-
-      case "PLC-1":
-        return "Signal Controller 14A";
-
-      case "PLC-2":
-        return "Grade Crossing Controller MP 82.4";
-
-      case "Solar Inverter":
-        return "PTC Radio Gateway";
-
-      case "Engineering Workstation":
-        return "Rail Engineering Workstation";
-
-      default:
-        return name || "Unknown Asset";
-    }
-  };
-
-  const displayType = (type) => {
-    switch (type) {
-      case "SCADA":
-        return "Dispatch System";
-
-      case "PLC":
-        return "Signal Controller";
-
-      case "Inverter":
-        return "Communications Gateway";
-
-      case "Workstation":
-        return "Engineering Station";
-
-      default:
-        return type || "Rail Asset";
-    }
-  };
-
-  const displayLocation = (name, location) => {
-  switch (name) {
-    case "SCADA Server":
-      return "West Dispatch Center";
-
-    case "PLC-1":
-      return "East Signal District";
-
-    case "PLC-2":
-      return "Prairie Subdivision - MP 82.4";
-
-    case "Solar Inverter":
-      return "Wayside Communications Hut";
-
-    case "Engineering Workstation":
-      return "Maintenance Facility Alpha";
-
-    default:
-      return location || "Unknown Rail Location";
-  }
-};
-  
   return (
     <>
       <h2>Railroad OT Asset Inventory</h2>
@@ -86,11 +23,11 @@ function DeviceInventory({ devices }) {
         <tbody>
           {(devices || []).map((device) => (
             <tr key={device.id}>
-              <td>{displayName(device.name)}</td>
+              <td>{device.name}</td>
 
               <td>{device.ip_address}</td>
 
-              <td>{displayType(device.device_type)}</td>
+              <td>{device.device_type}</td>
 
               <td>{device.vendor}</td>
 
@@ -116,7 +53,7 @@ function DeviceInventory({ devices }) {
 
               <td>{device.firmware_version}</td>
 
-              <td>{displayLocation(device.name, device.location)}</td>
+              <td>{device.location}</td>
 
               <td>
                 {device.last_seen

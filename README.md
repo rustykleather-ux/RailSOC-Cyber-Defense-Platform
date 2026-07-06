@@ -1,209 +1,299 @@
-# 🏭 Industrial Cyber Defense Platform
+# 🚆 RailSOC – Railroad Operational Technology Cyber Defense Platform
 
-An enterprise-style **Operational Technology (OT) and Information Technology (IT) cybersecurity platform** built with **Python, FastAPI, React, and SQLite**.
-
-The platform provides centralized visibility into industrial assets, security alerts, vulnerabilities, and operational risk through a modern web dashboard. It is designed as a portfolio project that demonstrates practical software engineering and cybersecurity concepts commonly used in industrial control system (ICS) and SCADA environments.
+> A full-stack Operational Technology (OT) cybersecurity platform built to simulate monitoring, threat detection, incident response, and asset management within a fictional railroad environment.
 
 ---
 
-## 🚀 Features
+## Overview
 
-### 📊 Executive Dashboard
+RailSOC is a portfolio project designed to demonstrate practical cybersecurity engineering skills applied to railroad Operational Technology (OT) environments.
 
-* Security overview dashboard
-* Online vs. Offline device monitoring
-* High-risk asset identification
-* Active security alerts
-* Vulnerability summary
-* Overall security posture
+The platform simulates a Security Operations Center (SOC) responsible for protecting critical railroad infrastructure including:
+
+- Signal Controllers
+- Grade Crossing Controllers
+- Positive Train Control (PTC) Communications
+- Dispatch SCADA Systems
+- Engineering Workstations
+
+Rather than serving as a simple dashboard, RailSOC demonstrates how OT cybersecurity concepts can be implemented across an end-to-end platform including backend APIs, real-time telemetry, incident management, risk scoring, and analyst workflows.
 
 ---
 
-### 🖥️ OT Asset Inventory
+## Features
 
-Manage industrial assets including:
+### 🚦 Railroad OT Asset Inventory
 
-* PLCs
-* HMIs
-* SCADA Servers
-* Historians
-* Engineering Workstations
-* Solar Inverters
-* Industrial Switches
+Maintain visibility into simulated railroad operational assets.
 
-Each asset tracks:
+- Signal Controllers
+- Grade Crossing Controllers
+- Dispatch SCADA
+- PTC Radio Gateways
+- Engineering Workstations
 
-* IP Address
-* Vendor
-* Device Type
-* Firmware Version
-* Location
-* Status
-* Risk Level
-* Last Seen Timestamp
+Displays:
+
+- Operational Status
+- Firmware Version
+- Risk Score
+- Vendor
+- Last Communication
+- Asset Location
+
+---
+
+### 🛰 Live Asset Telemetry
+
+Continuously monitors simulated OT infrastructure.
+
+Examples include:
+
+- Equipment Temperature
+- Controller CPU Usage
+- Memory Utilization
+- Network Latency
+- Active Sessions
+- Authentication Activity
+- Communication Status
+
+---
+
+### 🛡 RailSOC Incident Center
+
+SOC-style incident management platform.
+
+Capabilities include:
+
+- Incident Assignment
+- Acknowledgement Workflow
+- Investigation Notes
+- Analyst Timeline
+- MITRE ATT&CK for ICS Mapping
+- Incident Resolution Tracking
 
 ---
 
 ### 🚨 Security Alert Management
 
-Track and display active OT security events including:
+Generate and investigate simulated security events including:
 
-* Firmware Outdated
-* Communication Loss
-* Device Offline
-* Failed Authentication Attempts
-* Unauthorized Access
-* Network Anomalies
-
-Alerts include:
-
-* Severity
-* Device
-* Alert Type
-* Status
-* Timestamp
-* Acknowledgement State
+- Unauthorized Logic Modification
+- OT Network Reconnaissance
+- PTC Communication Failure
+- Unauthorized Engineering Login
+- Signal Controller Communication Loss
 
 ---
 
-### 🔍 Vulnerability Management
+### ⚠ Vulnerability Management
 
-Store and manage OT vulnerabilities with:
+Track simulated OT vulnerabilities.
 
-* CVE Tracking
-* CVSS Scoring
-* Risk Classification
-* Recommended Remediation
-* Device Association
-* Vulnerability Status
+Includes:
 
----
-
-### 💾 SQLite Database
-
-Persistent storage for:
-
-* Device Inventory
-* Security Alerts
-* Vulnerabilities
-
-Built using SQLAlchemy ORM.
+- CVE Tracking
+- CVSS Scoring
+- Severity Classification
+- Analyst Recommendations
+- Risk Prioritization
 
 ---
 
-### ⚙️ REST API
+### 🌐 Railroad OT Network Topology
 
-FastAPI-powered backend exposing endpoints including:
+Visual representation of the simulated OT environment.
 
-* `/devices`
-* `/alerts`
-* `/dashboard`
-* `/vulnerabilities`
-
-Designed for future integration with:
-
-* SIEM Platforms
-* OT Monitoring Solutions
-* PLC Discovery
-* Asset Scanners
-
----
-
-## 🛠️ Technology Stack
-
-### Backend
-
-* Python
-* FastAPI
-* SQLAlchemy
-* SQLite
-* Uvicorn
-* Pydantic
-
-### Frontend
-
-* React
-* Axios
-* JavaScript
-* HTML5
-* CSS3
-
-### Database
-
-* SQLite
-* SQLAlchemy ORM
-
----
-
-## 🏗️ Current Architecture
-
-```text
-IndustrialCyberPlatform
-
-frontend/
-    React Dashboard
-
-backend/
-    main.py
-    database.py
-    models.py
-    schemas.py
-    seed.py
-    alerts.py
-    ot_platform.db
+```
+Enterprise Network
+        │
+Enterprise / OT Firewall
+        │
+Dispatch SCADA Server
+        │
+ ├── Signal Controller
+ ├── Grade Crossing Controller
+ ├── PTC Radio Gateway
+ └── Engineering Workstation
 ```
 
 ---
 
-## 📈 Current Capabilities
+### 🎯 Attack Simulation Engine
 
-* OT Device Inventory
-* Executive Dashboard
-* Security Alert Management
-* Vulnerability Tracking
-* Persistent Database
-* REST API
-* Risk Classification
+Generate realistic cybersecurity scenarios for analyst training.
 
----
+Current simulations include:
 
-## 🚧 Planned Features
+- Unauthorized Logic Modification
+- OT Network Reconnaissance
+- PTC Communication Failure
+- Unauthorized Engineering Login
 
-* OT Network Discovery
-* Live Device Monitoring
-* PLC Configuration Auditing
-* Firmware Compliance Checking
-* Industrial Protocol Monitoring (Modbus, DNP3, OPC UA)
-* Network Topology Visualization
-* MITRE ATT&CK for ICS Mapping
-* Incident Response Workflow
-* Compliance Reporting
-* Executive PDF Reports
-* AI-Assisted Threat Analysis
-* Real-Time Dashboards
-* Historical Trend Analysis
+Future planned scenarios:
+
+- Ransomware
+- Rogue Engineering Laptop
+- Insider Threat
+- Unauthorized Remote Vendor Access
+- Denial of Service
+- Supply Chain Compromise
 
 ---
 
-## 🎯 Project Goals
+## Technology Stack
 
-This project is intended to demonstrate skills in:
+### Backend
 
-* Operational Technology (OT) Security
-* Industrial Control Systems (ICS)
-* SCADA Security
-* Python Development
-* FastAPI API Design
-* React Frontend Development
-* Database Design
-* Secure Software Engineering
-* Asset Inventory Management
-* Vulnerability Management
-* Incident Response
-* Enterprise Dashboard Design
+- Python
+- FastAPI
+- SQLAlchemy
+- SQLite
+- Pydantic
+
+### Frontend
+
+- React
+- Vite
+- JavaScript
+- CSS
+
+### API
+
+REST API providing:
+
+- Devices
+- Alerts
+- Incidents
+- Vulnerabilities
+- Dashboard Metrics
+- Plant Telemetry
+- Simulation Engine
 
 ---
 
-## ⚠️ Disclaimer
+## Platform Architecture
 
-This project is intended for educational, research, and portfolio purposes. It simulates industrial cybersecurity workflows and should be adapted and validated before deployment in production OT or ICS environments.
+```
+             React Frontend
+                    │
+             FastAPI REST API
+                    │
+      ┌─────────────┴─────────────┐
+      │                           │
+ Simulation Engine         Risk Engine
+      │                           │
+ Incident Manager      Device Scoring
+      │                           │
+      └─────────────┬─────────────┘
+                    │
+                SQLite Database
+```
+
+---
+
+## Simulated Railroad Assets
+
+| Asset | Purpose |
+|---------|---------|
+| Dispatch SCADA Server | Central Operations |
+| Signal Controller 14A | Signal Control |
+| Grade Crossing Controller MP 82.4 | Crossing Protection |
+| PTC Radio Gateway | Positive Train Control Communications |
+| Rail Engineering Workstation | Engineering Maintenance |
+
+---
+
+## Example Workflow
+
+1. Analyst launches simulation.
+
+2. OT event generated.
+
+3. Alert created.
+
+4. Incident opened.
+
+5. Asset risk recalculated.
+
+6. Live telemetry changes.
+
+7. Analyst investigates.
+
+8. Incident assigned.
+
+9. Investigation notes documented.
+
+10. Incident resolved.
+
+---
+
+## MITRE ATT&CK for ICS
+
+RailSOC demonstrates integration with the MITRE ATT&CK for ICS framework including techniques such as:
+
+- T0842 Network Service Scanning
+- T0859 Modify Controller Tasking
+- T0881 Service Stop
+
+---
+
+## Current Project Status
+
+Current capabilities include:
+
+- OT Asset Inventory
+- Risk Scoring Engine
+- Live Operational Telemetry
+- Incident Management
+- Railroad Network Topology
+- Attack Simulation
+- Vulnerability Tracking
+- Analyst Assignment
+- Investigation Notes
+- MITRE ATT&CK Mapping
+
+---
+
+## Planned Enhancements
+
+- Interactive Railroad Map
+- Digital Twin Visualization
+- Threat Intelligence Feed
+- Purple Team Exercise Mode
+- Active Directory Integration
+- Syslog Collection
+- Zeek Integration
+- Suricata Integration
+- Splunk Integration
+- SIEM Dashboard
+- Asset History
+- Configuration Drift Detection
+- Multi-Site Railroad Support
+- Role-Based Authentication
+- Reporting Dashboard
+- Executive Summary Reports
+
+---
+
+## Educational Purpose
+
+RailSOC is a fictional cybersecurity engineering platform developed for portfolio, research, and educational purposes.
+
+No actual railroad infrastructure, operational data, or proprietary systems are represented.
+
+---
+
+## Author
+
+**Rusty D. Folsom**
+
+Cybersecurity • Operational Technology • Incident Response • Infrastructure Engineering
+
+Kansas, USA
+
+---
+
+## License
+
+MIT License

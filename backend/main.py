@@ -10,7 +10,11 @@ class AssignIncidentRequest(BaseModel):
     assigned_to: str
 import random
 
-app = FastAPI(title="Industrial Cyber Defense Platform")
+app = FastAPI(
+    title="TrackSentinel",
+    description="RailSOC Training & Simulation Platform",
+    version="1.0.0"
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -33,7 +37,11 @@ def get_db():
 
 @app.get("/")
 def root():
-    return {"message": "Industrial Cyber Defense Platform API"}
+   return {
+    "product": "TrackSentinel",
+    "platform": "RailSOC Training & Simulation Platform",
+    "version": "1.0.0"
+}
 
 
 @app.get("/devices")
@@ -512,4 +520,4 @@ def reset_demo(db: Session = Depends(get_db)):
 
     db.commit()
 
-    return {"message": "RailSOC environment restored to operational baseline."}
+    return {"message": "TrackSentinel environment restored to operational baseline."}

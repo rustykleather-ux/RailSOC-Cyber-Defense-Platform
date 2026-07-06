@@ -25,7 +25,7 @@ function AlertsPanel({ alerts }) {
               </span>
 
               <p>
-                <strong>RailSOC Alert:</strong> {alert.message || "No message"}
+                <strong>TrackSentinel Alert:</strong> {alert.message || "No message"}
               </p>
 
               <small>

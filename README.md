@@ -1,6 +1,6 @@
-# 🚆 RailSOC – Railroad Operational Technology Cyber Defense Platform
+# 🚆 TrackSentinel – RailSOC Training & Simulation Platform
 
-> A full-stack Operational Technology (OT) cybersecurity platform built to simulate monitoring, threat detection, incident response, and asset management within a fictional railroad environment.
+> A full-stack Operational Technology cybersecurity platform that simulates the monitoring, protection, and incident response workflows of a modern railroad Security Operations Center.
 
 ---
 

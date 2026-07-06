@@ -4,14 +4,14 @@ function Header() {
   return (
     <header className="header">
       <div className="header-left">
-        <div className="logo-box">RS</div>
+        <button className="logo-box" type="button" aria-label="TrackSentinel home">
+          <img src="/logo.png" alt="TrackSentinel Logo" />
+        </button>
 
         <div>
-          <h1>RailSOC</h1>
+          <h1>TrackSentinel</h1>
 
-          <p className="subtitle">
-            Railroad Operational Technology Security Operations Center
-          </p>
+          <p className="subtitle">RailSOC Training & Simulation Platform</p>
 
           <p className="tagline">
             Monitoring • Detection • Incident Response • Threat Hunting
@@ -32,7 +32,7 @@ function Header() {
 
         <div className="status-card">
           <span className="status-label">Platform</span>
-          <strong>RailSOC v1.0</strong>
+          <strong>TrackSentinel v1.0</strong>
         </div>
       </div>
     </header>

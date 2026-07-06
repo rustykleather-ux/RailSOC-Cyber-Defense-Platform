@@ -2,12 +2,9 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-
   padding: 24px 32px;
-
-  background: var(--panel);
-
-  border-bottom: 1px solid var(--border);
+  background: linear-gradient(180deg, #0b1220 0%, #101827 100%);
+  border-bottom: 1px solid #1f2937;
 }
 
 .header-left {
@@ -17,65 +14,70 @@
 }
 
 .logo-box {
-  width: 72px;
-  height: 72px;
-
-  border-radius: 14px;
-
-  background: linear-gradient(
-      135deg,
-      var(--accent),
-      #1d4ed8
-  );
-
+  width: 88px;
+  height: 88px;
   display: flex;
   align-items: center;
   justify-content: center;
+  background: #111827;
+  border: 1px solid #334155;
+  border-radius: 16px;
+  box-shadow: 0 4px 14px rgba(0,0,0,.35);
+  padding: 8px;
+}
 
-  font-size: 28px;
-  font-weight: bold;
+.logo-box img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 46px;
+  font-weight: 700;
   color: white;
-
-  box-shadow: var(--shadow);
 }
 
 .subtitle {
-  color: var(--muted);
-  margin-top: 6px;
+  margin: 6px 0;
+  color: #d1d5db;
+  font-size: 20px;
 }
 
 .tagline {
-  color: var(--accent);
-  margin-top: 6px;
-  font-size: 14px;
+  margin: 0;
+  color: #60a5fa;
+  font-size: 15px;
 }
 
 .header-right {
   display: flex;
-  gap: 16px;
+  gap: 18px;
 }
 
 .status-card {
-  background: var(--card);
-
-  border: 1px solid var(--border);
-
-  border-radius: 10px;
-
-  padding: 10px 18px;
-
-  min-width: 140px;
-
-  text-align: left;
+  min-width: 170px;
+  background: #111827;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 16px;
 }
 
 .status-label {
   display: block;
-  color: var(--muted);
+  color: #9ca3af;
   font-size: 12px;
-  margin-bottom: 4px;
+  text-transform: uppercase;
+}
+
+.status-card strong {
+  display: block;
+  margin-top: 6px;
+  color: white;
+  font-size: 18px;
 }
 
 .warning {
-  color: var(--warning);
+  color: #fbbf24 !important;
 }

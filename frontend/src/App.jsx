@@ -43,7 +43,7 @@ function App() {
       const res = await getPlantStatus();
       setPlantStatus(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
-      console.error("RailSOC Telemetry Error:", err);
+      console.error("TrackSentinel Telemetry Error:", err);
     }
   };
 
@@ -75,7 +75,7 @@ function App() {
       setAlerts(Array.isArray(alertsRes.data) ? alertsRes.data : []);
       setIncidents(Array.isArray(incidentsRes.data) ? incidentsRes.data : []);
     } catch (err) {
-      console.error("RailSOC Load Data Error:", err);
+      console.error("TrackSentinel Load Data Error:", err);
     }
   };
 
@@ -96,7 +96,7 @@ function App() {
       await simulateAttackRequest(attackType);
       await loadData();
     } catch (err) {
-      console.error("RailSOC Simulation Error:", err);
+      console.error("TrackSentinel Simulation Error:", err);
     }
   };
 
@@ -105,7 +105,7 @@ function App() {
       await resetDemoRequest();
       await loadData();
     } catch (err) {
-      console.error("RailSOC Reset Error:", err);
+      console.error("TrackSentinel Reset Error:", err);
     }
   };
 
@@ -114,7 +114,7 @@ function App() {
       await acknowledgeIncidentRequest(incidentId);
       await loadData();
     } catch (err) {
-      console.error("RailSOC Acknowledge Error:", err);
+      console.error("TrackSentinel Acknowledge Error:", err);
     }
   };
 
@@ -123,7 +123,7 @@ function App() {
       await assignIncidentRequest(incidentId, assignedTo);
       await loadData();
     } catch (err) {
-      console.error("RailSOC Assign Incident Error:", err);
+      console.error("TrackSentinel Assign Incident Error:", err);
     }
   };
 
@@ -132,7 +132,7 @@ function App() {
       await updateIncidentNotesRequest(incidentId, notes);
       await loadData();
     } catch (err) {
-      console.error("RailSOC Update Notes Error:", err);
+      console.error("TrackSentinel Update Notes Error:", err);
     }
   };
 
@@ -141,7 +141,7 @@ function App() {
       await closeIncidentRequest(incidentId, closedBy);
       await loadData();
     } catch (err) {
-      console.error("RailSOC Close Incident Error:", err);
+      console.error("TrackSentinel Close Incident Error:", err);
     }
   };
 
@@ -174,7 +174,7 @@ function App() {
       </main>
 
       <footer className="app-footer">
-        RailSOC v1.0 · Railroad OT Cyber Defense Platform · Portfolio Demonstration
+        TrackSentinel v1.0 · Railroad OT Cyber Defense Platform · Portfolio Demonstration
       </footer>
     </div>
   );

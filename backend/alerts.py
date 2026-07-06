@@ -14,7 +14,7 @@ alerts = [
     {
         "id": 2,
         "severity": "High",
-        "device": "Solar Inverter",
+        "device": "PTC Radio Gateway",
         "message": "Communication Lost",
         "time": datetime.now().isoformat()
     },

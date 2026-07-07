@@ -782,3 +782,142 @@ Portfolio Demonstration
     height: auto;
   }
 }
+html {
+  scroll-behavior: smooth;
+}
+
+.sidebar-nav a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.roadmap-card {
+  margin-top: 30px;
+  background: rgba(17, 24, 39, 0.96);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+}
+
+.roadmap-card h2 {
+  margin-top: 0;
+}
+
+.roadmap-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+  margin-top: 20px;
+}
+
+.roadmap-grid ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.roadmap-grid li {
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+
+@media (max-width:900px) {
+  .roadmap-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.coming-soon-card {
+  background: rgba(17, 24, 39, 0.96);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: var(--shadow);
+}
+
+.coming-soon-card p {
+  color: var(--muted);
+}
+/* ============================
+   Railroad Digital Twin
+============================ */
+
+.rail-map {
+  margin: 24px 0;
+  padding: 24px;
+  background: rgba(17, 24, 39, 0.95);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+
+.rail-map-header h2 {
+  margin: 0;
+}
+
+.rail-map-header p {
+  color: var(--muted);
+  margin-bottom: 28px;
+}
+
+.rail-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  overflow-x: auto;
+}
+
+.rail-stop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  min-width: 170px;
+}
+
+.rail-track {
+  position: absolute;
+  top: 25px;
+  left: 95px;
+  width: 130px;
+  height: 4px;
+  background: #4b5563;
+}
+
+.rail-node {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  border: 3px solid;
+  z-index: 2;
+}
+
+.rail-node.healthy {
+  background: rgba(34,197,94,.2);
+  border-color: #22c55e;
+}
+
+.rail-node.warning {
+  background: rgba(245,158,11,.2);
+  border-color: #f59e0b;
+}
+
+.rail-node.critical,
+.rail-node.offline {
+  background: rgba(239,68,68,.2);
+  border-color: #ef4444;
+}
+
+.rail-node.unknown {
+  background: rgba(107,114,128,.2);
+  border-color: #6b7280;
+}
+
+.rail-name {
+  margin-top: 12px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text);
+}

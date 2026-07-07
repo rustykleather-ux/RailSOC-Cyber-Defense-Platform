@@ -1,16 +1,20 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 
+
 import Header from "./components/Header";
 import EnvironmentOverview from "./components/EnviromentOverview";
+import RailroadMap from "./components/Railroadmap";
 import DashboardCards from "./components/DashboardCards";
 import DemoControls from "./components/DemoControls";
 import NetworkTopology from "./components/NetworkTopology";
 import LivePlantStatus from "./components/LivePlantStatus";
 import DeviceInventory from "./components/DeviceInventory";
 import VulnerabilityTable from "./components/VulnerabilityTable";
+import Roadmap from "./components/Roadmap";
 import AlertsPanel from "./components/AlertsPanel";
 import IncidentCenter from "./components/IncidentCenter";
+
 
 import {
   getIncidents,
@@ -157,18 +161,18 @@ function App() {
         </div>
       </div>
 
-      <nav className="sidebar-nav">
-        <a className="active" href="#overview">Dashboard</a>
-        <a href="#topology">Railroad Topology</a>
-        <a href="#telemetry">Live Telemetry</a>
-        <a href="#alerts">Security Alerts</a>
-        <a href="#incidents">Incident Center</a>
-        <a href="#assets">OT Assets</a>
-        <a href="#vulnerabilities">Vulnerabilities</a>
-        <a href="#training">Training Exercises</a>
-        <a href="#reports">Reports</a>
-        <a href="#settings">Settings</a>
-      </nav>
+        <nav className="sidebar-nav">
+          <a className="active" href="#overview">📊 Dashboard</a>
+          <a href="#training">🎯 Training Exercises</a>
+          <a href="#topology">🛤 Railroad Topology</a>
+          <a href="#telemetry">📡 Live Telemetry</a>
+          <a href="#alerts">🚨 Security Alerts</a>
+          <a href="#incidents">📝 Incident Center</a>
+          <a href="#assets">🚦 OT Assets</a>
+          <a href="#vulnerabilities">⚠️ Vulnerabilities</a>
+          <a href="#reports">📈 Reports</a>
+          <a href="#settings">⚙️ Settings</a>
+        </nav>
     </aside>
 
     <div className="app-content">
@@ -183,6 +187,12 @@ function App() {
             vulnerabilities={vulnerabilities}
           />
         </div>
+          <RailroadMap devices={devices} />
+
+          <DemoControls
+            simulateAttack={simulateAttack}
+            resetDemo={resetDemo}
+          />
 
         <div id="training">
           <DemoControls
@@ -226,6 +236,15 @@ function App() {
         <div id="vulnerabilities">
           <VulnerabilityTable vulnerabilities={vulnerabilities} />
         </div>
+
+          <div id="reports">
+            <Roadmap />
+          </div>
+
+          <div id="settings" className="coming-soon-card">
+            <h2>Settings</h2>
+            <p>Role-based access, user preferences, and platform configuration are planned for a future TrackSentinel release.</p>
+          </div>
 
         <footer className="app-footer">
           TrackSentinel v1.0 · Railroad OT Cyber Defense Platform · Portfolio Demonstration

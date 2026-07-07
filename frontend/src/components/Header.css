@@ -71,13 +71,18 @@
   text-transform: uppercase;
 }
 
-.status-card strong {
-  display: block;
-  margin-top: 6px;
-  color: white;
-  font-size: 18px;
+
+.header-status-normal {
+  color: #22c55e;
+  font-weight: 700;
 }
 
-.warning {
-  color: #fbbf24 !important;
+.header-status-elevated {
+  color: #fbbf24;
+  font-weight: 700;
+}
+
+.header-status-critical {
+  color: #ef4444;
+  font-weight: 700;
 }

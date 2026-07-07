@@ -662,21 +662,29 @@ Portfolio Demonstration
   color: var(--muted);
 }
 
-.overview-card.warning {
-  border-left-color: var(--warning);
-}
-
-.overview-card.danger {
-  border-left-color: var(--danger);
-}
-
 .overview-card.threat.normal {
-  border-left-color: var(--success);
+  border-left-color: #22c55e;
 }
 
-.overview-card.threat.guarded,
+.overview-card.threat.normal strong {
+  color: #22c55e;
+}
+
 .overview-card.threat.elevated {
-  border-left-color: var(--warning);
+  border-left-color: #fbbf24;
+}
+
+.overview-card.threat.elevated strong {
+  color: #fbbf24;
+}
+
+.overview-card.threat.critical {
+  border-left-color: #ef4444;
+}
+
+.overview-card.threat.critical strong {
+  color: #ef4444;
+}
 }/* ===========================
    SOC Dashboard Layout
 =========================== */
@@ -925,4 +933,106 @@ html {
   color: var(--text-h);
   background: rgba(37, 99, 235, 0.18);
   border-color: var(--accent-border);
+}.dashboard-summary-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.summary-panel {
+  background: rgba(17, 24, 39, 0.96);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 22px;
+  box-shadow: var(--shadow);
+}
+
+.summary-panel h2 {
+  margin-top: 0;
+}
+
+.summary-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+
+.summary-item:last-child {
+  border-bottom: none;
+}
+
+.summary-item strong {
+  color: var(--text-h);
+}
+
+.summary-item p {
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+@media (max-width: 900px) {
+  .dashboard-summary-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.rail-node {
+  cursor: pointer;
+}
+
+.rail-node:hover {
+  transform: scale(1.08);
+}
+
+.rail-asset-panel {
+  margin-top: 28px;
+  background: rgba(15, 23, 42, 0.96);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px;
+}
+
+.rail-asset-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.rail-asset-panel-header h3 {
+  margin: 0;
+}
+
+.rail-asset-panel-header button {
+  background: transparent;
+  color: var(--text-h);
+  border: none;
+  font-size: 26px;
+  cursor: pointer;
+}
+
+.asset-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px 20px;
+  margin-top: 18px;
+}
+
+.asset-detail-grid p {
+  color: var(--muted);
+}
+
+.asset-detail-grid strong {
+  color: var(--text-h);
+}
+.header-status-normal {
+  color: #22c55e;
+}
+
+.header-status-elevated {
+  color: #fbbf24;
+}
+
+.header-status-critical {
+  color: #ef4444;
 }

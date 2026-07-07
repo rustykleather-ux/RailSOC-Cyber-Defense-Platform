@@ -1,6 +1,6 @@
 import "./Header.css";
 
-function Header() {
+function Header({ threatLevel }) {
   return (
     <header className="header">
       <div className="header-left">
@@ -26,9 +26,20 @@ function Header() {
         </div>
 
         <div className="status-card">
-          <span className="status-label">Threat Level</span>
-          <strong className="warning">Elevated</strong>
-        </div>
+  <span className="status-label">Threat Level</span>
+
+  <strong
+  className={
+    threatLevel === "Critical"
+      ? "header-status-critical"
+      : threatLevel === "Elevated"
+      ? "header-status-elevated"
+      : "header-status-normal"
+  }
+>
+  {threatLevel}
+</strong>
+</div>
 
         <div className="status-card">
           <span className="status-label">Platform</span>

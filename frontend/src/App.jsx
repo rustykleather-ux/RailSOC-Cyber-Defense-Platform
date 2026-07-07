@@ -130,6 +130,27 @@ function App() {
     await loadData();
   };
 
+  const criticalAlerts = alerts.filter(
+    (a) => a.severity === "Critical"
+  ).length;
+
+  const highAlerts = alerts.filter((a) => a.severity === "High").length;
+
+  const openIncidents = incidents.filter(
+    (i) => i.status !== "Closed"
+  ).length;
+
+  const offlineAssets = dashboard?.offline_devices || 0;
+  const highRiskAssets = dashboard?.high_risk_devices || 0;
+
+  let threatLevel = "Normal";
+
+  if (criticalAlerts > 0 || openIncidents > 0) {
+    threatLevel = "Critical";
+  } else if (highAlerts > 0 || offlineAssets > 0 || highRiskAssets > 0) {
+    threatLevel = "Elevated";
+  }
+
   return (
     <BrowserRouter>
       <div className="app-shell">
@@ -157,7 +178,7 @@ function App() {
         </aside>
 
         <div className="app-content">
-          <Header />
+          <Header threatLevel={threatLevel} />
 
           <main className="railsoc-main">
             <Routes>
@@ -170,9 +191,24 @@ function App() {
                     incidents={incidents}
                     vulnerabilities={vulnerabilities}
                     devices={devices}
+                    threatLevel={threatLevel}
                   />
                 }
               />
+              <Route
+                path="/"
+                element={
+                  <Dashboard
+                    dashboard={dashboard}
+                    alerts={alerts}
+                    incidents={incidents}
+                    vulnerabilities={vulnerabilities}
+                    devices={devices}
+                    threatLevel={threatLevel}
+                  />
+                }
+              />
+
 
               <Route
                 path="/training"
@@ -184,20 +220,14 @@ function App() {
                 }
               />
 
-              <Route
-                path="/topology"
-                element={<Topology devices={devices} />}
-              />
+              <Route path="/topology" element={<Topology devices={devices} />} />
 
               <Route
                 path="/telemetry"
                 element={<Telemetry plantStatus={plantStatus} />}
               />
 
-              <Route
-                path="/alerts"
-                element={<Alerts alerts={alerts} />}
-              />
+              <Route path="/alerts" element={<Alerts alerts={alerts} />} />
 
               <Route
                 path="/incidents"
@@ -212,10 +242,7 @@ function App() {
                 }
               />
 
-              <Route
-                path="/assets"
-                element={<Assets devices={devices} />}
-              />
+              <Route path="/assets" element={<Assets devices={devices} />} />
 
               <Route
                 path="/vulnerabilities"

@@ -1,4 +1,4 @@
-function EnvironmentOverview({ dashboard, alerts, incidents, vulnerabilities }) {
+function EnvironmentOverview({ dashboard, alerts, incidents, vulnerabilities, threatLevel }) {
   if (!dashboard) return null;
 
   const activeAlerts = alerts?.length || 0;
@@ -9,16 +9,12 @@ function EnvironmentOverview({ dashboard, alerts, incidents, vulnerabilities }) 
   const offlineAssets = dashboard.offline_devices || 0;
   const highRiskAssets = dashboard.high_risk_devices || 0;
 
-  const threatLevel =
-    dashboard.critical_alerts > 0 || highRiskAssets > 0
-      ? "Elevated"
-      : activeAlerts > 0 || offlineAssets > 0
-      ? "Guarded"
-      : "Normal";
-
-  const platformStatus =
-    threatLevel === "Normal" ? "Operational" : "Attention Required";
-
+ const platformStatus =
+  threatLevel === "Normal"
+    ? "Operational"
+    : threatLevel === "Elevated"
+    ? "Elevated Monitoring"
+    : "Incident Response";
   return (
     <section className="environment-overview">
       <div className="overview-header">

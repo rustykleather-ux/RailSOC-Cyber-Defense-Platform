@@ -151,34 +151,53 @@ function App() {
       <Header />
 
       <main className="railsoc-main">
-        <EnvironmentOverview
-          dashboard={dashboard}
-          alerts={alerts}
-          incidents={incidents}
-          vulnerabilities={vulnerabilities}
-        />
+  <EnvironmentOverview
+    dashboard={dashboard}
+    alerts={alerts}
+    incidents={incidents}
+    vulnerabilities={vulnerabilities}
+  />
 
-        <DemoControls simulateAttack={simulateAttack} resetDemo={resetDemo} />
+  <DemoControls
+    simulateAttack={simulateAttack}
+    resetDemo={resetDemo}
+  />
 
-        <NetworkTopology devices={devices} />
+  <div className="dashboard-layout">
 
-        <LivePlantStatus plantStatus={plantStatus} />
+    {/* LEFT COLUMN */}
 
-        <IncidentCenter
-          incidents={incidents}
-          acknowledgeIncident={acknowledgeIncident}
-          assignIncident={assignIncident}
-          updateIncidentNotes={updateIncidentNotes}
-          closeIncident={closeIncident}
-        />
+    <div className="dashboard-primary">
 
-        <DeviceInventory devices={devices} />
+      <NetworkTopology devices={devices} />
 
-        <VulnerabilityTable vulnerabilities={vulnerabilities} />
+      <LivePlantStatus plantStatus={plantStatus} />
 
-        <AlertsPanel alerts={alerts} />
-      </main>
+    </div>
 
+    {/* RIGHT COLUMN */}
+
+    <div className="dashboard-secondary">
+
+      <AlertsPanel alerts={alerts} />
+
+      <IncidentCenter
+        incidents={incidents}
+        acknowledgeIncident={acknowledgeIncident}
+        assignIncident={assignIncident}
+        updateIncidentNotes={updateIncidentNotes}
+        closeIncident={closeIncident}
+      />
+
+    </div>
+
+  </div>
+
+  <DeviceInventory devices={devices} />
+
+  <VulnerabilityTable vulnerabilities={vulnerabilities} />
+
+</main>
       <footer className="app-footer">
         TrackSentinel v1.0 · Railroad OT Cyber Defense Platform · Portfolio Demonstration
       </footer>

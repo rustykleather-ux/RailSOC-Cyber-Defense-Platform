@@ -677,4 +677,27 @@ Portfolio Demonstration
 .overview-card.threat.guarded,
 .overview-card.threat.elevated {
   border-left-color: var(--warning);
+}/* ===========================
+   SOC Dashboard Layout
+=========================== */
+
+.dashboard-layout {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 24px;
+    margin-top: 20px;
+    align-items: start;
 }
+
+.dashboard-primary,
+.dashboard-secondary {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+@media (max-width: 1200px) {
+    .dashboard-layout {
+        grid-template-columns: 1fr;
+    }
+} 

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route, NavLink } from "react-router-dom";
 import "./App.css";
 
+import ExecutiveDashboard from "./pages/ExecutiveDashboard";
 import IncidentTimeline from "./pages/IncidentTimeline";
 import Header from "./components/Header";
 import ThreatIntel from "./pages/ThreatIntel";
@@ -175,6 +176,7 @@ function App() {
             <NavLink to="/incidents">📝 Incident Center</NavLink>
             <NavLink to="/assets">🚦 OT Assets</NavLink>
             <NavLink to="/vulnerabilities">⚠️ Vulnerabilities</NavLink>
+            <NavLink to="/executive">📊 Executive Dashboard</NavLink>
             <NavLink to="/reports">📈 Reports</NavLink>
             <NavLink to="/settings">⚙️ Settings</NavLink>
           </nav>
@@ -211,7 +213,18 @@ function App() {
                   />
                 }
               />
-
+              <Route
+                path="/executive"
+                element={
+                  <ExecutiveDashboard
+                    dashboard={dashboard}
+                    alerts={alerts}
+                    incidents={incidents}
+                    vulnerabilities={vulnerabilities}
+                    threatLevel={threatLevel}
+                  />
+                }
+              />
               <Route
                 path="/timeline"
                 element={<IncidentTimeline incidents={incidents} />}

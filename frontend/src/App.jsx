@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import "./App.css";
 
 import Header from "./components/Header";
+import EnvironmentOverview from "./components/EnviromentOverview";
 import DashboardCards from "./components/DashboardCards";
 import DemoControls from "./components/DemoControls";
 import NetworkTopology from "./components/NetworkTopology";
@@ -150,7 +151,12 @@ function App() {
       <Header />
 
       <main className="railsoc-main">
-        <DashboardCards dashboard={dashboard} />
+        <EnvironmentOverview
+          dashboard={dashboard}
+          alerts={alerts}
+          incidents={incidents}
+          vulnerabilities={vulnerabilities}
+        />
 
         <DemoControls simulateAttack={simulateAttack} resetDemo={resetDemo} />
 

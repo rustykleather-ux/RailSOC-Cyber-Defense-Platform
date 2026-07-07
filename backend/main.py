@@ -516,7 +516,7 @@ def reset_demo(db: Session = Depends(get_db)):
             device.last_seen = datetime.utcnow()
 
     db.query(Alert).delete()
-    db.query(Vulnerability).delete()
+    
 
     db.commit()
 

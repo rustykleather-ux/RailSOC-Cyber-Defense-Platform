@@ -15,7 +15,7 @@ function Dashboard({ dashboard, alerts, incidents, vulnerabilities, devices, thr
         threatLevel={threatLevel}
       />
 
-      <RailroadMap devices={devices} />
+      <RailroadMap devices={devices} incidents={incidents} />
 
       <div className="dashboard-summary-grid">
         <section className="summary-panel">

@@ -2,8 +2,9 @@ import { useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route, NavLink } from "react-router-dom";
 import "./App.css";
 
+import IncidentTimeline from "./pages/IncidentTimeline";
 import Header from "./components/Header";
-
+import ThreatIntel from "./pages/ThreatIntel";
 import Dashboard from "./pages/Dashboard";
 import Assets from "./pages/Assets";
 import Alerts from "./pages/Alerts";
@@ -169,6 +170,8 @@ function App() {
             <NavLink to="/topology">🛤 Railroad Topology</NavLink>
             <NavLink to="/telemetry">📡 Live Telemetry</NavLink>
             <NavLink to="/alerts">🚨 Security Alerts</NavLink>
+            <NavLink to="/threat-intel">🧠 Threat Intelligence</NavLink>
+            <NavLink to="/timeline">🧭 Incident Timeline</NavLink>
             <NavLink to="/incidents">📝 Incident Center</NavLink>
             <NavLink to="/assets">🚦 OT Assets</NavLink>
             <NavLink to="/vulnerabilities">⚠️ Vulnerabilities</NavLink>
@@ -209,7 +212,22 @@ function App() {
                 }
               />
 
-
+              <Route
+                path="/timeline"
+                element={<IncidentTimeline incidents={incidents} />}
+              />
+              <Route
+                path="/reports"
+                element={
+                  <Reports
+                    dashboard={dashboard}
+                    alerts={alerts}
+                    incidents={incidents}
+                    vulnerabilities={vulnerabilities}
+                    threatLevel={threatLevel}
+                  />
+                }
+              />
               <Route
                 path="/training"
                 element={
@@ -242,6 +260,17 @@ function App() {
                 }
               />
 
+              <Route
+                path="/threat-intel"
+                element={
+                  <ThreatIntel
+                    threatLevel={threatLevel}
+                    alerts={alerts}
+                    incidents={incidents}
+                    vulnerabilities={vulnerabilities}
+                  />
+                }
+              />
               <Route path="/assets" element={<Assets devices={devices} />} />
 
               <Route

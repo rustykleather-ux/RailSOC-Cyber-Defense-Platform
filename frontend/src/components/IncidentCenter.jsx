@@ -95,7 +95,7 @@ function IncidentCenter({
 
   return (
     <>
-      <h2>RailSOC Incident Center</h2>
+      <h2>TrackSintinel Incident Center</h2>
 
       <p className="simulation-subtitle">
         Manage simulated railroad OT security incidents, analyst assignments,

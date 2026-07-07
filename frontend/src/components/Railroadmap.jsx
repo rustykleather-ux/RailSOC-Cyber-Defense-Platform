@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-function RailroadMap({ devices }) {
+function RailroadMap({ devices, incidents }) {
   const [selectedAsset, setSelectedAsset] = useState(null);
 
   const getDevice = (name) =>
@@ -14,54 +14,105 @@ function RailroadMap({ devices }) {
 
     if (risk === "Critical") return "critical";
     if (risk === "High") return "warning";
-
     return "healthy";
   };
 
-  const assets = [
-    "Dispatch SCADA Server",
-    "Signal Controller 14A",
-    "Grade Crossing Controller MP 82.4",
-    "PTC Radio Gateway",
-    "Rail Engineering Workstation",
+  const mapAssets = [
+    
+    {
+      name: "Dispatch SCADA Server",
+      label: "Dispatch Center",
+      icon: "🖥️",
+      position: "dispatch",
+    },
+    {
+      name: "Signal Controller 14A",
+      label: "Signal 14A",
+      icon: "🚦",
+      position: "signal",
+    },
+    {
+      name: "Grade Crossing Controller MP 82.4",
+      label: "Crossing MP 82.4",
+      icon: "🚧",
+      position: "crossing",
+    },
+    {
+      name: "PTC Radio Gateway",
+      label: "PTC Radio Site",
+      icon: "📡",
+      position: "ptc",
+    },
+    {
+      name: "Rail Engineering Workstation",
+      label: "Maintenance Facility",
+      icon: "🛠️",
+      position: "maintenance",
+    },
   ];
 
   return (
-    <section className="rail-map">
+    <section className="rail-ops-map">
       <div className="rail-map-header">
-        <h2>Railroad Digital Twin</h2>
+        <h2>Interactive Railroad Operations Map</h2>
         <p>
-          Simulated railroad operational technology infrastructure with live
-          asset health. Click an asset to inspect details.
+          Simulated rail subdivision showing live OT asset health, cyber risk,
+          and operational status.
         </p>
       </div>
 
-      <div className="rail-line">
-        {assets.map((asset, index) => {
-          const device = getDevice(asset);
+      <div className="subdivision-map">
+        <div className="track-line main-track"></div>
+        <div className="track-tie tie-1"></div>
+        <div className="track-tie tie-2"></div>
+        <div className="track-tie tie-3"></div>
+        <div className="track-tie tie-4"></div>
+        <div className="track-tie tie-5"></div>
 
+        {mapAssets.map((asset) => {
+          const device = getDevice(asset.name);
+          const statusClass = getStatusClass(device);
+          const activeIncidentCount = (incidents || []).filter(
+            (incident) =>
+              incident.device === asset.name && incident.status !== "Closed"
+          ).length;
           return (
-            <div className="rail-stop" key={asset}>
-              <button
-                className={`rail-node ${getStatusClass(device)}`}
-                onClick={() => setSelectedAsset(device)}
-                type="button"
-              >
-                🚦
-              </button>
-
-              <div className="rail-name">{asset}</div>
-
-              {index < assets.length - 1 && <div className="rail-track"></div>}
-            </div>
+           
+            <button
+              key={asset.name}
+              className={`map-asset ${asset.position} ${statusClass}`}
+              onClick={() => setSelectedAsset(device)}
+              type="button"
+            >
+              <span className="map-asset-icon">{asset.icon}</span>
+              <span className="map-asset-label">{asset.label}</span>
+              <span className="map-asset-status"> {activeIncidentCount > 0 && (
+                <span className="map-incident-badge">
+                  {activeIncidentCount} incident{activeIncidentCount > 1 ? "s" : ""}
+                </span>
+              )}
+                {device?.status || "Unknown"}
+              </span>
+            </button>
           );
         })}
+      </div>
+
+      <div className="map-legend">
+        <span><i className="legend-dot healthy"></i> Healthy</span>
+        <span><i className="legend-dot warning"></i> Elevated Risk</span>
+        <span><i className="legend-dot critical"></i> Critical / Offline</span>
+        <span><i className="legend-dot unknown"></i> Unknown</span>
       </div>
 
       {selectedAsset && (
         <div className="rail-asset-panel">
           <div className="rail-asset-panel-header">
-            <h3>{selectedAsset.name}</h3>
+            <div>
+              <h3>{selectedAsset.name}</h3>
+              <p>{selectedAsset.device_type}</p>
+            </div>
+
             <button onClick={() => setSelectedAsset(null)}>×</button>
           </div>
 

@@ -48,7 +48,9 @@ function ExecutiveDashboard({
             Leadership-level summary of TrackSentinel railroad OT security posture.
           </p>
         </div>
-
+              <button className="export-button" onClick={() => window.print()}>
+                  Export PDF
+              </button>
         <span className={`threat-pill ${threatLevel.toLowerCase()}`}>
           {threatLevel}
         </span>

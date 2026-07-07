@@ -1734,3 +1734,54 @@ html {
     grid-template-columns: 1fr;
   }
 }
+.executive-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.export-button {
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 999px;
+  padding: 10px 16px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.export-button:hover {
+  background: #1d4ed8;
+}
+
+@media print {
+  .sidebar,
+  .header,
+  .app-footer,
+  .export-button {
+    display: none !important;
+  }
+
+  .app-shell {
+    display: block;
+  }
+
+  .railsoc-main {
+    padding: 0;
+  }
+
+  body {
+    background: white;
+    color: black;
+  }
+
+  .executive-page,
+  .executive-header,
+  .score-card,
+  .kpi-card,
+  .executive-panel {
+    background: white !important;
+    color: black !important;
+    box-shadow: none !important;
+  }
+}

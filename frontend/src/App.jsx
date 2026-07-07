@@ -1,20 +1,19 @@
 import { useEffect, useState } from "react";
+import { BrowserRouter, Routes, Route, NavLink } from "react-router-dom";
 import "./App.css";
 
-
 import Header from "./components/Header";
-import EnvironmentOverview from "./components/EnviromentOverview";
-import RailroadMap from "./components/Railroadmap";
-import DashboardCards from "./components/DashboardCards";
-import DemoControls from "./components/DemoControls";
-import NetworkTopology from "./components/NetworkTopology";
-import LivePlantStatus from "./components/LivePlantStatus";
-import DeviceInventory from "./components/DeviceInventory";
-import VulnerabilityTable from "./components/VulnerabilityTable";
-import Roadmap from "./components/Roadmap";
-import AlertsPanel from "./components/AlertsPanel";
-import IncidentCenter from "./components/IncidentCenter";
 
+import Dashboard from "./pages/Dashboard";
+import Assets from "./pages/Assets";
+import Alerts from "./pages/Alerts";
+import Incidents from "./pages/Incidents";
+import Topology from "./pages/Topology";
+import Telemetry from "./pages/Telemetry";
+import Training from "./pages/Training";
+import Reports from "./pages/Reports";
+import Settings from "./pages/Settings";
+import Vulnerabilities from "./pages/Vulnerabilities";
 
 import {
   getIncidents,
@@ -89,10 +88,7 @@ function App() {
   }, []);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      loadPlantStatus();
-    }, 3000);
-
+    const interval = setInterval(loadPlantStatus, 3000);
     return () => clearInterval(interval);
   }, []);
 
@@ -115,144 +111,130 @@ function App() {
   };
 
   const acknowledgeIncident = async (incidentId) => {
-    try {
-      await acknowledgeIncidentRequest(incidentId);
-      await loadData();
-    } catch (err) {
-      console.error("TrackSentinel Acknowledge Error:", err);
-    }
+    await acknowledgeIncidentRequest(incidentId);
+    await loadData();
   };
 
   const assignIncident = async (incidentId, assignedTo) => {
-    try {
-      await assignIncidentRequest(incidentId, assignedTo);
-      await loadData();
-    } catch (err) {
-      console.error("TrackSentinel Assign Incident Error:", err);
-    }
+    await assignIncidentRequest(incidentId, assignedTo);
+    await loadData();
   };
 
   const updateIncidentNotes = async (incidentId, notes) => {
-    try {
-      await updateIncidentNotesRequest(incidentId, notes);
-      await loadData();
-    } catch (err) {
-      console.error("TrackSentinel Update Notes Error:", err);
-    }
+    await updateIncidentNotesRequest(incidentId, notes);
+    await loadData();
   };
 
   const closeIncident = async (incidentId, closedBy) => {
-    try {
-      await closeIncidentRequest(incidentId, closedBy);
-      await loadData();
-    } catch (err) {
-      console.error("TrackSentinel Close Incident Error:", err);
-    }
+    await closeIncidentRequest(incidentId, closedBy);
+    await loadData();
   };
 
   return (
-  <div className="app-shell">
-    <aside className="sidebar">
-      <div className="sidebar-brand">
-        <img src="/logo.png" alt="TrackSentinel" />
-        <div>
-          <strong>TrackSentinel</strong>
-          <span>RailSOC Platform</span>
+    <BrowserRouter>
+      <div className="app-shell">
+        <aside className="sidebar">
+          <div className="sidebar-brand">
+            <img src="/logo.png" alt="TrackSentinel" />
+            <div>
+              <strong>TrackSentinel</strong>
+              <span>RailSOC Platform</span>
+            </div>
+          </div>
+
+          <nav className="sidebar-nav">
+            <NavLink to="/">📊 Dashboard</NavLink>
+            <NavLink to="/training">🎯 Training Exercises</NavLink>
+            <NavLink to="/topology">🛤 Railroad Topology</NavLink>
+            <NavLink to="/telemetry">📡 Live Telemetry</NavLink>
+            <NavLink to="/alerts">🚨 Security Alerts</NavLink>
+            <NavLink to="/incidents">📝 Incident Center</NavLink>
+            <NavLink to="/assets">🚦 OT Assets</NavLink>
+            <NavLink to="/vulnerabilities">⚠️ Vulnerabilities</NavLink>
+            <NavLink to="/reports">📈 Reports</NavLink>
+            <NavLink to="/settings">⚙️ Settings</NavLink>
+          </nav>
+        </aside>
+
+        <div className="app-content">
+          <Header />
+
+          <main className="railsoc-main">
+            <Routes>
+              <Route
+                path="/"
+                element={
+                  <Dashboard
+                    dashboard={dashboard}
+                    alerts={alerts}
+                    incidents={incidents}
+                    vulnerabilities={vulnerabilities}
+                    devices={devices}
+                  />
+                }
+              />
+
+              <Route
+                path="/training"
+                element={
+                  <Training
+                    simulateAttack={simulateAttack}
+                    resetDemo={resetDemo}
+                  />
+                }
+              />
+
+              <Route
+                path="/topology"
+                element={<Topology devices={devices} />}
+              />
+
+              <Route
+                path="/telemetry"
+                element={<Telemetry plantStatus={plantStatus} />}
+              />
+
+              <Route
+                path="/alerts"
+                element={<Alerts alerts={alerts} />}
+              />
+
+              <Route
+                path="/incidents"
+                element={
+                  <Incidents
+                    incidents={incidents}
+                    acknowledgeIncident={acknowledgeIncident}
+                    assignIncident={assignIncident}
+                    updateIncidentNotes={updateIncidentNotes}
+                    closeIncident={closeIncident}
+                  />
+                }
+              />
+
+              <Route
+                path="/assets"
+                element={<Assets devices={devices} />}
+              />
+
+              <Route
+                path="/vulnerabilities"
+                element={<Vulnerabilities vulnerabilities={vulnerabilities} />}
+              />
+
+              <Route path="/reports" element={<Reports />} />
+
+              <Route path="/settings" element={<Settings />} />
+            </Routes>
+
+            <footer className="app-footer">
+              TrackSentinel v1.0 · Railroad OT Cyber Defense Platform · Portfolio Demonstration
+            </footer>
+          </main>
         </div>
       </div>
-
-        <nav className="sidebar-nav">
-          <a className="active" href="#overview">📊 Dashboard</a>
-          <a href="#training">🎯 Training Exercises</a>
-          <a href="#topology">🛤 Railroad Topology</a>
-          <a href="#telemetry">📡 Live Telemetry</a>
-          <a href="#alerts">🚨 Security Alerts</a>
-          <a href="#incidents">📝 Incident Center</a>
-          <a href="#assets">🚦 OT Assets</a>
-          <a href="#vulnerabilities">⚠️ Vulnerabilities</a>
-          <a href="#reports">📈 Reports</a>
-          <a href="#settings">⚙️ Settings</a>
-        </nav>
-    </aside>
-
-    <div className="app-content">
-      <Header />
-
-      <main className="railsoc-main">
-        <div id="overview">
-          <EnvironmentOverview
-            dashboard={dashboard}
-            alerts={alerts}
-            incidents={incidents}
-            vulnerabilities={vulnerabilities}
-          />
-        </div>
-          <RailroadMap devices={devices} />
-
-          <DemoControls
-            simulateAttack={simulateAttack}
-            resetDemo={resetDemo}
-          />
-
-        <div id="training">
-          <DemoControls
-            simulateAttack={simulateAttack}
-            resetDemo={resetDemo}
-          />
-        </div>
-
-        <div className="dashboard-layout">
-          <div className="dashboard-primary">
-            <div id="topology">
-              <NetworkTopology devices={devices} />
-            </div>
-
-            <div id="telemetry">
-              <LivePlantStatus plantStatus={plantStatus} />
-            </div>
-          </div>
-
-          <div className="dashboard-secondary">
-            <div id="alerts">
-              <AlertsPanel alerts={alerts} />
-            </div>
-
-            <div id="incidents">
-              <IncidentCenter
-                incidents={incidents}
-                acknowledgeIncident={acknowledgeIncident}
-                assignIncident={assignIncident}
-                updateIncidentNotes={updateIncidentNotes}
-                closeIncident={closeIncident}
-              />
-            </div>
-          </div>
-        </div>
-
-        <div id="assets">
-          <DeviceInventory devices={devices} />
-        </div>
-
-        <div id="vulnerabilities">
-          <VulnerabilityTable vulnerabilities={vulnerabilities} />
-        </div>
-
-          <div id="reports">
-            <Roadmap />
-          </div>
-
-          <div id="settings" className="coming-soon-card">
-            <h2>Settings</h2>
-            <p>Role-based access, user preferences, and platform configuration are planned for a future TrackSentinel release.</p>
-          </div>
-
-        <footer className="app-footer">
-          TrackSentinel v1.0 · Railroad OT Cyber Defense Platform · Portfolio Demonstration
-        </footer>
-      </main>
-    </div>
-  </div>
-);
+    </BrowserRouter>
+  );
 }
 
 export default App;

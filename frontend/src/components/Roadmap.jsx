@@ -23,7 +23,7 @@ function Roadmap() {
   ];
 
   return (
-    <section className="roadmap-section" id="reports">
+    <section className="roadmap-section">
       <div className="roadmap-card">
         <h2>Platform Roadmap</h2>
         <p>
@@ -34,7 +34,6 @@ function Roadmap() {
         <div className="roadmap-grid">
           <div>
             <h3>✅ Current Capabilities</h3>
-
             <ul>
               {completed.map((item) => (
                 <li key={item}>{item}</li>
@@ -42,9 +41,8 @@ function Roadmap() {
             </ul>
           </div>
 
-          <div id="settings">
+          <div>
             <h3>🚀 Planned Enhancements</h3>
-
             <ul>
               {planned.map((item) => (
                 <li key={item}>{item}</li>

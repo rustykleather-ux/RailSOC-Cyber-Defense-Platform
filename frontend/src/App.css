@@ -921,3 +921,8 @@ html {
   font-size: 13px;
   color: var(--text);
 }
+.sidebar-nav a.active {
+  color: var(--text-h);
+  background: rgba(37, 99, 235, 0.18);
+  border-color: var(--accent-border);
+}

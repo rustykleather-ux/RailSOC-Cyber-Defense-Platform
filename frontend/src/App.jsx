@@ -147,62 +147,93 @@ function App() {
   };
 
   return (
-    <div className="app">
+  <div className="app-shell">
+    <aside className="sidebar">
+      <div className="sidebar-brand">
+        <img src="/logo.png" alt="TrackSentinel" />
+        <div>
+          <strong>TrackSentinel</strong>
+          <span>RailSOC Platform</span>
+        </div>
+      </div>
+
+      <nav className="sidebar-nav">
+        <a className="active" href="#overview">Dashboard</a>
+        <a href="#topology">Railroad Topology</a>
+        <a href="#telemetry">Live Telemetry</a>
+        <a href="#alerts">Security Alerts</a>
+        <a href="#incidents">Incident Center</a>
+        <a href="#assets">OT Assets</a>
+        <a href="#vulnerabilities">Vulnerabilities</a>
+        <a href="#training">Training Exercises</a>
+        <a href="#reports">Reports</a>
+        <a href="#settings">Settings</a>
+      </nav>
+    </aside>
+
+    <div className="app-content">
       <Header />
 
       <main className="railsoc-main">
-  <EnvironmentOverview
-    dashboard={dashboard}
-    alerts={alerts}
-    incidents={incidents}
-    vulnerabilities={vulnerabilities}
-  />
+        <div id="overview">
+          <EnvironmentOverview
+            dashboard={dashboard}
+            alerts={alerts}
+            incidents={incidents}
+            vulnerabilities={vulnerabilities}
+          />
+        </div>
 
-  <DemoControls
-    simulateAttack={simulateAttack}
-    resetDemo={resetDemo}
-  />
+        <div id="training">
+          <DemoControls
+            simulateAttack={simulateAttack}
+            resetDemo={resetDemo}
+          />
+        </div>
 
-  <div className="dashboard-layout">
+        <div className="dashboard-layout">
+          <div className="dashboard-primary">
+            <div id="topology">
+              <NetworkTopology devices={devices} />
+            </div>
 
-    {/* LEFT COLUMN */}
+            <div id="telemetry">
+              <LivePlantStatus plantStatus={plantStatus} />
+            </div>
+          </div>
 
-    <div className="dashboard-primary">
+          <div className="dashboard-secondary">
+            <div id="alerts">
+              <AlertsPanel alerts={alerts} />
+            </div>
 
-      <NetworkTopology devices={devices} />
+            <div id="incidents">
+              <IncidentCenter
+                incidents={incidents}
+                acknowledgeIncident={acknowledgeIncident}
+                assignIncident={assignIncident}
+                updateIncidentNotes={updateIncidentNotes}
+                closeIncident={closeIncident}
+              />
+            </div>
+          </div>
+        </div>
 
-      <LivePlantStatus plantStatus={plantStatus} />
+        <div id="assets">
+          <DeviceInventory devices={devices} />
+        </div>
 
+        <div id="vulnerabilities">
+          <VulnerabilityTable vulnerabilities={vulnerabilities} />
+        </div>
+
+        <footer className="app-footer">
+          TrackSentinel v1.0 · Railroad OT Cyber Defense Platform · Portfolio Demonstration
+        </footer>
+      </main>
     </div>
-
-    {/* RIGHT COLUMN */}
-
-    <div className="dashboard-secondary">
-
-      <AlertsPanel alerts={alerts} />
-
-      <IncidentCenter
-        incidents={incidents}
-        acknowledgeIncident={acknowledgeIncident}
-        assignIncident={assignIncident}
-        updateIncidentNotes={updateIncidentNotes}
-        closeIncident={closeIncident}
-      />
-
-    </div>
-
   </div>
-
-  <DeviceInventory devices={devices} />
-
-  <VulnerabilityTable vulnerabilities={vulnerabilities} />
-
-</main>
-      <footer className="app-footer">
-        TrackSentinel v1.0 · Railroad OT Cyber Defense Platform · Portfolio Demonstration
-      </footer>
-    </div>
-  );
+);
 }
 
 export default App;

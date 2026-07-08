@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route, NavLink } from "react-router-dom";
 import "./App.css";
 
+import InvestigationWorkspace from "./pages/InvestigationWorkspace";
 import ExecutiveDashboard from "./pages/ExecutiveDashboard";
 import IncidentTimeline from "./pages/IncidentTimeline";
 import Header from "./components/Header";
@@ -174,6 +175,7 @@ function App() {
             <NavLink to="/threat-intel">🧠 Threat Intelligence</NavLink>
             <NavLink to="/timeline">🧭 Incident Timeline</NavLink>
             <NavLink to="/incidents">📝 Incident Center</NavLink>
+            <NavLink to="/investigation">🔍 Investigation</NavLink>
             <NavLink to="/assets">🚦 OT Assets</NavLink>
             <NavLink to="/vulnerabilities">⚠️ Vulnerabilities</NavLink>
             <NavLink to="/executive">📊 Executive Dashboard</NavLink>
@@ -250,7 +252,14 @@ function App() {
                   />
                 }
               />
-
+              <Route
+                path="/investigation"
+                element={
+                  <InvestigationWorkspace
+                    incidents={incidents}
+                  />
+                }
+              />
               <Route path="/topology" element={<Topology devices={devices} />} />
 
               <Route

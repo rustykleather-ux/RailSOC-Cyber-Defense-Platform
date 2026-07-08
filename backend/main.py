@@ -175,116 +175,96 @@ def dashboard(db: Session = Depends(get_db)):
 def simulate_attack(attack_type: str, db: Session = Depends(get_db)):
     attack_type = attack_type.lower()
 
-    if attack_type == "inverter-offline":
-        device = db.query(OTDevice).filter(
-            OTDevice.name == "PTC Radio Gateway"
-        ).first()
+    scenarios = {
+        "firmware": {
+            "device": "Grade Crossing Controller MP 82.4",
+            "status": "Online",
+            "risk": "Critical",
+            "severity": "Critical",
+            "alert_type": "Unauthorized Logic Modification",
+            "message": "Simulated rail OT event: Unauthorized logic or firmware modification detected on grade crossing controller MP 82.4.",
+            "firmware": "UNKNOWN",
+        },
+        "recon": {
+            "device": "Dispatch SCADA Server",
+            "status": "Online",
+            "risk": "High",
+            "severity": "High",
+            "alert_type": "OT Network Reconnaissance",
+            "message": "Simulated rail OT event: Network reconnaissance detected against the dispatch SCADA environment.",
+        },
+        "dos": {
+            "device": "Dispatch SCADA Server",
+            "status": "Degraded",
+            "risk": "Critical",
+            "severity": "Critical",
+            "alert_type": "Rail OT Denial of Service",
+            "message": "Simulated rail OT event: Denial of service condition causing degraded dispatch SCADA communications.",
+        },
+        "auth": {
+            "device": "Rail Engineering Workstation",
+            "status": "Online",
+            "risk": "High",
+            "severity": "High",
+            "alert_type": "Unauthorized Engineering Login",
+            "message": "Simulated rail OT event: Repeated authentication attempts detected against rail engineering workstation.",
+        },
+        "ptc": {
+            "device": "PTC Radio Gateway",
+            "status": "Offline",
+            "risk": "High",
+            "severity": "High",
+            "alert_type": "PTC Radio Failure",
+            "message": "Simulated rail OT event: PTC radio gateway communication loss detected from the wayside communications hut.",
+        },
+        "malware": {
+            "device": "Rail Engineering Workstation",
+            "status": "Degraded",
+            "risk": "Critical",
+            "severity": "Critical",
+            "alert_type": "Engineering Workstation Malware",
+            "message": "Simulated rail OT event: Malware-like behavior detected on rail engineering workstation.",
+        },
+    }
 
-        if not device:
-            return {"error": "PTC Radio Gateway not found"}
+    scenario = scenarios.get(attack_type)
 
-        device.status = "Offline"
-        device.risk_level = "High"
-        device.last_seen = datetime.utcnow()
+    if not scenario:
+        return {
+            "error": "Unknown attack type",
+            "valid_attack_types": list(scenarios.keys())
+        }
 
-        alert = Alert(
-            device_id=device.id,
-            severity="High",
-            alert_type="PTC Radio Failure",
-            message="Simulated rail OT event: PTC radio gateway communication loss detected from the wayside communications hut.",
-            status="Open",
-            acknowledged=False
-        )
+    device = db.query(OTDevice).filter(
+        OTDevice.name == scenario["device"]
+    ).first()
 
-        db.add(alert)
-        db.commit()
+    if not device:
+        return {"error": f"{scenario['device']} not found"}
 
-        return {"message": "Simulated PTC radio gateway communication loss created."}
+    device.status = scenario["status"]
+    device.risk_level = scenario["risk"]
+    device.last_seen = datetime.utcnow()
 
-    if attack_type == "plc-firmware":
-        device = db.query(OTDevice).filter(
-            OTDevice.name == "Grade Crossing Controller MP 82.4"
-        ).first()
+    if "firmware" in scenario:
+        device.firmware_version = scenario["firmware"]
 
-        if not device:
-            return {"error": "Grade Crossing Controller MP 82.4 not found"}
+    alert = Alert(
+        device_id=device.id,
+        severity=scenario["severity"],
+        alert_type=scenario["alert_type"],
+        message=scenario["message"],
+        status="Open",
+        acknowledged=False
+    )
 
-        device.firmware_version = "UNKNOWN"
-        device.risk_level = "Critical"
-        device.last_seen = datetime.utcnow()
-
-        alert = Alert(
-            device_id=device.id,
-            severity="Critical",
-            alert_type="Unauthorized Logic Modification",
-            message="Simulated rail OT event: Unauthorized logic or firmware modification detected on grade crossing controller MP 82.4.",
-            status="Open",
-            acknowledged=False
-        )
-
-        db.add(alert)
-        db.commit()
-
-        return {"message": "Simulated unauthorized grade crossing logic modification created."}
-
-    if attack_type == "failed-logins":
-        device = db.query(OTDevice).filter(
-            OTDevice.name == "Rail Engineering Workstation"
-        ).first()
-
-        if not device:
-            return {"error": "Rail Engineering Workstation not found"}
-
-        device.risk_level = "Medium"
-        device.last_seen = datetime.utcnow()
-
-        alert = Alert(
-            device_id=device.id,
-            severity="Medium",
-            alert_type="Unauthorized Engineering Login",
-            message="Simulated rail OT event: Multiple failed authentication attempts detected against the rail engineering workstation.",
-            status="Open",
-            acknowledged=False
-        )
-
-        db.add(alert)
-        db.commit()
-
-        return {"message": "Simulated unauthorized engineering login event created."}
-
-    if attack_type == "network-scan":
-        device = db.query(OTDevice).filter(
-            OTDevice.name == "Dispatch SCADA Server"
-        ).first()
-
-        if not device:
-            return {"error": "Dispatch SCADA Server not found"}
-
-        device.risk_level = "High"
-        device.last_seen = datetime.utcnow()
-
-        alert = Alert(
-            device_id=device.id,
-            severity="High",
-            alert_type="OT Network Reconnaissance",
-            message="Simulated rail OT event: Network reconnaissance detected against the dispatch SCADA environment.",
-            status="Open",
-            acknowledged=False
-        )
-
-        db.add(alert)
-        db.commit()
-
-        return {"message": "Simulated OT network reconnaissance created."}
+    db.add(alert)
+    db.commit()
 
     return {
-        "error": "Unknown attack type",
-        "valid_attack_types": [
-            "inverter-offline",
-            "plc-firmware",
-            "failed-logins",
-            "network-scan"
-        ]
+        "message": f"{scenario['alert_type']} simulation created.",
+        "device": device.name,
+        "severity": scenario["severity"]
     }
 @app.get("/plant-status")
 def plant_status(db: Session = Depends(get_db)):

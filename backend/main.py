@@ -310,33 +310,37 @@ def plant_status(db: Session = Depends(get_db)):
 
         elif device.device_type == "Dispatch SCADA":
             scan_detected = "OT Network Reconnaissance" in alert_types
+            dos_attack = "Rail OT Denial of Service" in alert_types
 
             status_data.append({
                 "device": device.name,
                 "type": device.device_type,
                 "status": device.status,
-                "cpu_usage": random.randint(70, 95) if scan_detected else random.randint(20, 65),
-                "memory_usage": random.randint(65, 90) if scan_detected else random.randint(35, 80),
-                "active_sessions": random.randint(8, 20) if scan_detected else random.randint(1, 8),
-                "network_latency": random.randint(25, 90) if scan_detected else random.randint(1, 10),
-                "condition": "Reconnaissance Detected" if scan_detected else "Normal",
+                "cpu_usage": random.randint(85, 99) if dos_attack else random.randint(70, 95) if scan_detected else random.randint(20, 65),
+                "memory_usage": random.randint(80, 96) if dos_attack else random.randint(65, 90) if scan_detected else random.randint(35, 80),
+                "active_sessions": random.randint(12, 30) if dos_attack or scan_detected else random.randint(1, 8),
+                "network_latency": random.randint(500, 999) if dos_attack else random.randint(25, 90) if scan_detected else random.randint(1, 10),
+                "condition": "Denial of Service" if dos_attack else "Reconnaissance Detected" if scan_detected else "Normal",
                 "timestamp": datetime.utcnow().isoformat()
             })
 
         elif device.device_type == "Engineering Workstation":
             auth_attack = "Unauthorized Engineering Login" in alert_types
+            malware_attack = "Engineering Workstation Malware" in alert_types
 
             status_data.append({
                 "device": device.name,
                 "type": device.device_type,
                 "status": device.status,
-                "cpu_usage": random.randint(50, 90) if auth_attack else random.randint(10, 90),
-                "memory_usage": random.randint(50, 90) if auth_attack else random.randint(30, 90),
+                "cpu_usage": random.randint(85, 99) if malware_attack else random.randint(50, 90) if auth_attack else random.randint(10, 90),
+                "memory_usage": random.randint(80, 98) if malware_attack else random.randint(50, 90) if auth_attack else random.randint(30, 90),
                 "failed_logins": random.randint(8, 25) if auth_attack else random.randint(0, 5),
-                "network_latency": random.randint(10, 40) if auth_attack else random.randint(1, 25),
-                "condition": "Authentication Attack" if auth_attack else "Normal",
+                "network_latency": random.randint(40, 120) if malware_attack else random.randint(10, 40) if auth_attack else random.randint(1, 25),
+                "condition": "Malware Activity" if malware_attack else "Authentication Attack" if auth_attack else "Normal",
                 "timestamp": datetime.utcnow().isoformat()
             })
+
+    return status_data
 
     return status_data
 

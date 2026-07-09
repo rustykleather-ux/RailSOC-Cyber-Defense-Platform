@@ -276,7 +276,7 @@ npm run dev
 http://localhost:5173
 
 ---
-##Example Simulation Workflow
+## Example Simulation Workflow
 
 1. Open TrackSentinel.
 2. to Training Exercises.

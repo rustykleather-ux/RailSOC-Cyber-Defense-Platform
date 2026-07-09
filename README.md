@@ -309,13 +309,71 @@ Examples used in the platform:
 ---
 ## Screenshots
 
-![Executive Dashboard](screenshots/executive-dashboard.png)
-![RailSOC Dashboard](screenshots/dashboard.png)
-![Live Telemetry](screenshots/live-telemetry.png)
-![Incident Center](screenshots/incident-center.png)
-![Investigation Workspace](screenshots/investigation-workspace.png)
-![Purple Team Library](screenshots/purple-team-library.png)
+### Executive Security Dashboard
 
+<p align="center">
+  <img src="screenshots/executive-dashboard.png" width="900" alt="Executive Security Dashboard">
+</p>
+
+### RailSOC Dashboard
+
+<p align="center">
+  <img src="screenshots/dashboard.png" width="900" alt="TrackSentinel Dashboard">
+</p>
+
+### Interactive Railroad Operations Map
+
+<p align="center">
+  <img src="screenshots/operations-map.png" width="900" alt="Interactive Railroad Operations Map">
+</p>
+
+### Live Telemetry
+
+<p align="center">
+  <img src="screenshots/live-telemetry.png" width="900" alt="Live Telemetry">
+</p>
+
+### Railroad Network Topology
+
+<p align="center">
+  <img src="screenshots/topology.png" width="900" alt="Railroad Network Topology">
+</p>
+
+### Incident Center
+
+<p align="center">
+  <img src="screenshots/incident-center.png" width="900" alt="Incident Center">
+</p>
+
+### Investigation Workspace
+
+<p align="center">
+  <img src="screenshots/investigation-workspace.png" width="900" alt="Investigation Workspace">
+</p>
+
+### Threat Intelligence Center
+
+<p align="center">
+  <img src="screenshots/threat-intelligence.png" width="900" alt="Threat Intelligence Center">
+</p>
+
+### Vulnerability Management
+
+<p align="center">
+  <img src="screenshots/vulnerability-management.png" width="900" alt="Vulnerability Management">
+</p>
+
+### Purple Team Attack Library
+
+<p align="center">
+  <img src="screenshots/purple-team-library.png" width="900" alt="Purple Team Attack Library">
+</p>
+
+### Executive Reports
+
+<p align="center">
+  <img src="screenshots/reports.png" width="900" alt="Executive Reports">
+</p>
 ---
 ## Roadmap
 TrackSentinel v1.0

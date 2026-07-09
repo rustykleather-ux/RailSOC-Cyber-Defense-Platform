@@ -2,6 +2,7 @@
   <img src="https://raw.githubusercontent.com/rustykleather-ux/RailSOC-Cyber-Defense-Platform/main/frontend/src/assets/TrackSintinel-Banner.png" alt="TrackSentinel Banner" width="100%">
 </p>
 # 🚂 TrackSentinel
+
 ![Python](https://img.shields.io/badge/Python-3.12-blue?logo=python)
 ![FastAPI](https://img.shields.io/badge/FastAPI-Backend-009688?logo=fastapi)
 ![React](https://img.shields.io/badge/React-Frontend-61DAFB?logo=react)

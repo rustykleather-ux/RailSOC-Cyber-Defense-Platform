@@ -360,7 +360,7 @@ Telemetry automatically changes during simulated attack scenarios to reflect the
 
 > Executive-level cybersecurity posture and operational risk overview.
 
-Screenshots\executive-dashboard.png.jpg
+RailSoc-Cyber-Defense-Platform/main/Screenshots/executive-dashboard.jpg
 
 ```text
 screenshots/executive-dashboard.png

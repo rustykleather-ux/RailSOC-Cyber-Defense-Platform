@@ -235,7 +235,7 @@ TrackSentinel/
 │
 └── README.md
 ```
-
+---
 
 #Installation
 
@@ -255,12 +255,15 @@ pip install fastapi uvicorn sqlalchemy
 python seed.py
 uvicorn main:app --reload
 ```
+---
+
 ##Backend will runn at:
 http://127.0.0.1:8000
 
 ##Test Telemetry
 Invoke-RestMethod http://127.0.0.1:8000/plant-status
 
+---
 ##Frontend Setup
 Open Second Terminal
 ```bash
@@ -272,6 +275,7 @@ npm run dev
 ##Frontend will run at:
 http://localhost:5173
 
+---
 ##Example Simulation Workflow
 
 1. Open TrackSentinel.
@@ -288,6 +292,7 @@ http://localhost:5173
 6. Acknowledge, assign, document, and close the incident.
 7. Restore the operational baseline.
 
+---
 ##Simulated MITRE ATT&CK for ICS Techniques
 
 Examples used in the platform:
@@ -301,6 +306,7 @@ Examples used in the platform:
 | Denial of Service Simulation      | T0814 - Denial of Service         |
 | Malware-like Engineering Activity | T0809 - Data Destruction          |
 
+---
 ##Screenshots
 
 ![Executive Dashboard](screenshots/executive-dashboard.png)
@@ -310,6 +316,7 @@ Examples used in the platform:
 ![Investigation Workspace](screenshots/investigation-workspace.png)
 ![Purple Team Library](screenshots/purple-team-library.png)
 
+---
 ##Roadmap
 TrackSentinel v1.0
 Railroad OT asset inventory
@@ -339,6 +346,7 @@ Docker Compose deployment
 AI-assisted incident summaries
 PDF incident report generation
 
+---
 ##Safety Notice
 
 TrackSentinel is a simulated cybersecurity training and portfolio project.
@@ -347,6 +355,7 @@ It does not perform real exploitation, packet flooding, denial of service activi
 or unauthorized access. All attacks, telemetry, indicators, alerts, and incidents 
 are simulated for educational and demonstration purposes only.
 
+---
 ##Author
 Created by Rusty Folsom as a railroad OT cybersecurity portfolio project.
 

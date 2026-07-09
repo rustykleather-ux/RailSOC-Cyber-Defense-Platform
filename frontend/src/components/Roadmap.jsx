@@ -9,17 +9,21 @@ function Roadmap() {
     "Attack Simulation Engine",
     "Vulnerability Management",
     "MITRE ATT&CK for ICS Mapping",
-  ];
-
-  const planned = [
     "Executive Reporting Dashboard",
     "Interactive Railroad Map",
     "Digital Twin Visualization",
     "Threat Intelligence Feed",
     "Purple Team Exercise Library",
+  ];
+
+  const planned = [
+    
     "Role-Based Access Control",
     "Asset Configuration History",
     "Syslog / SIEM Integration",
+    "Audit Loging",
+    "Settings",
+    "AI Security Assistant"
   ];
 
   return (

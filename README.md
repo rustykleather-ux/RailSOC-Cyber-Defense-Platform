@@ -1,428 +1,1647 @@
-# TrackSentinel  
-## RailSOC Training & Simulation Platform
+<p align="center">
 
-TrackSentinel is a railroad-focused Operational Technology cybersecurity simulation platform built to demonstrate SOC monitoring, incident response, threat intelligence, executive reporting, and purple team training workflows in a simulated rail OT environment.
+# 🚂 TrackSentinel
 
-This project is designed as a cybersecurity portfolio platform showing how IT, OT, safety systems, communications, and railroad operations can be monitored from a unified security operations view.
+### RailSOC Training & Simulation Platform
 
----
+### Operational Technology Cybersecurity • Railroad Infrastructure • Industrial Control Systems
 
-## Purpose
+</p>
 
-TrackSentinel simulates a railroad OT cyber defense environment where analysts can:
+<p align="center">
 
-- Monitor railroad OT assets
-- View live operational telemetry
-- Launch safe purple team simulations
-- Investigate alerts and incidents
-- Track vulnerabilities
-- Review MITRE ATT&CK for ICS mappings
-- View executive security posture
-- Generate leadership-style security reports
+A full-stack Operational Technology (OT) cybersecurity platform simulating a modern Railroad Security Operations Center (RailSOC) used for monitoring, detection, investigation, incident response, executive reporting, and purple team exercises across railroad operational technology environments.
 
-No real attacks or network traffic are generated. All scenarios are simulated for training and demonstration purposes.
+</p>
 
 ---
 
-## Key Features
+<p align="center">
 
-### Executive Security Operations Dashboard
+![Python](https://img.shields.io/badge/Python-3.12-blue?logo=python)
 
-- Dynamic security score
-- Current threat level
-- Open incident counts
-- Critical alert counts
-- Protected asset percentage
-- Simulated MTTD and MTTR
-- Compliance posture indicators
-- Executive recommendations
-- Print/export-ready dashboard
+![FastAPI](https://img.shields.io/badge/FastAPI-Backend-009688?logo=fastapi)
 
-### RailSOC Dashboard
+![React](https://img.shields.io/badge/React-Frontend-61DAFB?logo=react)
 
-- Environment overview
-- Interactive railroad operations map
-- Recent incidents
-- Top active alerts
-- Dynamic threat posture
+![Vite](https://img.shields.io/badge/Vite-Build-646CFF?logo=vite)
 
-### Railroad OT Asset Inventory
+![SQLite](https://img.shields.io/badge/SQLite-Database-003B57?logo=sqlite)
 
-Includes simulated assets such as:
+![MITRE ATT&CK ICS](https://img.shields.io/badge/MITRE-ATT%26CK%20ICS-red)
 
-- Dispatch SCADA Server
-- Operations Historian
-- OT Jump Server
-- Signal Controllers
-- Grade Crossing Controllers
-- PTC Radio Gateway
-- Microwave Radio
-- Fiber Distribution Switch
-- UPS System
-- Backup Generator PLC
-- Fire Detection Panel
-- Hydrogen Gas Detector
-- Flood Detection Sensor
-- Cabinet Intrusion Sensor
-- Bridge Structural Monitor
-- Hot Bearing Detector
-- Rail Engineering Workstation
+![Status](https://img.shields.io/badge/Status-Active-success)
 
-### Live Telemetry
+![Portfolio](https://img.shields.io/badge/Portfolio-Project-orange)
 
-Telemetry is grouped by operational category:
+</p>
 
-- Operations Systems
-- Signal & Crossing Systems
-- Communications
-- Power Systems
-- Safety & Environmental
-- Infrastructure
-- Engineering Access
+---
 
-Telemetry includes simulated values such as:
+# Overview
 
-- CPU and memory usage
-- Network latency
-- Signal quality
-- Packet loss
+TrackSentinel is a modern Operational Technology (OT) cybersecurity platform developed to demonstrate cybersecurity monitoring, incident response, threat intelligence, executive reporting, and purple team exercises within a simulated railroad environment.
+
+Unlike traditional SOC dashboards that focus exclusively on IT infrastructure, TrackSentinel models a railroad Operational Technology network consisting of SCADA systems, signaling infrastructure, Positive Train Control (PTC), communications equipment, engineering workstations, environmental monitoring, safety systems, and critical railroad infrastructure.
+
+The platform combines cybersecurity operations with operational awareness, allowing simulated cyber events to influence operational telemetry, incident workflows, asset health, and executive security posture.
+
+Although inspired by real OT security concepts, all attacks, alerts, telemetry, vulnerabilities, and incidents are fully simulated for educational, training, and portfolio purposes.
+
+---
+
+# Why TrackSentinel?
+
+Industrial environments differ significantly from enterprise IT environments.
+
+Operational Technology systems prioritize:
+
+- Availability
+- Safety
+- Reliability
+- Continuous operations
+- Physical process control
+
+rather than traditional confidentiality-focused enterprise security.
+
+TrackSentinel demonstrates how cybersecurity analysts can monitor, investigate, and respond to cyber threats affecting railroad operational technology while balancing operational continuity and safety.
+
+The platform brings together:
+
+- Executive Cybersecurity Dashboards
+- SOC Monitoring
+- OT Asset Management
+- Vulnerability Management
+- Live Operational Telemetry
+- Incident Response
+- Investigation Workspaces
+- Threat Intelligence
+- Purple Team Exercises
+- MITRE ATT&CK for ICS mappings
+
+within a single unified training platform.
+
+---
+
+# 🚀 Feature Showcase
+
+TrackSentinel provides a complete Operational Technology (OT) cybersecurity training environment modeled after a modern Railroad Security Operations Center (RailSOC).
+
+The platform combines cybersecurity monitoring, operational awareness, incident response, executive reporting, and purple team exercises into a unified experience.
+
+---
+
+---
+
+# 🚂 Simulated Railroad OT Environment
+
+TrackSentinel models a realistic railroad Operational Technology (OT) environment consisting of dispatch systems, signaling infrastructure, communications, power systems, safety devices, engineering workstations, and infrastructure monitoring.
+
+The environment is intentionally designed to represent the types of assets commonly found in modern freight and passenger railroad operations while remaining entirely fictional for training and demonstration purposes.
+
+---
+
+# 🖥️ Operations Control Center
+
+The Operations Control Center (OCC) serves as the operational heart of the railroad environment.
+
+### Dispatch SCADA Server
+
+The Dispatch SCADA Server provides centralized visibility into railroad operational assets.
+
+Responsibilities include:
+
+- Operational monitoring
+- Signal supervision
+- Device status monitoring
+- Communications aggregation
+- Alarm generation
+
+### Operations Historian
+
+The Historian stores operational telemetry for reporting and historical analysis.
+
+Collected information includes:
+
+- Device health
+- Operational telemetry
+- Environmental data
+- Historical trends
+- Alarm history
+
+### OT Jump Server
+
+The Jump Server provides controlled administrative access into the OT environment.
+
+Security considerations include:
+
+- Multi-factor authentication
+- Privileged access
+- Session auditing
+- Remote maintenance
+
+---
+
+# 🚦 Signal & Train Control
+
+Signal systems are responsible for the safe movement of trains across the subdivision.
+
+## Signal Controller 14A
+
+Controls:
+
+- Wayside signal indications
+- Route logic
+- Track occupancy response
+
+## Signal Controller 14B
+
+Provides additional signal control for adjacent territory.
+
+## Signal Controller 15C
+
+Controls western subdivision signal infrastructure.
+
+### Security Risks
+
+- Unauthorized logic modification
+- Firmware tampering
+- Remote engineering access
+- Configuration drift
+
+---
+
+# 🚧 Grade Crossing Protection
+
+TrackSentinel includes multiple simulated highway grade crossings.
+
+### Grade Crossing Controller MP 82.4
+
+Responsible for:
+
+- Flashing lights
+- Crossing gates
+- Audible warning devices
+- Train detection
+
+### Grade Crossing Controller MP 87.1
+
+Provides identical protection for a second roadway crossing.
+
+### Security Risks
+
+- Logic manipulation
+- Communication failure
+- Loss of train detection
+- Safety system disruption
+
+---
+
+# 📡 Railroad Communications
+
+Reliable communications are essential for railroad operations.
+
+## Positive Train Control (PTC) Radio Gateway
+
+Responsible for:
+
+- PTC communications
+- Wayside connectivity
+- Dispatcher communications
+- Operational messaging
+
+## Microwave Radio
+
+Provides long-distance wireless communications between field assets.
+
+## Fiber Distribution Switch
+
+Serves as the communications backbone connecting operational systems.
+
+### Security Risks
+
+- Denial of service
+- Network reconnaissance
+- Communication loss
+- Unauthorized access
+
+---
+
+# ⚡ Power Systems
+
+Operational Technology environments require highly available power systems.
+
+### UPS System
+
+Provides uninterrupted power during utility interruptions.
+
+### Backup Generator PLC
+
+Controls emergency generator operations.
+
+Telemetry includes:
+
 - Voltage
 - Battery runtime
-- Smoke level
-- Gas PPM
-- Water detection
-- Door state
-- Vibration
-- Bearing temperature
+- Load percentage
+- Generator status
 
-### Incident Center
+### Security Risks
 
-- View active incidents
-- Acknowledge incidents
-- Assign analyst ownership
-- Add investigation notes
-- Close incidents
-- View MITRE ATT&CK for ICS mapping
-- Review recommended response actions
-
-### Investigation Workspace
-
-- Active investigation summary
-- Affected asset
-- MITRE mapping
-- Analyst guidance
-- Evidence table
-- IOC summary
-- Investigation timeline
-- Links to incident workflow
-
-### Threat Intelligence Center
-
-- Current threat posture
-- MITRE ATT&CK for ICS coverage
-- Simulated IOC feed
-- Vendor advisory watch
-- Threat posture statistics
-
-### Purple Team Attack Library
-
-Safe simulated attack scenarios include:
-
-- Unauthorized PLC / controller logic modification
-- OT network reconnaissance
-- Rail OT denial of service simulation
-- Engineering workstation credential abuse
-- PTC communications failure
-- Malware-like activity on engineering workstation
-
-These scenarios update alerts, incidents, telemetry, threat level, dashboards, and investigation views.
-
-### Vulnerability Management
-
-- Simulated railroad OT CVEs
-- Severity ratings
-- CVSS scores
-- Status tracking
-- Remediation recommendations
-
-### Reports
-
-- Executive summary
-- Asset health summary
-- Alert summary
-- Incident summary
-- Vulnerability summary
-- Threat posture summary
-- Platform roadmap
+- Generator failure
+- PLC manipulation
+- Battery degradation
+- Power loss
 
 ---
 
-## Technology Stack
+# 🔥 Safety Systems
+
+Safety systems protect personnel and critical facilities.
+
+## Fire Detection Panel
+
+Monitors:
+
+- Smoke detection
+- Heat alarms
+- Fire panel health
+
+### Hydrogen Gas Detector
+
+Protects battery rooms by monitoring hydrogen concentrations.
+
+### Flood Detection Sensor
+
+Detects water intrusion into communications vaults and equipment rooms.
+
+### Cabinet Intrusion Sensor
+
+Detects unauthorized access to field equipment cabinets.
+
+### Security Risks
+
+- Disabled safety monitoring
+- False alarms
+- Environmental damage
+- Physical intrusion
+
+---
+
+# 🌉 Railroad Infrastructure Monitoring
+
+Infrastructure monitoring provides additional operational awareness.
+
+## Bridge Structural Monitor
+
+Monitors:
+
+- Structural vibration
+- Temperature
+- Infrastructure health
+
+## Hot Bearing Detector
+
+Monitors train bearings for overheating conditions.
+
+Telemetry includes:
+
+- Bearing temperature
+- Equipment health
+- Alarm conditions
+
+### Security Risks
+
+- False sensor readings
+- Monitoring failure
+- Missed safety events
+
+---
+
+# 💻 Engineering Systems
+
+Engineering workstations provide maintenance access into operational technology environments.
+
+## Rail Engineering Workstation
+
+Supports:
+
+- Controller programming
+- Firmware updates
+- Maintenance activities
+- Configuration management
+
+### Security Risks
+
+- Credential compromise
+- Malware
+- Unauthorized engineering access
+- Lateral movement
+
+---
+
+# 📊 Operational Telemetry
+
+TrackSentinel dynamically simulates telemetry for each operational asset.
+
+Examples include:
+
+| Category | Example Metrics |
+|----------|-----------------|
+| Operations | CPU, Memory, Active Sessions |
+| Signals | Controller CPU, Temperature |
+| Communications | Signal Quality, Packet Loss |
+| Power | Voltage, Runtime, Load |
+| Environmental | Gas PPM, Humidity, Water Detection |
+| Infrastructure | Bridge Vibration, Bearing Temperature |
+| Security | Failed Logins, Door State, Tamper Status |
+
+Telemetry automatically changes during simulated attack scenarios to reflect the operational impact of cybersecurity events.
+
+---
+
+# 📊 Executive Security Operations Dashboard
+
+> Executive-level cybersecurity posture and operational risk overview.
+
+*(Insert Screenshot: Executive Dashboard)*
+
+```text
+screenshots/executive-dashboard.png
+```
+
+### Capabilities
+
+- Dynamic Overall Security Score
+- Current Threat Level
+- Protected Asset Percentage
+- Mean Time to Detect (MTTD)
+- Mean Time to Respond (MTTR)
+- Compliance Status
+- Open Incidents
+- Critical Alerts
+- Executive Recommendations
+- Security Trend Indicators
+
+### Demonstrates
+
+- Executive Reporting
+- Security Metrics
+- Risk Communication
+- Leadership Dashboards
+- Operational Risk
+
+---
+
+# 🚦 RailSOC Dashboard
+
+> The operational command center used by analysts during daily monitoring.
+
+*(Insert Screenshot: Dashboard)*
+
+```text
+screenshots/dashboard.png
+```
+
+### Capabilities
+
+- Environment Overview
+- Railroad Operations Map
+- Recent Incidents
+- Top Active Alerts
+- Live Asset Status
+- Dynamic Threat Level
+- Security KPIs
+
+### Demonstrates
+
+- Security Operations Center (SOC)
+- Operational Technology Monitoring
+- Threat Visualization
+- Executive Awareness
+
+---
+
+# 🚂 Interactive Railroad Operations Map
+
+> A digital visualization of the simulated railroad operational environment.
+
+*(Insert Screenshot: Operations Map)*
+
+```text
+screenshots/operations-map.png
+```
+
+### Capabilities
+
+- Dispatch Operations Center
+- Railroad Signal Controllers
+- Grade Crossing Controllers
+- Positive Train Control (PTC)
+- Communications Infrastructure
+- Safety Systems
+- Environmental Monitoring
+- Bridge Monitoring
+- Hot Bearing Detection
+- Asset Detail Panel
+- Incident Indicators
+- Live Asset Health
+
+### Demonstrates
+
+- Operational Awareness
+- Railroad Infrastructure
+- OT Asset Monitoring
+- Infrastructure Visualization
+
+---
+
+# 📡 Live Railroad Telemetry
+
+> Real-time operational telemetry grouped by asset category.
+
+*(Insert Screenshot: Telemetry)*
+
+```text
+screenshots/live-telemetry.png
+```
+
+### Asset Categories
+
+#### Operations Systems
+
+- Dispatch SCADA
+- Operations Historian
+- OT Jump Server
+
+#### Signal & Crossing Systems
+
+- Signal Controllers
+- Grade Crossing Controllers
+- Switch Controllers
+
+#### Communications
+
+- PTC Gateway
+- Microwave Radio
+- Fiber Distribution
+
+#### Power Systems
+
+- UPS
+- Generator PLC
+
+#### Safety & Environmental
+
+- Fire Detection
+- Hydrogen Gas Detection
+- Flood Detection
+- Cabinet Intrusion
+
+#### Infrastructure
+
+- Bridge Structural Monitoring
+- Hot Bearing Detection
+
+#### Engineering
+
+- Engineering Workstations
+
+### Telemetry Includes
+
+- CPU Usage
+- Memory Usage
+- Network Latency
+- Active Sessions
+- Failed Logins
+- Voltage
+- Signal Quality
+- Packet Loss
+- Battery Runtime
+- Gas Concentration
+- Water Detection
+- Door State
+- Bridge Vibration
+- Bearing Temperature
+
+### Demonstrates
+
+- Operational Monitoring
+- ICS Telemetry
+- OT Health Monitoring
+- Environmental Monitoring
+
+---
+
+# 🌐 Railroad OT Network Topology
+
+> Interactive visualization of the simulated railroad OT network.
+
+*(Insert Screenshot: Topology)*
+
+```text
+screenshots/topology.png
+```
+
+### Network Zones
+
+- Enterprise / OT Firewall
+- Operations Core
+- Signal & Train Control
+- Communications
+- Power Systems
+- Safety Systems
+- Engineering Access
+
+Each node dynamically reflects:
+
+- Operational Status
+- Risk Level
+- IP Address
+- Device Type
+
+### Demonstrates
+
+- Network Segmentation
+- Purdue Model Concepts
+- OT Architecture
+- Asset Relationships
+
+---
+
+# 🚨 Security Alerts
+
+> Centralized monitoring of simulated cybersecurity events.
+
+*(Insert Screenshot: Alerts)*
+
+```text
+screenshots/alerts.png
+```
+
+### Alert Types
+
+- OT Network Reconnaissance
+- Unauthorized Logic Modification
+- PTC Communication Failure
+- Unauthorized Engineering Login
+- Denial of Service (Simulated)
+- Malware Activity (Simulated)
+
+Each alert includes
+
+- Severity
+- Device
+- Timestamp
+- Description
+- Status
+- MITRE Technique
+
+### Demonstrates
+
+- Security Monitoring
+- Detection Engineering
+- Alert Triage
+
+---
+
+# 📝 Incident Response Center
+
+> Central workspace for managing operational cybersecurity incidents.
+
+*(Insert Screenshot: Incident Center)*
+
+```text
+screenshots/incident-center.png
+```
+
+### Capabilities
+
+- Incident Queue
+- Acknowledge
+- Assignment
+- Investigation Notes
+- Close Incident
+- Analyst Tracking
+- Timeline
+- MITRE Mapping
+
+### Demonstrates
+
+- Incident Response
+- Case Management
+- Analyst Workflow
+- Documentation
+
+---
+
+# 🔍 Investigation Workspace
+
+> Analyst-focused investigation environment.
+
+*(Insert Screenshot: Investigation Workspace)*
+
+```text
+screenshots/investigation-workspace.png
+```
+
+### Capabilities
+
+- IOC Review
+- Timeline
+- Device Information
+- Threat Summary
+- Evidence Collection
+- Analyst Notes
+- Recommended Actions
+- MITRE ATT&CK for ICS Mapping
+
+### Demonstrates
+
+- Digital Forensics
+- Incident Investigation
+- Threat Analysis
+- OT Security Operations
+
+---
+
+---
+
+# 🚂 Simulated Railroad OT Environment
+
+TrackSentinel models a realistic railroad Operational Technology (OT) environment consisting of dispatch systems, signaling infrastructure, communications, power systems, safety devices, engineering workstations, and infrastructure monitoring.
+
+The environment is intentionally designed to represent the types of assets commonly found in modern freight and passenger railroad operations while remaining entirely fictional for training and demonstration purposes.
+
+---
+
+# 🖥️ Operations Control Center
+
+The Operations Control Center (OCC) serves as the operational heart of the railroad environment.
+
+### Dispatch SCADA Server
+
+The Dispatch SCADA Server provides centralized visibility into railroad operational assets.
+
+Responsibilities include:
+
+- Operational monitoring
+- Signal supervision
+- Device status monitoring
+- Communications aggregation
+- Alarm generation
+
+### Operations Historian
+
+The Historian stores operational telemetry for reporting and historical analysis.
+
+Collected information includes:
+
+- Device health
+- Operational telemetry
+- Environmental data
+- Historical trends
+- Alarm history
+
+### OT Jump Server
+
+The Jump Server provides controlled administrative access into the OT environment.
+
+Security considerations include:
+
+- Multi-factor authentication
+- Privileged access
+- Session auditing
+- Remote maintenance
+
+---
+
+# 🚦 Signal & Train Control
+
+Signal systems are responsible for the safe movement of trains across the subdivision.
+
+## Signal Controller 14A
+
+Controls:
+
+- Wayside signal indications
+- Route logic
+- Track occupancy response
+
+## Signal Controller 14B
+
+Provides additional signal control for adjacent territory.
+
+## Signal Controller 15C
+
+Controls western subdivision signal infrastructure.
+
+### Security Risks
+
+- Unauthorized logic modification
+- Firmware tampering
+- Remote engineering access
+- Configuration drift
+
+---
+
+# 🚧 Grade Crossing Protection
+
+TrackSentinel includes multiple simulated highway grade crossings.
+
+### Grade Crossing Controller MP 82.4
+
+Responsible for:
+
+- Flashing lights
+- Crossing gates
+- Audible warning devices
+- Train detection
+
+### Grade Crossing Controller MP 87.1
+
+Provides identical protection for a second roadway crossing.
+
+### Security Risks
+
+- Logic manipulation
+- Communication failure
+- Loss of train detection
+- Safety system disruption
+
+---
+
+# 📡 Railroad Communications
+
+Reliable communications are essential for railroad operations.
+
+## Positive Train Control (PTC) Radio Gateway
+
+Responsible for:
+
+- PTC communications
+- Wayside connectivity
+- Dispatcher communications
+- Operational messaging
+
+## Microwave Radio
+
+Provides long-distance wireless communications between field assets.
+
+## Fiber Distribution Switch
+
+Serves as the communications backbone connecting operational systems.
+
+### Security Risks
+
+- Denial of service
+- Network reconnaissance
+- Communication loss
+- Unauthorized access
+
+---
+
+# ⚡ Power Systems
+
+Operational Technology environments require highly available power systems.
+
+### UPS System
+
+Provides uninterrupted power during utility interruptions.
+
+### Backup Generator PLC
+
+Controls emergency generator operations.
+
+Telemetry includes:
+
+- Voltage
+- Battery runtime
+- Load percentage
+- Generator status
+
+### Security Risks
+
+- Generator failure
+- PLC manipulation
+- Battery degradation
+- Power loss
+
+---
+
+# 🔥 Safety Systems
+
+Safety systems protect personnel and critical facilities.
+
+## Fire Detection Panel
+
+Monitors:
+
+- Smoke detection
+- Heat alarms
+- Fire panel health
+
+### Hydrogen Gas Detector
+
+Protects battery rooms by monitoring hydrogen concentrations.
+
+### Flood Detection Sensor
+
+Detects water intrusion into communications vaults and equipment rooms.
+
+### Cabinet Intrusion Sensor
+
+Detects unauthorized access to field equipment cabinets.
+
+### Security Risks
+
+- Disabled safety monitoring
+- False alarms
+- Environmental damage
+- Physical intrusion
+
+---
+
+# 🌉 Railroad Infrastructure Monitoring
+
+Infrastructure monitoring provides additional operational awareness.
+
+## Bridge Structural Monitor
+
+Monitors:
+
+- Structural vibration
+- Temperature
+- Infrastructure health
+
+## Hot Bearing Detector
+
+Monitors train bearings for overheating conditions.
+
+Telemetry includes:
+
+- Bearing temperature
+- Equipment health
+- Alarm conditions
+
+### Security Risks
+
+- False sensor readings
+- Monitoring failure
+- Missed safety events
+
+---
+
+# 💻 Engineering Systems
+
+Engineering workstations provide maintenance access into operational technology environments.
+
+## Rail Engineering Workstation
+
+Supports:
+
+- Controller programming
+- Firmware updates
+- Maintenance activities
+- Configuration management
+
+### Security Risks
+
+- Credential compromise
+- Malware
+- Unauthorized engineering access
+- Lateral movement
+
+---
+
+# 📊 Operational Telemetry
+
+TrackSentinel dynamically simulates telemetry for each operational asset.
+
+Examples include:
+
+| Category | Example Metrics |
+|----------|-----------------|
+| Operations | CPU, Memory, Active Sessions |
+| Signals | Controller CPU, Temperature |
+| Communications | Signal Quality, Packet Loss |
+| Power | Voltage, Runtime, Load |
+| Environmental | Gas PPM, Humidity, Water Detection |
+| Infrastructure | Bridge Vibration, Bearing Temperature |
+| Security | Failed Logins, Door State, Tamper Status |
+
+Telemetry automatically changes during simulated attack scenarios to reflect the operational impact of cybersecurity events.
+
+---
+
+---
+
+# 📈 Executive Security Dashboard
+
+The Executive Security Dashboard provides leadership with a high-level view of the organization's current operational cybersecurity posture.
+
+Unlike the analyst-focused RailSOC Dashboard, this interface emphasizes business risk, operational impact, and security metrics that support executive decision-making.
+
+*(Insert Screenshot: executive-dashboard.png)*
+
+## Executive KPIs
+
+The dashboard continuously calculates and updates:
+
+- Overall Security Score
+- Current Threat Level
+- Protected Asset Percentage
+- Open Incidents
+- Critical Alerts
+- High-Risk Assets
+- Mean Time to Detect (MTTD)
+- Mean Time to Respond (MTTR)
+- Compliance Status
+
+---
+
+## Threat Level Calculation
+
+The platform dynamically determines the current operational threat level using simulated conditions.
+
+| Threat Level | Description |
+|--------------|-------------|
+| 🟢 Normal | No significant security events detected |
+| 🟡 Guarded | Elevated activity requiring analyst awareness |
+| 🟠 Elevated | Multiple high-risk conditions affecting operations |
+| 🔴 Critical | Active operational security incident impacting railroad systems |
+
+Threat levels automatically update during purple team exercises and incident response activities.
+
+---
+
+## Executive Security Score
+
+TrackSentinel calculates an overall security posture score using multiple simulated factors including:
+
+- Asset Health
+- Open Vulnerabilities
+- Active Incidents
+- Critical Alerts
+- Device Availability
+- High-Risk Assets
+- Threat Intelligence
+- Compliance Status
+
+The score provides leadership with an easy-to-understand indicator of overall operational cybersecurity health.
+
+---
+
+## Operational Metrics
+
+The Executive Dashboard presents operational metrics commonly reviewed by cybersecurity leadership.
+
+### Mean Time to Detect (MTTD)
+
+Measures how quickly simulated threats are identified.
+
+### Mean Time to Respond (MTTR)
+
+Measures the time required to investigate and resolve simulated incidents.
+
+### Protected Assets
+
+Displays the percentage of operational technology assets currently functioning within expected operational parameters.
+
+### Operational Availability
+
+Reflects the health and availability of simulated railroad operational technology.
+
+---
+
+## Executive Recommendations
+
+Based on current platform conditions, TrackSentinel generates executive recommendations such as:
+
+- Prioritize remediation of critical vulnerabilities
+- Investigate active controller anomalies
+- Review engineering workstation authentication activity
+- Validate Positive Train Control communications
+- Schedule maintenance windows for firmware updates
+- Increase monitoring during elevated threat conditions
+
+These recommendations provide leadership with actionable guidance without requiring detailed technical knowledge.
+
+---
+
+# ⚠️ Railroad OT Vulnerability Management
+
+TrackSentinel includes a centralized vulnerability management module focused on Operational Technology assets.
+
+*(Insert Screenshot: vulnerability-management.png)*
+
+Each vulnerability includes:
+
+- Device
+- CVE Identifier
+- Severity
+- CVSS Score
+- Current Status
+- Recommended Remediation
+- Operational Impact
+
+---
+
+## Example Vulnerability Workflow
+
+```text
+Vulnerability Identified
+          │
+          ▼
+Risk Assessment
+          │
+          ▼
+Prioritization
+          │
+          ▼
+Engineering Coordination
+          │
+          ▼
+Maintenance Window
+          │
+          ▼
+Validation
+          │
+          ▼
+Closed
+```
+
+Unlike enterprise IT environments, OT vulnerabilities often require coordination with engineering and operations teams to avoid disrupting critical railroad services.
+
+---
+
+# 📊 Executive Reports
+
+TrackSentinel includes executive-oriented reporting designed to communicate cybersecurity posture to technical and non-technical stakeholders.
+
+*(Insert Screenshot: reports.png)*
+
+Reports summarize:
+
+- Security Score
+- Threat Level
+- Asset Health
+- Vulnerability Summary
+- Incident Summary
+- Alert Statistics
+- Operational Availability
+- Executive Recommendations
+
+These reports are designed to support leadership briefings and cybersecurity program reviews.
+
+---
+
+# 🏗️ System Architecture
+
+The TrackSentinel platform follows a modular client-server architecture.
+
+```mermaid
+flowchart TD
+
+A[React Frontend]
+
+B[FastAPI REST API]
+
+C[Simulation Engine]
+
+D[Telemetry Engine]
+
+E[SQLite Database]
+
+F[Executive Dashboard]
+
+G[RailSOC Dashboard]
+
+H[Purple Team Library]
+
+I[Incident Response]
+
+J[Vulnerability Management]
+
+A --> B
+
+B --> C
+
+B --> D
+
+B --> E
+
+C --> I
+
+D --> G
+
+E --> F
+
+E --> G
+
+E --> I
+
+E --> J
+
+H --> C
+```
+
+---
+
+# 🖥️ Application Architecture
+
+```text
+                     React Frontend
+
+ ┌──────────────────────────────────────────────┐
+ │ Executive Dashboard                          │
+ │ RailSOC Dashboard                            │
+ │ Live Telemetry                               │
+ │ Operations Map                               │
+ │ Incident Center                              │
+ │ Investigation Workspace                      │
+ │ Vulnerability Management                     │
+ │ Purple Team Library                          │
+ └──────────────────────────────────────────────┘
+
+                    REST API
+
+               FastAPI Application
+
+                        │
+
+        Simulation • Alerts • Incidents
+
+                        │
+
+                 SQLite Demonstration DB
+```
+
+---
+
+# 💻 Technology Stack
+
+## Frontend
+
+- React
+- React Router
+- Vite
+- CSS3
+- JavaScript (ES6+)
+
+---
+
+## Backend
+
+- Python
+- FastAPI
+- SQLAlchemy
+- SQLite
+- Uvicorn
+
+---
+
+## Cybersecurity Concepts
+
+TrackSentinel demonstrates practical experience with:
+
+- Operational Technology Security
+- Industrial Control Systems (ICS)
+- SCADA Security
+- Railroad Operations
+- Incident Response
+- Threat Intelligence
+- MITRE ATT&CK for ICS
+- Vulnerability Management
+- Purple Team Exercises
+- Executive Security Reporting
+
+---
+
+# 📂 Repository Structure
+
+```text
+TrackSentinel
+│
+├── backend
+│   ├── database.py
+│   ├── main.py
+│   ├── models.py
+│   ├── seed.py
+│   ├── simulation_engine.py
+│   └── services/
+│
+├── frontend
+│   ├── components/
+│   ├── pages/
+│   ├── services/
+│   ├── App.jsx
+│   └── App.css
+│
+├── screenshots/
+│
+├── README.md
+│
+└── LICENSE
+```
+
+---
+
+---
+
+# ⚙️ Installation
+
+## Prerequisites
+
+Before running TrackSentinel, ensure the following software is installed:
+
+- Python 3.11+
+- Node.js 20+
+- npm
+- Git
+
+---
+
+## Clone the Repository
+
+```bash
+git clone https://github.com/YOUR_USERNAME/TrackSentinel.git
+
+cd TrackSentinel
+```
+
+---
+
+# 🖥️ Backend Setup
+
+Navigate to the backend folder.
+
+```bash
+cd backend
+```
+
+Create a virtual environment.
+
+```bash
+python -m venv venv
+```
+
+Activate it.
+
+### Windows
+
+```bash
+venv\Scripts\activate
+```
+
+### Linux / macOS
+
+```bash
+source venv/bin/activate
+```
+
+Install dependencies.
+
+```bash
+pip install -r requirements.txt
+```
+
+Initialize the demonstration database.
+
+```bash
+python seed.py
+```
+
+Start the API.
+
+```bash
+uvicorn main:app --reload
+```
+
+The backend will be available at:
+
+```
+http://127.0.0.1:8000
+```
+
+Interactive API documentation:
+
+```
+http://127.0.0.1:8000/docs
+```
+
+---
+
+# 💻 Frontend Setup
+
+Open a second terminal.
+
+```bash
+cd frontend
+```
+
+Install packages.
+
+```bash
+npm install
+```
+
+Start the React application.
+
+```bash
+npm run dev
+```
+
+Open:
+
+```
+http://localhost:5173
+```
+
+---
+
+# 🎮 Demonstration Workflow
+
+A typical TrackSentinel demonstration follows this workflow:
+
+```text
+Launch Platform
+
+↓
+
+Review Executive Dashboard
+
+↓
+
+Open RailSOC Dashboard
+
+↓
+
+Launch Purple Team Exercise
+
+↓
+
+Observe Alerts
+
+↓
+
+Investigate Incident
+
+↓
+
+Review Live Telemetry
+
+↓
+
+Analyze Threat Intelligence
+
+↓
+
+Document Findings
+
+↓
+
+Close Incident
+
+↓
+
+Generate Executive Report
+```
+
+---
+
+# 🟣 Example Purple Team Scenario
+
+### Scenario
+
+Unauthorized Logic Modification
+
+### Simulated Target
+
+Grade Crossing Controller MP 82.4
+
+### Platform Response
+
+✔ Critical Alert Generated
+
+✔ Incident Created
+
+✔ Threat Level Elevated
+
+✔ Telemetry Updated
+
+✔ Investigation Workspace Populated
+
+✔ Executive Dashboard Updated
+
+✔ Timeline Created
+
+✔ MITRE ATT&CK Technique Displayed
+
+---
+
+# 🧩 Skills Demonstrated
+
+TrackSentinel showcases practical knowledge across multiple cybersecurity disciplines.
+
+## Operational Technology
+
+- Industrial Control Systems (ICS)
+- SCADA Security
+- Railroad Operational Technology
+- Purdue Model Concepts
+- Asset Monitoring
+- Engineering Workstations
+
+---
+
+## Security Operations
+
+- Security Monitoring
+- Incident Response
+- Threat Detection
+- Alert Triage
+- Threat Intelligence
+- Investigation Workflow
+- Purple Team Operations
+
+---
+
+## Security Frameworks
+
+- MITRE ATT&CK for ICS
+- Vulnerability Management
+- Risk Assessment
+- Executive Reporting
+- Security Metrics
+
+---
+
+## Software Development
 
 ### Frontend
 
 - React
 - Vite
 - React Router
-- CSS
+- Component Architecture
+- Responsive Design
 
 ### Backend
 
-- Python
 - FastAPI
 - SQLAlchemy
+- REST APIs
 - SQLite
+- Python
 
-### Security Concepts
+---
 
-- SOC operations
-- OT asset monitoring
+## Additional Concepts
+
+- Executive Dashboards
+- Telemetry Simulation
+- Operational Risk
+- Asset Inventory
+- Infrastructure Monitoring
+- Environmental Monitoring
+- Safety Systems
+- Network Topology Visualization
+
+---
+
+# 🚀 Future Roadmap
+
+TrackSentinel continues to evolve with additional planned capabilities.
+
+## Version 2.0
+
+### Railroad Digital Twin
+
+- Moving train simulation
+- Live train positioning
+- Signal state changes
+- Operational route visualization
+
+### Operations Map
+
+- Interactive mileposts
+- Expandable railroad locations
+- Asset clustering
+- Geographic overlays
+
+### Enhanced Telemetry
+
+- Historical trending
+- Graphs
+- Performance history
+- Operational baselines
+
+### Security
+
+- IOC Database
+- Threat Hunting Dashboard
+- SIEM-style searching
+- Audit Logging
+- Role-Based Access Control
+
+---
+
+## Version 3.0
+
+Future concepts under consideration include:
+
+- Docker deployment
+- PostgreSQL support
+- Authentication
+- Multi-user analyst environment
+- PDF executive reports
+- AI-assisted investigations
+- Natural language reporting
+- Live threat feeds
+- Multi-subdivision railroad environments
+- GIS integration
+
+---
+
+# 🎯 Project Goals
+
+TrackSentinel was developed to demonstrate how modern cybersecurity concepts can be applied within Operational Technology environments.
+
+The project emphasizes:
+
+- Operational awareness
 - Incident response
-- Vulnerability management
-- MITRE ATT&CK for ICS
-- Threat intelligence
-- Purple team exercises
-- Executive cyber risk reporting
+- Cybersecurity visualization
+- Executive reporting
+- Railroad infrastructure protection
+- OT asset monitoring
+- Security operations workflows
 
 ---
 
-## Project Structure
+# ⚠️ Safety Notice
 
-```text
-TrackSentinel/
-├── backend/
-│   ├── main.py
-│   ├── models.py
-│   ├── database.py
-│   ├── seed.py
-│   └── ot_platform.db
-│
-├── frontend/
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── Header.jsx
-│   │   │   ├── EnvironmentOverview.jsx
-│   │   │   ├── RailroadMap.jsx
-│   │   │   ├── NetworkTopology.jsx
-│   │   │   ├── LivePlantStatus.jsx
-│   │   │   ├── DeviceInventory.jsx
-│   │   │   ├── VulnerabilityTable.jsx
-│   │   │   ├── AlertsPanel.jsx
-│   │   │   ├── IncidentCenter.jsx
-│   │   │   └── Roadmap.jsx
-│   │   │
-│   │   ├── pages/
-│   │   │   ├── Dashboard.jsx
-│   │   │   ├── ExecutiveDashboard.jsx
-│   │   │   ├── Telemetry.jsx
-│   │   │   ├── Topology.jsx
-│   │   │   ├── Assets.jsx
-│   │   │   ├── Alerts.jsx
-│   │   │   ├── Incidents.jsx
-│   │   │   ├── InvestigationWorkspace.jsx
-│   │   │   ├── IncidentTimeline.jsx
-│   │   │   ├── ThreatIntel.jsx
-│   │   │   ├── Training.jsx
-│   │   │   ├── Reports.jsx
-│   │   │   ├── Vulnerabilities.jsx
-│   │   │   └── Settings.jsx
-│   │   │
-│   │   ├── services/
-│   │   ├── App.jsx
-│   │   └── App.css
-│   │
-│   └── package.json
-│
-└── README.md
-```
----
+TrackSentinel is a simulated cybersecurity platform.
 
-# Installation
+The project **does not** perform:
 
-## Getting Started
+- Real denial-of-service attacks
+- Unauthorized access
+- Malware execution
+- Exploitation
+- Packet flooding
+- Controller manipulation
+- Network intrusion
 
-```bash
-1. Clone the repository
-git clone https://github.com/YOUR-USERNAME/TrackSentinel.git
-cd TrackSentinel
-```
-## Backend Setup
-```bash
-cd backend
-python -m venv venv
-venv\Scripts\activate
-pip install fastapi uvicorn sqlalchemy
-python seed.py
-uvicorn main:app --reload
-```
----
-
-## Backend will run at:
-http://127.0.0.1:8000
-
-##Test Telemetry
-Invoke-RestMethod http://127.0.0.1:8000/plant-status
+All attack scenarios are simulated within the application for educational, portfolio, and demonstration purposes.
 
 ---
-## Frontend Setup
-Open Second Terminal
-```bash
-cd frontend
-npm install
-npm run dev
-```
 
-## Frontend will run at:
-http://localhost:5173
+# 👤 About the Author
 
----
-## Example Simulation Workflow
+## Rusty Folsom
 
-1. Open TrackSentinel.
-2. to Training Exercises.
-3. Launch a purple team scenario.
-4. Watch the environment update:
-        -Threat level changes
-        -Alerts are created
-        -Incidents appear
-        -Telemetry changes
-        -Digital twin map updates
-        -Investigation workspace populates
-5. Open the Incident Center.
-6. Acknowledge, assign, document, and close the incident.
-7. Restore the operational baseline.
+Technical Services Administrator • Cybersecurity Professional • Operational Technology Security Enthusiast
+
+Areas of focus include:
+
+- Operational Technology (OT)
+- Industrial Control Systems (ICS)
+- Railroad Cybersecurity
+- Incident Response
+- Threat Intelligence
+- Purple Team Exercises
+- Network Security
+- SCADA Security
+- Executive Security Reporting
 
 ---
-## Simulated MITRE ATT&CK for ICS Techniques
 
-Examples used in the platform:
+## Connect
 
-| Scenario                          | MITRE ATT&CK for ICS              |
-| --------------------------------- | --------------------------------- |
-| Network Reconnaissance            | T0842 - Network Service Scanning  |
-| Unauthorized Logic Modification   | T0859 - Modify Controller Tasking |
-| PTC Radio Failure                 | T0881 - Service Stop              |
-| Unauthorized Engineering Login    | T0812 - Valid Accounts            |
-| Denial of Service Simulation      | T0814 - Denial of Service         |
-| Malware-like Engineering Activity | T0809 - Data Destruction          |
+- GitHub: https://github.com/YOUR_USERNAME
+- LinkedIn: https://linkedin.com/in/YOUR_PROFILE
 
 ---
-## Screenshots
 
-### Executive Security Dashboard
+# ⭐ Acknowledgements
 
-<p align="center">
-  <img src="screenshots/executive-dashboard.png" width="900" alt="Executive Security Dashboard">
-</p>
+This project draws inspiration from publicly available guidance and best practices related to Operational Technology cybersecurity, industrial control systems, railroad operations, and the MITRE ATT&CK® for ICS framework.
 
-### RailSOC Dashboard
-
-<p align="center">
-  <img src="screenshots/dashboard.png" width="900" alt="TrackSentinel Dashboard">
-</p>
-
-### Interactive Railroad Operations Map
-
-<p align="center">
-  <img src="screenshots/operations-map.png" width="900" alt="Interactive Railroad Operations Map">
-</p>
-
-### Live Telemetry
-
-<p align="center">
-  <img src="screenshots/live-telemetry.png" width="900" alt="Live Telemetry">
-</p>
-
-### Railroad Network Topology
-
-<p align="center">
-  <img src="screenshots/topology.png" width="900" alt="Railroad Network Topology">
-</p>
-
-### Incident Center
-
-<p align="center">
-  <img src="screenshots/incident-center.png" width="900" alt="Incident Center">
-</p>
-
-### Investigation Workspace
-
-<p align="center">
-  <img src="screenshots/investigation-workspace.png" width="900" alt="Investigation Workspace">
-</p>
-
-### Threat Intelligence Center
-
-<p align="center">
-  <img src="screenshots/threat-intelligence.png" width="900" alt="Threat Intelligence Center">
-</p>
-
-### Vulnerability Management
-
-<p align="center">
-  <img src="screenshots/vulnerability-management.png" width="900" alt="Vulnerability Management">
-</p>
-
-### Purple Team Attack Library
-
-<p align="center">
-  <img src="screenshots/purple-team-library.png" width="900" alt="Purple Team Attack Library">
-</p>
-
-### Executive Reports
-
-<p align="center">
-  <img src="screenshots/reports.png" width="900" alt="Executive Reports">
-</p>
----
-## Roadmap
-TrackSentinel v1.0
-Railroad OT asset inventory
-Live telemetry
-Incident management
-Executive dashboard
-Threat intelligence
-Investigation workspace
-Purple team attack library
-MITRE ATT&CK for ICS mapping
-Vulnerability management
-Reports and settings pages
-
-##Future TrackSentinel v2.0
-Planned future enhancements:
-
-Moving train digital twin
-Signal indication logic
-Animated grade crossings
-Location-based asset clustering
-Multi-subdivision monitoring
-Role-based access control
-Audit logging
-IOC database
-Threat hunting interface
-Docker Compose deployment
-AI-assisted incident summaries
-PDF incident report generation
+TrackSentinel is an independent portfolio project created for educational and professional demonstration purposes and is not affiliated with any railroad, transportation company, equipment manufacturer, or government agency.
 
 ---
-## Safety Notice
 
-TrackSentinel is a simulated cybersecurity training and portfolio project.
+<p align="center">
 
-It does not perform real exploitation, packet flooding, denial of service activity, malware execution, 
-or unauthorized access. All attacks, telemetry, indicators, alerts, and incidents 
-are simulated for educational and demonstration purposes only.
+## 🚂 TrackSentinel
 
----
-## Author
-Created by Rusty Folsom as a railroad OT cybersecurity portfolio project.
+**Operational Technology • Railroad Cybersecurity • Executive Reporting • Purple Team Simulation**
 
-Focus areas:
+**Built with React • FastAPI • Python**
 
-Operational Technology cybersecurity
-Railroad cyber defense
-SOC operations
-Incident response
-Threat intelligence
-Purple team training
-Executive cyber risk reporting
+⭐ If you found this project interesting, consider starring the repository.
+
+</p>
+

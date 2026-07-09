@@ -257,7 +257,7 @@ uvicorn main:app --reload
 ```
 ---
 
-## Backend will runn at:
+## Backend will run at:
 http://127.0.0.1:8000
 
 ##Test Telemetry

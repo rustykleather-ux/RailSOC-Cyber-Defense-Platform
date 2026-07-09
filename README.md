@@ -1,6 +1,4 @@
-<p align="center">
-  <img src="assets/tracksentinel-banner.png" alt="TrackSentinel Banner" width="100%">
-</p>
+
 # 🚂 TrackSentinel
 ![Python](https://img.shields.io/badge/Python-3.12-blue?logo=python)
 ![FastAPI](https://img.shields.io/badge/FastAPI-Backend-009688?logo=fastapi)

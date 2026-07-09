@@ -362,7 +362,9 @@ Telemetry automatically changes during simulated attack scenarios to reflect the
 
 > Executive-level cybersecurity posture and operational risk overview.
 
-RailSoc-Cyber-Defense-Platform/main/Screenshots/executive-dashboard.jpg
+<p align="center">
+  <img src="https://raw.githubusercontent.com/rustykleather-ux/RailSOC-Cyber-Defense-Platform/main/Screenshots/executive-dashboard.jpg" alt="TrackSentinel Banner" width="100%">
+</p>
 
 ```text
 screenshots/executive-dashboard.png
@@ -579,7 +581,9 @@ Each node dynamically reflects:
 
 > Centralized monitoring of simulated cybersecurity events.
 
-*(Insert Screenshot: Alerts)*
+<p align="center">
+  <img src="https://raw.githubusercontent.com/rustykleather-ux/RailSOC-Cyber-Defense-Platform/main/Screenshots/security-alerts.jpg" alt="TrackSentinel Banner" width="100%">
+</p>
 
 ```text
 screenshots/alerts.png

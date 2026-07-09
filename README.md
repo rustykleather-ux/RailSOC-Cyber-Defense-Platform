@@ -237,16 +237,16 @@ TrackSentinel/
 ```
 ---
 
-#Installation
+# Installation
 
-##Getting Started
+## Getting Started
 
 ```bash
 1. Clone the repository
 git clone https://github.com/YOUR-USERNAME/TrackSentinel.git
 cd TrackSentinel
 ```
-##Backend Setup
+## Backend Setup
 ```bash
 cd backend
 python -m venv venv
@@ -257,14 +257,14 @@ uvicorn main:app --reload
 ```
 ---
 
-##Backend will runn at:
+## Backend will runn at:
 http://127.0.0.1:8000
 
 ##Test Telemetry
 Invoke-RestMethod http://127.0.0.1:8000/plant-status
 
 ---
-##Frontend Setup
+## Frontend Setup
 Open Second Terminal
 ```bash
 cd frontend
@@ -272,7 +272,7 @@ npm install
 npm run dev
 ```
 
-##Frontend will run at:
+## Frontend will run at:
 http://localhost:5173
 
 ---
@@ -293,7 +293,7 @@ http://localhost:5173
 7. Restore the operational baseline.
 
 ---
-##Simulated MITRE ATT&CK for ICS Techniques
+## Simulated MITRE ATT&CK for ICS Techniques
 
 Examples used in the platform:
 
@@ -307,7 +307,7 @@ Examples used in the platform:
 | Malware-like Engineering Activity | T0809 - Data Destruction          |
 
 ---
-##Screenshots
+## Screenshots
 
 ![Executive Dashboard](screenshots/executive-dashboard.png)
 ![RailSOC Dashboard](screenshots/dashboard.png)
@@ -317,7 +317,7 @@ Examples used in the platform:
 ![Purple Team Library](screenshots/purple-team-library.png)
 
 ---
-##Roadmap
+## Roadmap
 TrackSentinel v1.0
 Railroad OT asset inventory
 Live telemetry
@@ -347,7 +347,7 @@ AI-assisted incident summaries
 PDF incident report generation
 
 ---
-##Safety Notice
+## Safety Notice
 
 TrackSentinel is a simulated cybersecurity training and portfolio project.
 
@@ -356,7 +356,7 @@ or unauthorized access. All attacks, telemetry, indicators, alerts, and incident
 are simulated for educational and demonstration purposes only.
 
 ---
-##Author
+## Author
 Created by Rusty Folsom as a railroad OT cybersecurity portfolio project.
 
 Focus areas:

@@ -359,7 +359,7 @@ Telemetry automatically changes during simulated attack scenarios to reflect the
 
 > Executive-level cybersecurity posture and operational risk overview.
 
-*(Insert Screenshot: Executive Dashboard)*
+Screenshots\executive-dashboard.png.jpg
 
 ```text
 screenshots/executive-dashboard.png

@@ -938,7 +938,9 @@ The Executive Security Dashboard provides leadership with a high-level view of t
 
 Unlike the analyst-focused RailSOC Dashboard, this interface emphasizes business risk, operational impact, and security metrics that support executive decision-making.
 
-*(Insert Screenshot: executive-dashboard.png)*
+<p align="center">
+  <img src="https://raw.githubusercontent.com/rustykleather-ux/RailSOC-Cyber-Defense-Platform/main/Screenshots/executive-dashboard.jpg" alt="TrackSentinel Banner" width="100%">
+</p>
 
 ## Executive KPIs
 

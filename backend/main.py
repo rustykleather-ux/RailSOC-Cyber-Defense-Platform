@@ -279,7 +279,11 @@ def plant_status(db: Session = Depends(get_db)):
 
         alert_types = [alert.alert_type for alert in device_alerts]
 
-        if device.device_type in ["Signal Controller", "Grade Crossing Controller"]:
+        if device.device_type in [
+            "Signal Controller",
+            "Grade Crossing Controller",
+            "Switch Controller"
+        ]:
             logic_attack = "Unauthorized Logic Modification" in alert_types
 
             status_data.append({
@@ -340,7 +344,107 @@ def plant_status(db: Session = Depends(get_db)):
                 "timestamp": datetime.utcnow().isoformat()
             })
 
-    return status_data
+        elif device.device_type in ["Historian", "Jump Server"]:
+            status_data.append({
+                "device": device.name,
+                "type": device.device_type,
+                "status": device.status,
+                "cpu_usage": random.randint(20, 70),
+                "memory_usage": random.randint(35, 85),
+                "active_sessions": random.randint(1, 12),
+                "network_latency": random.randint(1, 20),
+                "condition": "Normal",
+                "timestamp": datetime.utcnow().isoformat()
+            })
+
+        elif device.device_type == "Communications":
+            status_data.append({
+                "device": device.name,
+                "type": device.device_type,
+                "status": device.status,
+                "signal_quality": random.randint(82, 100),
+                "packet_loss": round(random.uniform(0.0, 1.8), 2),
+                "bandwidth_utilization": random.randint(20, 78),
+                "network_latency": random.randint(3, 35),
+                "condition": "Normal",
+                "timestamp": datetime.utcnow().isoformat()
+            })
+
+        elif device.device_type in ["Power", "PLC"]:
+            status_data.append({
+                "device": device.name,
+                "type": device.device_type,
+                "status": device.status,
+                "voltage": random.randint(116, 124),
+                "load_percent": random.randint(20, 75),
+                "battery_percent": random.randint(75, 100),
+                "runtime_minutes": random.randint(45, 180),
+                "network_latency": random.randint(1, 20),
+                "condition": "Normal",
+                "timestamp": datetime.utcnow().isoformat()
+            })
+
+        elif device.device_type == "Safety":
+            status_data.append({
+                "device": device.name,
+                "type": device.device_type,
+                "status": device.status,
+                "smoke_level": random.randint(0, 2),
+                "heat_alarm": "No",
+                "panel_battery": random.randint(80, 100),
+                "network_latency": random.randint(1, 20),
+                "condition": "Normal",
+                "timestamp": datetime.utcnow().isoformat()
+            })
+
+        elif device.device_type == "Environmental":
+            status_data.append({
+                "device": device.name,
+                "type": device.device_type,
+                "status": device.status,
+                "temperature": random.randint(62, 82),
+                "humidity": random.randint(35, 62),
+                "gas_ppm": random.randint(0, 3),
+                "water_detected": "No",
+                "network_latency": random.randint(1, 20),
+                "condition": "Normal",
+                "timestamp": datetime.utcnow().isoformat()
+            })
+
+        elif device.device_type == "Physical Security":
+            status_data.append({
+                "device": device.name,
+                "type": device.device_type,
+                "status": device.status,
+                "door_state": "Closed",
+                "tamper_alarm": "No",
+                "network_latency": random.randint(1, 20),
+                "condition": "Normal",
+                "timestamp": datetime.utcnow().isoformat()
+            })
+
+        elif device.device_type == "Infrastructure":
+            status_data.append({
+                "device": device.name,
+                "type": device.device_type,
+                "status": device.status,
+                "vibration": round(random.uniform(0.1, 1.8), 2),
+                "temperature": random.randint(55, 88),
+                "bearing_temperature": random.randint(90, 145),
+                "network_latency": random.randint(1, 25),
+                "condition": "Normal",
+                "timestamp": datetime.utcnow().isoformat()
+            })
+
+        else:
+            status_data.append({
+                "device": device.name,
+                "type": device.device_type,
+                "status": device.status,
+                "network_latency": random.randint(1, 25),
+                "condition": "Normal",
+                "timestamp": datetime.utcnow().isoformat()
+            })
 
     return status_data
 
@@ -463,45 +567,23 @@ def assign_incident(
 
 @app.post("/reset-demo")
 def reset_demo(db: Session = Depends(get_db)):
-    baseline_devices = {
-        "Signal Controller 14A": {
-            "status": "Online",
-            "risk_level": "Low",
-            "firmware_version": "4.1.3"
-        },
-        "Grade Crossing Controller MP 82.4": {
-            "status": "Online",
-            "risk_level": "Low",
-            "firmware_version": "3.2.1"
-        },
-        "PTC Radio Gateway": {
-            "status": "Online",
-            "risk_level": "Low",
-            "firmware_version": "2.4.8"
-        },
-        "Rail Engineering Workstation": {
-            "status": "Online",
-            "risk_level": "Low",
-            "firmware_version": "Windows 11 24H2"
-        },
-        "Dispatch SCADA Server": {
-            "status": "Online",
-            "risk_level": "Low",
-            "firmware_version": "8.1.35"
-        }
-    }
+    devices = db.query(OTDevice).all()
 
-    for name, values in baseline_devices.items():
-        device = db.query(OTDevice).filter(OTDevice.name == name).first()
-        if device:
-            device.status = values["status"]
-            device.risk_level = values["risk_level"]
-            device.firmware_version = values["firmware_version"]
-            device.last_seen = datetime.utcnow()
+    for device in devices:
+        device.status = "Online"
+        device.risk_level = "Low"
+        device.last_seen = datetime.utcnow()
+
+        if device.name == "Grade Crossing Controller MP 82.4":
+            device.firmware_version = "6.3.1"
+
+        if device.name == "PTC Radio Gateway":
+            device.firmware_version = "5.2.1"
+
+        if device.name == "Rail Engineering Workstation":
+            device.firmware_version = "Windows 11 24H2"
 
     db.query(Alert).delete()
-    
-
     db.commit()
 
     return {"message": "TrackSentinel environment restored to operational baseline."}

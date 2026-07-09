@@ -5,7 +5,8 @@ function NetworkTopology({ devices }) {
 
   const getNodeClass = (device) => {
     if (!device) return "unknown";
-    if (device.status === "Offline") return "critical";
+    if (device.status === "Offline" || device.status === "Degraded")
+      return "critical";
 
     const risk = device.calculated_risk || device.risk_level;
 
@@ -16,18 +17,50 @@ function NetworkTopology({ devices }) {
     return "healthy";
   };
 
-  const railNodes = [
+  const groups = [
     {
-      name: "Signal Controller 14A",
-      detail: "East Signal District",
+      title: "Operations Core",
+      nodes: [
+        "Dispatch SCADA Server",
+        "Operations Historian",
+        "OT Jump Server",
+      ],
     },
     {
-      name: "Grade Crossing Controller MP 82.4",
-      detail: "Prairie Subdivision",
+      title: "Signal & Train Control",
+      nodes: [
+        "Signal Controller 14A",
+        "Signal Controller 14B",
+        "Signal Controller 15C",
+        "Grade Crossing Controller MP 82.4",
+        "Grade Crossing Controller MP 87.1",
+        "Switch Machine Controller",
+      ],
     },
     {
-      name: "PTC Radio Gateway",
-      detail: "Wayside Communications Hut",
+      title: "Communications",
+      nodes: [
+        "PTC Radio Gateway",
+        "Microwave Radio",
+        "Fiber Distribution Switch",
+      ],
+    },
+    {
+      title: "Power, Safety & Infrastructure",
+      nodes: [
+        "UPS System",
+        "Backup Generator PLC",
+        "Fire Detection Panel",
+        "Hydrogen Gas Detector",
+        "Flood Detection Sensor",
+        "Cabinet Intrusion Sensor",
+        "Bridge Structural Monitor",
+        "Hot Bearing Detector",
+      ],
+    },
+    {
+      title: "Engineering Access",
+      nodes: ["Rail Engineering Workstation"],
     },
   ];
 
@@ -43,52 +76,29 @@ function NetworkTopology({ devices }) {
 
         <div className="topology-line"></div>
 
-        <div
-          className={`topology-node ${getNodeClass(
-            getDevice("Dispatch SCADA Server")
-          )}`}
-        >
-          Dispatch SCADA Server
-          <span>
-            {getDevice("Dispatch SCADA Server")?.ip_address || "Unknown IP"}
-          </span>
-        </div>
+        <div className="topology-zone-stack">
+          {groups.map((group) => (
+            <section className="topology-zone" key={group.title}>
+              <h3>{group.title}</h3>
 
-        <div className="topology-branches">
-          {railNodes.map((node) => {
-            const device = getDevice(node.name);
+              <div className="topology-zone-grid">
+                {group.nodes.map((name) => {
+                  const device = getDevice(name);
 
-            return (
-              <div className="branch" key={node.name}>
-                <div className="topology-line"></div>
-
-                <div className={`topology-node ${getNodeClass(device)}`}>
-                  {node.name}
-                  <span>{node.detail}</span>
-                  <span>{device?.ip_address || "Unknown IP"}</span>
-                </div>
+                  return (
+                    <div
+                      key={name}
+                      className={`topology-node ${getNodeClass(device)}`}
+                    >
+                      {name}
+                      <span>{device?.device_type || "Unknown Type"}</span>
+                      <span>{device?.ip_address || "Unknown IP"}</span>
+                    </div>
+                  );
+                })}
               </div>
-            );
-          })}
-        </div>
-
-        <div className="topology-branches">
-          <div className="branch">
-            <div className="topology-line"></div>
-
-            <div
-              className={`topology-node ${getNodeClass(
-                getDevice("Rail Engineering Workstation")
-              )}`}
-            >
-              Rail Engineering Workstation
-              <span>Remote Maintenance Access</span>
-              <span>
-                {getDevice("Rail Engineering Workstation")?.ip_address ||
-                  "Unknown IP"}
-              </span>
-            </div>
-          </div>
+            </section>
+          ))}
         </div>
       </div>
     </>

@@ -11,8 +11,41 @@ db.query(Alert).delete()
 db.query(OTDevice).delete()
 db.commit()
 
-# Railroad OT Assets
-signal_controller = OTDevice(
+
+dispatch_scada = OTDevice(
+    name="Dispatch SCADA Server",
+    ip_address="192.168.50.5",
+    device_type="Dispatch SCADA",
+    vendor="Inductive Automation Ignition",
+    status="Online",
+    risk_level="Low",
+    firmware_version="8.1.35",
+    location="Operations Control Center"
+)
+
+historian = OTDevice(
+    name="Operations Historian",
+    ip_address="192.168.50.6",
+    device_type="Historian",
+    vendor="OSIsoft PI",
+    status="Online",
+    risk_level="Low",
+    firmware_version="2024",
+    location="Operations Control Center"
+)
+
+jump_server = OTDevice(
+    name="OT Jump Server",
+    ip_address="192.168.50.7",
+    device_type="Jump Server",
+    vendor="Microsoft",
+    status="Online",
+    risk_level="Medium",
+    firmware_version="Windows Server 2022",
+    location="Operations Control Center"
+)
+
+signal14a = OTDevice(
     name="Signal Controller 14A",
     ip_address="192.168.50.10",
     device_type="Signal Controller",
@@ -23,29 +56,183 @@ signal_controller = OTDevice(
     location="East Signal District"
 )
 
-crossing_controller = OTDevice(
-    name="Grade Crossing Controller MP 82.4",
+signal14b = OTDevice(
+    name="Signal Controller 14B",
     ip_address="192.168.50.11",
+    device_type="Signal Controller",
+    vendor="Siemens Rail Automation",
+    status="Online",
+    risk_level="Low",
+    firmware_version="4.1.3",
+    location="East Signal District"
+)
+
+signal15c = OTDevice(
+    name="Signal Controller 15C",
+    ip_address="192.168.50.12",
+    device_type="Signal Controller",
+    vendor="Siemens Rail Automation",
+    status="Online",
+    risk_level="Low",
+    firmware_version="4.1.3",
+    location="West Signal District"
+)
+
+crossing82 = OTDevice(
+    name="Grade Crossing Controller MP 82.4",
+    ip_address="192.168.50.20",
     device_type="Grade Crossing Controller",
     vendor="Wabtec",
     status="Online",
-    risk_level="Critical",
-    firmware_version="3.2.1",
-    location="Prairie Subdivision - MP 82.4"
+    risk_level="Medium",
+    firmware_version="6.3.1",
+    location="Prairie Subdivision MP 82.4"
+)
+
+crossing87 = OTDevice(
+    name="Grade Crossing Controller MP 87.1",
+    ip_address="192.168.50.21",
+    device_type="Grade Crossing Controller",
+    vendor="Wabtec",
+    status="Online",
+    risk_level="Medium",
+    firmware_version="6.3.1",
+    location="Prairie Subdivision MP 87.1"
+)
+
+switch_controller = OTDevice(
+    name="Switch Machine Controller",
+    ip_address="192.168.50.30",
+    device_type="Switch Controller",
+    vendor="Alstom",
+    status="Online",
+    risk_level="Low",
+    firmware_version="3.8.2",
+    location="Yard Lead"
 )
 
 ptc_gateway = OTDevice(
     name="PTC Radio Gateway",
-    ip_address="192.168.50.25",
+    ip_address="192.168.50.40",
     device_type="PTC Communications Gateway",
     vendor="Meteorcomm",
-    status="Offline",
-    risk_level="High",
-    firmware_version="2.4.8",
+    status="Online",
+    risk_level="Medium",
+    firmware_version="5.2.1",
     location="Wayside Communications Hut"
 )
 
-engineering_workstation = OTDevice(
+microwave = OTDevice(
+    name="Microwave Radio",
+    ip_address="192.168.50.41",
+    device_type="Communications",
+    vendor="Cambium",
+    status="Online",
+    risk_level="Low",
+    firmware_version="2.5.8",
+    location="Communications Tower"
+)
+
+fiber_switch = OTDevice(
+    name="Fiber Distribution Switch",
+    ip_address="192.168.50.42",
+    device_type="Communications",
+    vendor="Cisco",
+    status="Online",
+    risk_level="Low",
+    firmware_version="17.9",
+    location="Dispatch Communications Room"
+)
+
+ups = OTDevice(
+    name="UPS System",
+    ip_address="192.168.50.50",
+    device_type="Power",
+    vendor="APC",
+    status="Online",
+    risk_level="Low",
+    firmware_version="3.2",
+    location="Dispatch UPS Room"
+)
+
+generator = OTDevice(
+    name="Backup Generator PLC",
+    ip_address="192.168.50.51",
+    device_type="PLC",
+    vendor="Schneider Electric",
+    status="Online",
+    risk_level="Low",
+    firmware_version="2.9",
+    location="Generator Building"
+)
+
+fire_panel = OTDevice(
+    name="Fire Detection Panel",
+    ip_address="192.168.50.60",
+    device_type="Safety",
+    vendor="Honeywell",
+    status="Online",
+    risk_level="Low",
+    firmware_version="5.3",
+    location="Operations Control Center"
+)
+
+gas_detector = OTDevice(
+    name="Hydrogen Gas Detector",
+    ip_address="192.168.50.61",
+    device_type="Environmental",
+    vendor="Honeywell",
+    status="Online",
+    risk_level="Low",
+    firmware_version="2.4",
+    location="Battery Room"
+)
+
+flood_sensor = OTDevice(
+    name="Flood Detection Sensor",
+    ip_address="192.168.50.62",
+    device_type="Environmental",
+    vendor="Banner Engineering",
+    status="Online",
+    risk_level="Low",
+    firmware_version="1.8",
+    location="Cable Vault"
+)
+
+cabinet_sensor = OTDevice(
+    name="Cabinet Intrusion Sensor",
+    ip_address="192.168.50.63",
+    device_type="Physical Security",
+    vendor="Bosch",
+    status="Online",
+    risk_level="Low",
+    firmware_version="3.0",
+    location="Wayside Equipment Hut"
+)
+
+bridge_monitor = OTDevice(
+    name="Bridge Structural Monitor",
+    ip_address="192.168.50.70",
+    device_type="Infrastructure",
+    vendor="Mistras",
+    status="Online",
+    risk_level="Low",
+    firmware_version="2.8",
+    location="Missouri River Bridge"
+)
+
+bearing_detector = OTDevice(
+    name="Hot Bearing Detector",
+    ip_address="192.168.50.71",
+    device_type="Infrastructure",
+    vendor="HBD Inc.",
+    status="Online",
+    risk_level="Low",
+    firmware_version="4.2",
+    location="Prairie Subdivision MP 95.2"
+)
+
+engineering_ws = OTDevice(
     name="Rail Engineering Workstation",
     ip_address="192.168.50.100",
     device_type="Engineering Workstation",
@@ -53,39 +240,43 @@ engineering_workstation = OTDevice(
     status="Online",
     risk_level="Medium",
     firmware_version="Windows 11 24H2",
-    location="Maintenance Facility Alpha"
+    location="Engineering Office"
 )
 
-dispatch_scada = OTDevice(
-    name="Dispatch SCADA Server",
-    ip_address="192.168.50.200",
-    device_type="Dispatch SCADA",
-    vendor="Ignition",
-    status="Online",
-    risk_level="Low",
-    firmware_version="8.1.35",
-    location="West Dispatch Center"
-)
-
-db.add_all([
-    signal_controller,
-    crossing_controller,
+devices = [
+    dispatch_scada,
+    historian,
+    jump_server,
+    signal14a,
+    signal14b,
+    signal15c,
+    crossing82,
+    crossing87,
+    switch_controller,
     ptc_gateway,
-    engineering_workstation,
-    dispatch_scada
-])
+    microwave,
+    fiber_switch,
+    ups,
+    generator,
+    fire_panel,
+    gas_detector,
+    flood_sensor,
+    cabinet_sensor,
+    bridge_monitor,
+    bearing_detector,
+    engineering_ws,
+]
+
+db.add_all(devices)
 db.commit()
 
-db.refresh(signal_controller)
-db.refresh(crossing_controller)
-db.refresh(ptc_gateway)
-db.refresh(engineering_workstation)
-db.refresh(dispatch_scada)
+for device in devices:
+    db.refresh(device)
 
 # RailSOC Alerts
 alerts = [
     Alert(
-        device_id=crossing_controller.id,
+        device_id=crossing82.id,
         severity="Critical",
         alert_type="Unauthorized Logic Modification",
         message="Grade crossing controller firmware/configuration drift detected at fictional milepost MP 82.4.",
@@ -101,7 +292,7 @@ alerts = [
         acknowledged=False
     ),
     Alert(
-        device_id=engineering_workstation.id,
+        device_id=engineering_ws.id,
         severity="Medium",
         alert_type="Unauthorized Engineering Login",
         message="Multiple failed authentication attempts detected against rail engineering workstation.",
@@ -115,7 +306,7 @@ db.add_all(alerts)
 # RailSOC Vulnerabilities
 vulnerabilities = [
     Vulnerability(
-        device_id=crossing_controller.id,
+        device_id=crossing82.id,
         cve_id="CVE-DEMO-RAIL-0001",
         title="Outdated Grade Crossing Controller Firmware",
         severity="Critical",

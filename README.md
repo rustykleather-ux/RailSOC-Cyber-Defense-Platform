@@ -1,6 +1,7 @@
 <p align="center">
   <img src="https://raw.githubusercontent.com/rustykleather-ux/RailSOC-Cyber-Defense-Platform/main/frontend/src/assets/TrackSintinel-Banner.png" alt="TrackSentinel Banner" width="100%">
 </p>
+
 # 🚂 TrackSentinel
 
 ![Python](https://img.shields.io/badge/Python-3.12-blue?logo=python)

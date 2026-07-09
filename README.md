@@ -339,7 +339,9 @@ Supports:
 # 📊 Operational Telemetry
 
 TrackSentinel dynamically simulates telemetry for each operational asset.
-
+<p align="center">
+  <img src="https://raw.githubusercontent.com/rustykleather-ux/RailSOC-Cyber-Defense-Platform/main/Screenshots/telemetry.jpg" alt="TrackSentinel Banner" width="100%">
+</p>
 Examples include:
 
 | Category | Example Metrics |
@@ -393,7 +395,9 @@ screenshots/executive-dashboard.png
 
 > The operational command center used by analysts during daily monitoring.
 
-*(Insert Screenshot: Dashboard)*
+<p align="center">
+  <img src="https://raw.githubusercontent.com/rustykleather-ux/RailSOC-Cyber-Defense-Platform/main/Screenshots/dashboard.jpg" alt="Dashboard" width="100%">
+</p>
 
 ```text
 screenshots/dashboard.png
@@ -422,7 +426,9 @@ screenshots/dashboard.png
 
 > A digital visualization of the simulated railroad operational environment.
 
-*(Insert Screenshot: Operations Map)*
+<p align="center">
+  <img src="https://raw.githubusercontent.com/rustykleather-ux/RailSOC-Cyber-Defense-Platform/main/Screenshots/operations-map.jpg" alt="Operations" width="100%">
+</p>
 
 ```text
 screenshots/operations-map.png
@@ -456,7 +462,9 @@ screenshots/operations-map.png
 
 > Real-time operational telemetry grouped by asset category.
 
-*(Insert Screenshot: Telemetry)*
+<p align="center">
+  <img src="https://raw.githubusercontent.com/rustykleather-ux/RailSOC-Cyber-Defense-Platform/main/Screenshots/telemetry.jpg" alt="TrackSentinel Banner" width="100%">
+</p>
 
 ```text
 screenshots/live-telemetry.png
@@ -533,7 +541,9 @@ screenshots/live-telemetry.png
 
 > Interactive visualization of the simulated railroad OT network.
 
-*(Insert Screenshot: Topology)*
+<p align="center">
+  <img src="https://raw.githubusercontent.com/rustykleather-ux/RailSOC-Cyber-Defense-Platform/main/Screenshots/topology.jpg" alt="TrackSentinel Banner" width="100%">
+</p>
 
 ```text
 screenshots/topology.png
@@ -605,7 +615,9 @@ Each alert includes
 
 > Central workspace for managing operational cybersecurity incidents.
 
-*(Insert Screenshot: Incident Center)*
+<p align="center">
+  <img src="https://raw.githubusercontent.com/rustykleather-ux/RailSOC-Cyber-Defense-Platform/main/Screenshots/incident-center.jpg" alt="TrackSentinel Banner" width="100%">
+</p>
 
 ```text
 screenshots/incident-center.png
@@ -635,7 +647,9 @@ screenshots/incident-center.png
 
 > Analyst-focused investigation environment.
 
-*(Insert Screenshot: Investigation Workspace)*
+<p align="center">
+  <img src="https://raw.githubusercontent.com/rustykleather-ux/RailSOC-Cyber-Defense-Platform/main/Screenshots/investigation-workspace.jpg" alt="TrackSentinel Banner" width="100%">
+</p>
 
 ```text
 screenshots/investigation-workspace.png
@@ -1077,7 +1091,9 @@ Unlike enterprise IT environments, OT vulnerabilities often require coordination
 
 TrackSentinel includes executive-oriented reporting designed to communicate cybersecurity posture to technical and non-technical stakeholders.
 
-*(Insert Screenshot: reports.png)*
+<p align="center">
+  <img src="https://raw.githubusercontent.com/rustykleather-ux/RailSOC-Cyber-Defense-Platform/main/Screenshots/reports.jpg" alt="TrackSentinel Banner" width="100%">
+</p>
 
 Reports summarize:
 

@@ -1,20 +1,12 @@
 # 🚂 TrackSentinel
 ![Python](https://img.shields.io/badge/Python-3.12-blue?logo=python)
-
 ![FastAPI](https://img.shields.io/badge/FastAPI-Backend-009688?logo=fastapi)
-
 ![React](https://img.shields.io/badge/React-Frontend-61DAFB?logo=react)
-
 ![Vite](https://img.shields.io/badge/Vite-Build-646CFF?logo=vite)
-
 ![SQLite](https://img.shields.io/badge/SQLite-Database-003B57?logo=sqlite)
-
 ![MITRE ATT&CK ICS](https://img.shields.io/badge/MITRE-ATT%26CK%20ICS-red)
-
 ![Status](https://img.shields.io/badge/Status-Active-success)
-
 ![Portfolio](https://img.shields.io/badge/Portfolio-Project-orange)
-
 ### RailSOC Training & Simulation Platform
 
 ### Operational Technology Cybersecurity • Railroad Infrastructure • Industrial Control Systems

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/tracksentinel-banner.png" alt="TrackSentinel Banner" width="100%">
+  <img src="https://raw.githubusercontent.com/rustykleather-ux/TrackSentinel/main/assets/tracksentinel-banner.png" alt="TrackSentinel Banner" width="100%">
 </p>
 # 🚂 TrackSentinel
 ![Python](https://img.shields.io/badge/Python-3.12-blue?logo=python)

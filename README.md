@@ -429,7 +429,7 @@ screenshots/dashboard.png
 > A digital visualization of the simulated railroad operational environment.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/rustykleather-ux/RailSOC-Cyber-Defense-Platform/main/Screenshots/operations-map.jpg" alt="Operations" width="100%">
+  <img src="https://raw.githubusercontent.com/rustykleather-ux/RailSOC-Cyber-Defense-Platform/main/Screenshots\operations-map.jpg" alt="Operations" width="100%">
 </p>
 
 ```text
@@ -582,7 +582,7 @@ Each node dynamically reflects:
 > Centralized monitoring of simulated cybersecurity events.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/rustykleather-ux/RailSOC-Cyber-Defense-Platform/main/Screenshots/security-alerts.jpg" alt="TrackSentinel Banner" width="100%">
+  <img src="https://raw.githubusercontent.com/rustykleather-ux/RailSOC-Cyber-Defense-Platform/main/Screenshots\security-alerts.jpg" alt="TrackSentinel Banner" width="100%">
 </p>
 
 ```text

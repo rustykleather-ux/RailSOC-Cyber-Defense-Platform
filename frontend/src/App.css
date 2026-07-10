@@ -934,6 +934,13 @@ td {
    Railroad Mileposts
 ========================== */
 
+.milepost-status {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  margin-top: 4px;
+}
+
 .milepost {
   position: absolute;
   display: flex;

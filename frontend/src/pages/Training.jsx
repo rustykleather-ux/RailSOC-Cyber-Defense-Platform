@@ -1,8 +1,19 @@
+import {
+  ScanSearch,
+  Cpu,
+  RadioTower,
+  KeyRound,
+  Bug,
+  RotateCcw,
+  Play,
+} from "lucide-react";
+
 function Training({ simulateAttack, resetDemo }) {
   const scenarios = [
     {
       id: "firmware",
       title: "Unauthorized PLC Firmware Modification",
+      icon: Cpu,
       asset: "Grade Crossing Controller MP 82.4",
       severity: "Critical",
       mitre: "T0859 - Modify Controller Tasking",
@@ -13,6 +24,7 @@ function Training({ simulateAttack, resetDemo }) {
     {
       id: "recon",
       title: "Network Reconnaissance",
+      icon: ScanSearch,
       asset: "Dispatch Network",
       severity: "Medium",
       mitre: "T0842 - Network Service Scanning",
@@ -23,6 +35,7 @@ function Training({ simulateAttack, resetDemo }) {
     {
       id: "dos",
       title: "Rail OT Denial of Service",
+      icon: Play,
       asset: "Dispatch SCADA Server",
       severity: "Critical",
       mitre: "T0814 - Denial of Service",
@@ -33,6 +46,7 @@ function Training({ simulateAttack, resetDemo }) {
     {
       id: "auth",
       title: "Engineering Workstation Credential Abuse",
+      icon: KeyRound,
       asset: "Engineering Workstation",
       severity: "High",
       mitre: "T0812 - Valid Accounts",
@@ -43,6 +57,7 @@ function Training({ simulateAttack, resetDemo }) {
     {
       id: "ptc",
       title: "PTC Communications Failure",
+      icon: RadioTower,
       asset: "PTC Radio Gateway",
       severity: "High",
       mitre: "T0881 - Service Stop",
@@ -53,6 +68,7 @@ function Training({ simulateAttack, resetDemo }) {
     {
       id: "malware",
       title: "Malware on Engineering Station",
+      icon: Bug,
       asset: "Engineering Workstation",
       severity: "Critical",
       mitre: "T0809 - Data Destruction",
@@ -73,51 +89,70 @@ function Training({ simulateAttack, resetDemo }) {
           </p>
         </div>
 
-        <button className="reset-button" onClick={resetDemo}>
-          Restore Operational Baseline
+        <button
+          className="reset-button"
+          type="button"
+          onClick={resetDemo}
+        >
+          <RotateCcw size={17} aria-hidden="true" />
+          <span>Restore Operational Baseline</span>
         </button>
       </div>
 
       <div className="scenario-grid">
-        {scenarios.map((scenario) => (
-          <div className="scenario-card" key={scenario.id}>
-            <span
-              className={`badge ${scenario.severity.toLowerCase()}`}
-            >
-              {scenario.severity}
-            </span>
+        {scenarios.map((scenario) => {
+          const ScenarioIcon = scenario.icon;
 
-            <h3>{scenario.title}</h3>
+          return (
+            <div className="scenario-card" key={scenario.id}>
+              <span
+                className={`badge ${scenario.severity.toLowerCase()}`}
+              >
+                {scenario.severity}
+              </span>
 
-            <p>{scenario.description}</p>
+              <div className="scenario-title-row">
+                <ScenarioIcon
+                  size={22}
+                  strokeWidth={1.8}
+                  aria-hidden="true"
+                />
 
-            <table className="scenario-table">
-              <tbody>
-                <tr>
-                  <td>Target</td>
-                  <td>{scenario.asset}</td>
-                </tr>
+                <h3>{scenario.title}</h3>
+              </div>
 
-                <tr>
-                  <td>MITRE</td>
-                  <td>{scenario.mitre}</td>
-                </tr>
+              <p>{scenario.description}</p>
 
-                <tr>
-                  <td>Difficulty</td>
-                  <td>{scenario.difficulty}</td>
-                </tr>
-              </tbody>
-            </table>
+              <table className="scenario-table">
+                <tbody>
+                  <tr>
+                    <td>Target</td>
+                    <td>{scenario.asset}</td>
+                  </tr>
 
-            <button
-              className="launch-button"
-              onClick={() => simulateAttack(scenario.id)}
-            >
-              Launch Scenario
-            </button>
-          </div>
-        ))}
+                  <tr>
+                    <td>MITRE</td>
+                    <td>{scenario.mitre}</td>
+                  </tr>
+
+                  <tr>
+                    <td>Difficulty</td>
+                    <td>{scenario.difficulty}</td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <button
+                className="launch-button"
+                type="button"
+                onClick={() => simulateAttack(scenario.id)}
+              >
+                <Play size={17} aria-hidden="true" />
+                <span>Launch Scenario</span>
+              </button>
+            </div>
+          );
+        })}
       </div>
     </section>
   );

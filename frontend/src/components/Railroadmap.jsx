@@ -1,9 +1,21 @@
 import { useState } from "react";
+import {
+  MonitorCog,
+  Database,
+  TrafficCone,
+  Construction,
+  RadioTower,
+  Zap,
+  Thermometer,
+  DoorOpen,
+  Landmark,
+  Flame,
+  Wrench,
+} from "lucide-react";
 
 function RailroadMap({ devices, incidents }) {
   const [selectedAsset, setSelectedAsset] = useState(null);
-
-  const getDevice = (name) => (devices || []).find((d) => d.name === name);
+    const getDevice = (name) => (devices || []).find((d) => d.name === name);
 
   const getStatusClass = (device) => {
     if (!device) return "unknown";
@@ -24,80 +36,80 @@ function RailroadMap({ devices, incidents }) {
       (incident) => incident.device === assetName && incident.status !== "Closed"
     ).length;
 
-  const mapAssets = [
-    {
-      name: "Dispatch SCADA Server",
-      label: "Dispatch Center",
-      icon: "🖥️",
-      position: "dispatch",
-    },
-    {
-      name: "Operations Historian",
-      label: "Historian",
-      icon: "🗄️",
-      position: "historian",
-    },
-    {
-      name: "Signal Controller 14A",
-      label: "Signal 14A",
-      icon: "🚦",
-      position: "signal-a",
-    },
-    {
-      name: "Signal Controller 14B",
-      label: "Signal 14B",
-      icon: "🚦",
-      position: "signal-b",
-    },
-    {
-      name: "Grade Crossing Controller MP 82.4",
-      label: "Crossing MP 82.4",
-      icon: "🚧",
-      position: "crossing-a",
-    },
-    {
-      name: "PTC Radio Gateway",
-      label: "PTC Radio",
-      icon: "📡",
-      position: "ptc",
-    },
-    {
-      name: "UPS System",
-      label: "UPS Power",
-      icon: "⚡",
-      position: "ups",
-    },
-    {
-      name: "Hydrogen Gas Detector",
-      label: "Gas Detector",
-      icon: "🌡️",
-      position: "gas",
-    },
-    {
-      name: "Cabinet Intrusion Sensor",
-      label: "Cabinet Sensor",
-      icon: "🚪",
-      position: "cabinet",
-    },
-    {
-      name: "Bridge Structural Monitor",
-      label: "Bridge Monitor",
-      icon: "🌉",
-      position: "bridge",
-    },
-    {
-      name: "Hot Bearing Detector",
-      label: "Hot Bearing",
-      icon: "🔥",
-      position: "bearing",
-    },
-    {
-      name: "Rail Engineering Workstation",
-      label: "Engineering",
-      icon: "🛠️",
-      position: "maintenance",
-    },
-  ];
+ const mapAssets = [
+  {
+    name: "Dispatch SCADA Server",
+    label: "Dispatch Center",
+    icon: MonitorCog,
+    position: "dispatch",
+  },
+  {
+    name: "Operations Historian",
+    label: "Historian",
+    icon: Database,
+    position: "historian",
+  },
+  {
+    name: "Signal Controller 14A",
+    label: "Signal 14A",
+    icon: TrafficCone,
+    position: "signal-a",
+  },
+  {
+    name: "Signal Controller 14B",
+    label: "Signal 14B",
+    icon: TrafficCone,
+    position: "signal-b",
+  },
+  {
+    name: "Grade Crossing Controller MP 82.4",
+    label: "Crossing MP 82.4",
+    icon: Construction,
+    position: "crossing-a",
+  },
+  {
+    name: "PTC Radio Gateway",
+    label: "PTC Radio",
+    icon: RadioTower,
+    position: "ptc",
+  },
+  {
+    name: "UPS System",
+    label: "UPS Power",
+    icon: Zap,
+    position: "ups",
+  },
+  {
+    name: "Hydrogen Gas Detector",
+    label: "Gas Detector",
+    icon: Thermometer,
+    position: "gas",
+  },
+  {
+    name: "Cabinet Intrusion Sensor",
+    label: "Cabinet Sensor",
+    icon: DoorOpen,
+    position: "cabinet",
+  },
+  {
+    name: "Bridge Structural Monitor",
+    label: "Bridge Monitor",
+    icon: Landmark,
+    position: "bridge",
+  },
+  {
+    name: "Hot Bearing Detector",
+    label: "Hot Bearing",
+    icon: Flame,
+    position: "bearing",
+  },
+  {
+    name: "Rail Engineering Workstation",
+    label: "Engineering",
+    icon: Wrench,
+    position: "maintenance",
+  },
+];
 
   return (
     <section className="rail-ops-map">
@@ -144,7 +156,7 @@ function RailroadMap({ devices, incidents }) {
           const device = getDevice(asset.name);
           const statusClass = getStatusClass(device);
           const activeIncidentCount = getIncidentCount(asset.name);
-
+          const AssetIcon = asset.icon;
           return (
             <button
               key={asset.name}
@@ -152,7 +164,9 @@ function RailroadMap({ devices, incidents }) {
               onClick={() => setSelectedAsset(device)}
               type="button"
             >
-              <span className="map-asset-icon">{asset.icon}</span>
+              <span className="map-asset-icon">
+                <AssetIcon size={22} strokeWidth={1.8} aria-hidden="true" />
+              </span>
               <span className="map-asset-label">{asset.label}</span>
               <span className="map-asset-status">
                 {device?.status || "Unknown"}

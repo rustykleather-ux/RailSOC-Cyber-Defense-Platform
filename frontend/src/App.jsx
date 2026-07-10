@@ -26,6 +26,23 @@ import {
   closeIncidentRequest,
 } from "./services/incidentService";
 
+import {
+  LayoutDashboard,
+  Target,
+  Network,
+  RadioTower,
+  TriangleAlert,
+  Brain,
+  Clock3,
+  ClipboardList,
+  Search,
+  TrafficCone,
+  ShieldAlert,
+  ChartNoAxesCombined,
+  FileChartColumn,
+  Settings as SettingsIcon,
+} from "lucide-react";
+
 import { getDevices } from "./services/deviceService";
 import { getDashboard } from "./services/dashboardService";
 import { getAlerts } from "./services/alertService";
@@ -167,20 +184,75 @@ function App() {
           </div>
 
           <nav className="sidebar-nav">
-            <NavLink to="/">📊 Dashboard</NavLink>
-            <NavLink to="/training">🎯 Training Exercises</NavLink>
-            <NavLink to="/topology">🛤 Railroad Topology</NavLink>
-            <NavLink to="/telemetry">📡 Live Telemetry</NavLink>
-            <NavLink to="/alerts">🚨 Security Alerts</NavLink>
-            <NavLink to="/threat-intel">🧠 Threat Intelligence</NavLink>
-            <NavLink to="/timeline">🧭 Incident Timeline</NavLink>
-            <NavLink to="/incidents">📝 Incident Center</NavLink>
-            <NavLink to="/investigation">🔍 Investigation</NavLink>
-            <NavLink to="/assets">🚦 OT Assets</NavLink>
-            <NavLink to="/vulnerabilities">⚠️ Vulnerabilities</NavLink>
-            <NavLink to="/executive">📊 Executive Dashboard</NavLink>
-            <NavLink to="/reports">📈 Reports</NavLink>
-            <NavLink to="/settings">⚙️ Settings</NavLink>
+            <NavLink to="/">
+              <LayoutDashboard size={18} />
+              <span>Dashboard</span>
+            </NavLink>
+
+            <NavLink to="/training">
+              <Target size={18} />
+              <span>Training Exercises</span>
+            </NavLink>
+
+            <NavLink to="/topology">
+              <Network size={18} />
+              <span>Railroad Topology</span>
+            </NavLink>
+
+            <NavLink to="/telemetry">
+              <RadioTower size={18} />
+              <span>Live Telemetry</span>
+            </NavLink>
+
+            <NavLink to="/alerts">
+              <TriangleAlert size={18} />
+              <span>Security Alerts</span>
+            </NavLink>
+
+            <NavLink to="/threat-intel">
+              <Brain size={18} />
+              <span>Threat Intelligence</span>
+            </NavLink>
+
+            <NavLink to="/timeline">
+              <Clock3 size={18} />
+              <span>Incident Timeline</span>
+            </NavLink>
+
+            <NavLink to="/incidents">
+              <ClipboardList size={18} />
+              <span>Incident Center</span>
+            </NavLink>
+
+            <NavLink to="/investigation">
+              <Search size={18} />
+              <span>Investigation</span>
+            </NavLink>
+
+            <NavLink to="/assets">
+              <TrafficCone size={18} />
+              <span>OT Assets</span>
+            </NavLink>
+
+            <NavLink to="/vulnerabilities">
+              <ShieldAlert size={18} />
+              <span>Vulnerabilities</span>
+            </NavLink>
+
+            <NavLink to="/executive">
+              <ChartNoAxesCombined size={18} />
+              <span>Executive Dashboard</span>
+            </NavLink>
+
+            <NavLink to="/reports">
+              <FileChartColumn size={18} />
+              <span>Reports</span>
+            </NavLink>
+
+            <NavLink to="/settings">
+              <SettingsIcon size={18} />
+              <span>Settings</span>
+            </NavLink>
           </nav>
         </aside>
 

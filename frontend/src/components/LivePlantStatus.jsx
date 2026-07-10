@@ -9,42 +9,83 @@ function Metric({ label, value }) {
   );
 }
 
+import {
+  TrafficCone,
+  Construction,
+  MonitorCog,
+  Laptop,
+  Database,
+  ShieldCheck,
+  RadioTower,
+  Wifi,
+  Zap,
+  PlugZap,
+  Flame,
+  Thermometer,
+  DoorOpen,
+  Landmark,
+  GitBranch,
+  Box,
+} from "lucide-react";
+
 function getIcon(type) {
+  const iconProps = {
+    size: 24,
+    strokeWidth: 1.8,
+    "aria-hidden": true,
+  };
+
   switch (type) {
     case "Signal Controller":
-      return "🚦";
+      return <TrafficCone {...iconProps} />;
+
     case "Grade Crossing Controller":
-      return "🚧";
+      return <Construction {...iconProps} />;
+
     case "Dispatch SCADA":
-      return "🖥️";
+      return <MonitorCog {...iconProps} />;
+
     case "Engineering Workstation":
-      return "💻";
+      return <Laptop {...iconProps} />;
+
     case "Historian":
-      return "🗄️";
+      return <Database {...iconProps} />;
+
     case "Jump Server":
-      return "🔐";
+      return <ShieldCheck {...iconProps} />;
+
     case "PTC Communications Gateway":
-      return "📡";
+      return <RadioTower {...iconProps} />;
+
     case "Communications":
-      return "📶";
+      return <Wifi {...iconProps} />;
+
     case "Power":
-      return "⚡";
+      return <Zap {...iconProps} />;
+
     case "PLC":
-      return "🔌";
+      return <PlugZap {...iconProps} />;
+
     case "Safety":
-      return "🔥";
+      return <Flame {...iconProps} />;
+
     case "Environmental":
-      return "🌡️";
+      return <Thermometer {...iconProps} />;
+
     case "Physical Security":
-      return "🚪";
+      return <DoorOpen {...iconProps} />;
+
     case "Infrastructure":
-      return "🌉";
+      return <Landmark {...iconProps} />;
+
     case "Switch Controller":
-      return "🔀";
+      return <GitBranch {...iconProps} />;
+
     default:
-      return "📦";
+      return <Box {...iconProps} />;
   }
 }
+
 
 function DeviceMetrics({ item }) {
   switch (item.type) {

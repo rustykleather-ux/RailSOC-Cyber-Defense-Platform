@@ -431,8 +431,6 @@ screenshots/investigation-workspace.png
 
 ---
 
----
-
 # 🚂 Simulated Railroad OT Environment
 
 TrackSentinel models a realistic railroad Operational Technology (OT) environment consisting of dispatch systems, signaling infrastructure, communications, power systems, safety devices, engineering workstations, and infrastructure monitoring.
@@ -843,28 +841,7 @@ Unlike enterprise IT environments, OT vulnerabilities often require coordination
 
 ---
 
-# 📊 Executive Reports
 
-TrackSentinel includes executive-oriented reporting designed to communicate cybersecurity posture to technical and non-technical stakeholders.
-
-<p align="center">
-  <img src="https://raw.githubusercontent.com/rustykleather-ux/RailSOC-Cyber-Defense-Platform/main/Screenshots/reports.jpg" alt="TrackSentinel Banner" width="100%">
-</p>
-
-Reports summarize:
-
-- Security Score
-- Threat Level
-- Asset Health
-- Vulnerability Summary
-- Incident Summary
-- Alert Statistics
-- Operational Availability
-- Executive Recommendations
-
-These reports are designed to support leadership briefings and cybersecurity program reviews.
-
----
 
 # 🏗️ System Architecture
 

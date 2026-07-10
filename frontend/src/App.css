@@ -829,15 +829,15 @@ td {
 
 .map-asset.dispatch { left: 5%; top: 8%; }
 .map-asset.historian { left: 18%; top: 8%; }
-.map-asset.maintenance { right: 5%; top: 8%; }
 
+.map-asset.maintenance { left: 5%; top: 62%; }
 .map-asset.signal-a { left: 20%; top: 62%; }
 .map-asset.signal-b { left: 34%; top: 62%; }
 .map-asset.crossing-a { left: 45%; top: 18%; }
 .map-asset.ptc { left: 55%; top: 62%; }
 .map-asset.ups { left: 58%; top: 18%; }
 .map-asset.gas { left: 69%; top: 18%; }
-.map-asset.cabinet { left: 76%; top: 62%; }
+.map-asset.cabinet { left: 80%; top: 62%; }
 .map-asset.bridge { left: 70%; top: 62%; }
 .map-asset.bearing { left: 84%; top: 18%; }
 

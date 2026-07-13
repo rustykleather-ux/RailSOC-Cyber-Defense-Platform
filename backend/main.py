@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+
 from database import Base, engine, SessionLocal
 from models import (
     OTDevice,
@@ -405,6 +406,30 @@ def simulate_attack(attack_type: str, db: Session = Depends(get_db)):
         "device": device.name,
         "severity": scenario["severity"]
     }
+
+@app.post("/train-simulation/start")
+def start_train_simulation():
+    started = train_simulation.start()
+
+    return {
+        "running": train_simulation.is_running,
+        "message": (
+            "Train simulation started."
+            if started
+            else "Train simulation is already running."
+        ),
+    }
+
+
+@app.get("/train-simulation/status")
+def train_simulation_status():
+    return {
+        "running": train_simulation.is_running,
+        "interval_seconds": train_simulation.interval_seconds,
+        "minimum_milepost": train_simulation.minimum_milepost,
+        "maximum_milepost": train_simulation.maximum_milepost,
+    }
+
 @app.get("/plant-status")
 def plant_status(db: Session = Depends(get_db)):
     devices = db.query(OTDevice).all()

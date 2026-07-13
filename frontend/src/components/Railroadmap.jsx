@@ -33,6 +33,27 @@ function RailroadMap({
       return "offline";
     }
 
+    const getTrainPosition = (milepost) => {
+  const minimumMilepost = 8.0;
+  const maximumMilepost = 95.2;
+
+  const trackStart = 80;
+  const trackEnd = 92;
+
+  const value = Number(milepost);
+
+  if (!Number.isFinite(value)) {
+    return trackStart;
+  }
+
+  const progress =
+    (value - minimumMilepost) /
+    (maximumMilepost - minimumMilepost);
+
+  const clampedProgress = Math.max(0, Math.min(1, progress));
+
+  return trackStart + clampedProgress * (trackEnd - trackStart);
+};
     const risk = device.calculated_risk || device.risk_level;
 
     if (risk === "Critical") return "critical";

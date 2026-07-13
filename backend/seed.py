@@ -1,5 +1,10 @@
+import datetime
+from datetime import datetime
 from database import Base, engine, SessionLocal
-from models import OTDevice, Alert, Vulnerability
+from models import OTDevice, Alert, Vulnerability,Train
+
+
+
 
 Base.metadata.create_all(bind=engine)
 
@@ -9,8 +14,32 @@ db = SessionLocal()
 db.query(Vulnerability).delete()
 db.query(Alert).delete()
 db.query(OTDevice).delete()
+db.query(Train).delete()
 db.commit()
 
+train_218 = Train(
+    symbol="TS-218",
+    subdivision="Prairie Subdivision",
+    train_type="Intermodal",
+    direction="Eastbound",
+    destination="Kansas City Terminal",
+    milepost=80.0,
+    speed=43,
+    status="Moving",
+    ptc_enabled=True,
+    authority="Main Track Authority",
+    locomotive="TSX 4821",
+    train_length=8420,
+    weight_tons=13600,
+    crew="Crew A",
+    current_signal="Clear",
+    track="Main",
+    last_updated=datetime.utcnow(),
+)
+
+db.add(train_218)
+db.commit()
+db.refresh(train_218)
 
 dispatch_scada = OTDevice(
     name="Dispatch SCADA Server",

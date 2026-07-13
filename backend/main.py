@@ -1,30 +1,169 @@
-from fastapi import FastAPI, Depends
-from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy.orm import Session
-from services.risk_engine import calculate_device_risk
-from database import Base, engine, SessionLocal
-from models import OTDevice, Alert, Vulnerability
-from datetime import datetime
-from pydantic import BaseModel
-class AssignIncidentRequest(BaseModel):
-    assigned_to: str
 import random
+from datetime import datetime
+from typing import Optional
+
+from fastapi import FastAPI, Depends, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
+
+from database import Base, engine, SessionLocal
+from models import (
+    OTDevice,
+    Alert,
+    Vulnerability,
+    Train,
+    TrainHistory,
+)
+from services.risk_engine import calculate_device_risk
+from train_simulation import train_simulation
+
+
+# =========================================================
+# Database setup
+# =========================================================
+
+Base.metadata.create_all(bind=engine)
+
+
+def get_db():
+    db = SessionLocal()
+
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+# =========================================================
+# FastAPI application
+# =========================================================
 
 app = FastAPI(
     title="TrackSentinel",
     description="RailSOC Training & Simulation Platform",
-    version="1.0.0"
+    version="1.0.0",
 )
+
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-Base.metadata.create_all(bind=engine)
+
+# =========================================================
+# Request models
+# =========================================================
+
+class TrainCreate(BaseModel):
+    symbol: str
+    subdivision: str
+    train_type: str = "Freight"
+    direction: str = "Eastbound"
+    destination: Optional[str] = None
+    milepost: float = 80.0
+    speed: int = 40
+    status: str = "Moving"
+    ptc_enabled: bool = True
+    authority: str = "Main Track"
+    locomotive: Optional[str] = None
+    train_length: Optional[int] = None
+    weight_tons: Optional[int] = None
+    crew: Optional[str] = None
+    current_signal: str = "Clear"
+    track: str = "Main"
+
+
+class AssignIncidentRequest(BaseModel):
+    assigned_to: str
+
+
+class CloseIncidentRequest(BaseModel):
+    closed_by: str
+
+
+class IncidentNotesRequest(BaseModel):
+    investigation_notes: str
+
+# =========================================================
+# Train API endpoints
+# =========================================================
+
+@app.get("/trains")
+def get_trains(db: Session = Depends(get_db)):
+    return db.query(Train).order_by(Train.id).all()
+
+
+@app.get("/trains/{train_id}")
+def get_train(
+    train_id: int,
+    db: Session = Depends(get_db),
+):
+    train = (
+        db.query(Train)
+        .filter(Train.id == train_id)
+        .first()
+    )
+
+    if not train:
+        raise HTTPException(
+            status_code=404,
+            detail="Train not found",
+        )
+
+    return train
+
+
+@app.post("/trains")
+def create_train(
+    payload: TrainCreate,
+    db: Session = Depends(get_db),
+):
+    existing = (
+        db.query(Train)
+        .filter(Train.symbol == payload.symbol)
+        .first()
+    )
+
+    if existing:
+        raise HTTPException(
+            status_code=400,
+            detail="A train with that symbol already exists",
+        )
+
+    train = Train(
+        symbol=payload.symbol,
+        subdivision=payload.subdivision,
+        train_type=payload.train_type,
+        direction=payload.direction,
+        destination=payload.destination,
+        milepost=payload.milepost,
+        speed=payload.speed,
+        status=payload.status,
+        ptc_enabled=payload.ptc_enabled,
+        authority=payload.authority,
+        locomotive=payload.locomotive,
+        train_length=payload.train_length,
+        weight_tons=payload.weight_tons,
+        crew=payload.crew,
+        current_signal=payload.current_signal,
+        track=payload.track,
+        last_updated=datetime.utcnow(),
+    )
+
+    db.add(train)
+    db.commit()
+    db.refresh(train)
+
+    return train
+
 
 
 def get_db():
@@ -510,7 +649,7 @@ def get_mitre_mapping(alert_type):
 
     return mappings.get(alert_type, "Unmapped")
 
-from pydantic import BaseModel
+
 
 class IncidentNotesRequest(BaseModel):
     investigation_notes: str

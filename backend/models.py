@@ -2,6 +2,7 @@ from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, F
 from sqlalchemy.orm import relationship
 from datetime import datetime
 
+
 from database import Base
 
 
@@ -57,3 +58,65 @@ class Vulnerability(Base):
     recommendation = Column(String, default="Review and remediate.")
 
     created_at = Column(DateTime, default=datetime.utcnow)
+
+class Train(Base):
+    __tablename__ = "trains"
+   
+    id = Column(Integer, primary_key=True, index=True)
+
+    # Railroad Information
+    symbol = Column(String, nullable=False)
+    subdivision = Column(String, nullable=False)
+    
+    train_type =Column(String, default="Freight")
+
+    direction = Column(String, default="Eastbound")
+    destination = Column(String)
+
+
+
+    # Live Operations
+    milepost = Column(Float, default=80.0)
+    speed = Column(Integer, default=40)
+    status = Column(String, default="Moving")
+    ptc_enabled = Column(Boolean, default=True)
+    authority = Column(String, default="Main Track")
+
+    # Train Information
+    locomotive = Column(String)
+    train_length = Column(Integer)
+    weight_tons = Column(Integer)
+    crew = Column(String)
+
+    # Operational
+    current_signal = Column(String, default="Clear")
+    track = Column(String, default="Main")
+    last_updated = Column(DateTime, default=datetime.utcnow)
+    default=datetime.utcnow,
+    onupdate=datetime.utcnow
+
+class TrainHistory(Base):
+    __tablename__ = "train_history"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    train_id = Column(
+        Integer,
+        ForeignKey("trains.id"),
+        nullable=False
+    )
+
+    timestamp = Column(
+        DateTime,
+        default=datetime.utcnow,
+        nullable=False
+    )
+
+    milepost = Column(Float, nullable=False)
+    speed = Column(Integer, nullable=False)
+    status = Column(String)
+    current_signal = Column(String)
+    authority = Column(String)
+    ptc_enabled = Column(Boolean)
+
+    train = relationship("Train", backref="history")

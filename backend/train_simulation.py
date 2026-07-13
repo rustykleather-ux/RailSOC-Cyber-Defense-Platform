@@ -10,7 +10,7 @@ class TrainSimulationEngine:
     def __init__(
         self,
         interval_seconds: int = 3,
-        minimum_milepost: float = 80.0,
+        minimum_milepost: float = 78.45,
         maximum_milepost: float = 95.2,
     ):
         self.interval_seconds = interval_seconds
@@ -360,6 +360,6 @@ class TrainSimulationEngine:
 
 train_simulation = TrainSimulationEngine(
     interval_seconds=3,
-    minimum_milepost=80.0,
+    minimum_milepost=78.45,
     maximum_milepost=95.2,
 )

@@ -11,6 +11,7 @@ import {
   Landmark,
   Flame,
   Wrench,
+  TrainFront,
 } from "lucide-react";
 
 function RailroadMap({
@@ -33,27 +34,6 @@ function RailroadMap({
       return "offline";
     }
 
-    const getTrainPosition = (milepost) => {
-  const minimumMilepost = 8.0;
-  const maximumMilepost = 95.2;
-
-  const trackStart = 80;
-  const trackEnd = 92;
-
-  const value = Number(milepost);
-
-  if (!Number.isFinite(value)) {
-    return trackStart;
-  }
-
-  const progress =
-    (value - minimumMilepost) /
-    (maximumMilepost - minimumMilepost);
-
-  const clampedProgress = Math.max(0, Math.min(1, progress));
-
-  return trackStart + clampedProgress * (trackEnd - trackStart);
-};
     const risk = device.calculated_risk || device.risk_level;
 
     if (risk === "Critical") return "critical";
@@ -71,36 +51,33 @@ function RailroadMap({
     ).length;
 
   const getTrainPosition = (milepost) => {
-  const minimumMilepost = 80.0;
-  const maximumMilepost = 95.2;
+    const minimumMilepost = 80.0;
+    const maximumMilepost = 95.2;
 
-  // Keep train safely inside the visible map
-  const trackStartPercent = 12;
-  const trackEndPercent = 88;
+    // Match the visible rail boundaries.
+    const trackStartPercent = 12;
+    const trackEndPercent = 88;
 
-  const value = Number(milepost);
+    const value = Number(milepost);
 
-  if (!Number.isFinite(value)) {
-    return trackStartPercent;
-  }
+    if (!Number.isFinite(value)) {
+      return trackStartPercent;
+    }
 
-  const progress =
-    (value - minimumMilepost) /
-    (maximumMilepost - minimumMilepost);
+    const progress =
+      (value - minimumMilepost) /
+      (maximumMilepost - minimumMilepost);
 
-  const clampedProgress = Math.max(0, Math.min(1, progress));
+    const clampedProgress = Math.max(
+      0,
+      Math.min(1, progress)
+    );
 
-  return (
-    trackStartPercent +
-    clampedProgress *
-      (trackEndPercent - trackStartPercent)
-  );
-};
-
-    const percent =
-      ((numericMilepost - startMP) / (endMP - startMP)) * 100;
-
-    return Math.max(0, Math.min(100, percent));
+    return (
+      trackStartPercent +
+      clampedProgress *
+        (trackEndPercent - trackStartPercent)
+    );
   };
 
   const mapAssets = [
@@ -204,17 +181,27 @@ function RailroadMap({
               left: `${getTrainPosition(train.milepost)}%`,
             }}
           >
-            <div className="train-icon">🚂</div>
+            <div className="train-icon">
+              <TrainFront
+                size={34}
+                strokeWidth={1.8}
+                aria-hidden="true"
+              />
+            </div>
 
             <div className="train-label">
-              <strong>{train.symbol || "Unknown Train"}</strong>
+              <strong>
+                {train.symbol || "Unknown Train"}
+              </strong>
 
-              <span>{train.direction || "Unknown Direction"}</span>
+              <span>
+                {train.direction || "Unknown Direction"}
+              </span>
 
               <span>
                 MP{" "}
                 {Number.isFinite(Number(train.milepost))
-                  ? Number(train.milepost).toFixed(1)
+                  ? Number(train.milepost).toFixed(2)
                   : "Unknown"}
               </span>
 
@@ -256,7 +243,8 @@ function RailroadMap({
         {mapAssets.map((asset) => {
           const device = getDevice(asset.name);
           const statusClass = getStatusClass(device);
-          const activeIncidentCount = getIncidentCount(asset.name);
+          const activeIncidentCount =
+            getIncidentCount(asset.name);
           const AssetIcon = asset.icon;
 
           return (
@@ -338,7 +326,8 @@ function RailroadMap({
 
           <div className="asset-detail-grid">
             <p>
-              <strong>Status:</strong> {selectedAsset.status}
+              <strong>Status:</strong>{" "}
+              {selectedAsset.status}
             </p>
 
             <p>
@@ -353,7 +342,8 @@ function RailroadMap({
             </p>
 
             <p>
-              <strong>Vendor:</strong> {selectedAsset.vendor}
+              <strong>Vendor:</strong>{" "}
+              {selectedAsset.vendor}
             </p>
 
             <p>
@@ -384,6 +374,6 @@ function RailroadMap({
       )}
     </section>
   );
-
+}
 
 export default RailroadMap;

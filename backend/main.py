@@ -430,6 +430,15 @@ def train_simulation_status():
         "maximum_milepost": train_simulation.maximum_milepost,
     }
 
+@app.post("/train-simulation/reset")
+def reset_train_simulation():
+    train_simulation.reset_trains()
+
+    return {
+        "success": True,
+        "message": "Train simulation reset.",
+    }
+
 @app.get("/plant-status")
 def plant_status(db: Session = Depends(get_db)):
     devices = db.query(OTDevice).all()

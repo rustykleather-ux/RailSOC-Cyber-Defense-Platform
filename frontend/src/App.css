@@ -2097,3 +2097,57 @@ td {
   white-space: nowrap;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
+.subdivision-map {
+  position: relative;
+}
+
+.train-marker {
+  position: absolute;
+  top: 52%;
+  transform: translate(-50%, -50%);
+  transition: left 3s linear;
+  z-index: 50;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  pointer-events: none;
+}
+
+.train-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  color: #f97316;
+  background: #0f172a;
+  border: 2px solid #f97316;
+  border-radius: 8px;
+  padding: 4px;
+
+  transform: translateY(-13px);
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.6));
+}
+
+.train-label {
+  position: absolute;
+  top: 32px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  min-width: 100px;
+  padding: 6px 9px;
+
+  color: white;
+  background: rgba(15, 23, 42, 0.96);
+  border: 1px solid #334155;
+  border-radius: 8px;
+
+  font-size: 11px;
+  line-height: 1.35;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}

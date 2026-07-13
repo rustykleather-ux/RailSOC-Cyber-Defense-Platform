@@ -71,13 +71,31 @@ function RailroadMap({
     ).length;
 
   const getTrainPosition = (milepost) => {
-    const startMP = 80.0;
-    const endMP = 95.2;
-    const numericMilepost = Number(milepost);
+  const minimumMilepost = 80.0;
+  const maximumMilepost = 95.2;
 
-    if (!Number.isFinite(numericMilepost)) {
-      return 0;
-    }
+  // Keep train safely inside the visible map
+  const trackStartPercent = 12;
+  const trackEndPercent = 88;
+
+  const value = Number(milepost);
+
+  if (!Number.isFinite(value)) {
+    return trackStartPercent;
+  }
+
+  const progress =
+    (value - minimumMilepost) /
+    (maximumMilepost - minimumMilepost);
+
+  const clampedProgress = Math.max(0, Math.min(1, progress));
+
+  return (
+    trackStartPercent +
+    clampedProgress *
+      (trackEndPercent - trackStartPercent)
+  );
+};
 
     const percent =
       ((numericMilepost - startMP) / (endMP - startMP)) * 100;
@@ -366,6 +384,6 @@ function RailroadMap({
       )}
     </section>
   );
-}
+
 
 export default RailroadMap;

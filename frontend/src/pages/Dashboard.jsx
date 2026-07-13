@@ -1,10 +1,10 @@
 import EnvironmentOverview from "../components/EnvironmentOverview";
 import RailroadMap from "../components/RailroadMap";
 
-function Dashboard({ dashboard, alerts, incidents, vulnerabilities, devices, threatLevel }) {
+function Dashboard({ dashboard, alerts, incidents, vulnerabilities, devices, trains, threatLevel }) {
   const recentIncidents = (incidents || []).slice(0, 3);
   const topAlerts = (alerts || []).slice(0, 3);
-
+console.log("Dashboard trains:", trains);
   return (
     <>
       <EnvironmentOverview
@@ -15,7 +15,13 @@ function Dashboard({ dashboard, alerts, incidents, vulnerabilities, devices, thr
         threatLevel={threatLevel}
       />
 
-      <RailroadMap devices={devices} incidents={incidents} />
+      
+
+      <RailroadMap
+        devices={devices}
+        incidents={incidents}
+        trains={trains}
+      />
 
       <div className="dashboard-summary-grid">
         <section className="summary-panel">

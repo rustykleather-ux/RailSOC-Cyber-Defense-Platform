@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route, NavLink } from "react-router-dom";
 import "./App.css";
+import API from "./api";
 
 import InvestigationWorkspace from "./pages/InvestigationWorkspace";
 import ExecutiveDashboard from "./pages/ExecutiveDashboard";
@@ -17,6 +18,8 @@ import Training from "./pages/Training";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import Vulnerabilities from "./pages/Vulnerabilities";
+import {getTrains } from "./services/trainService";
+
 
 import {
   getIncidents,
@@ -61,56 +64,103 @@ function App() {
   const [vulnerabilities, setVulnerabilities] = useState([]);
   const [plantStatus, setPlantStatus] = useState([]);
   const [incidents, setIncidents] = useState([]);
+  const [trains, setTrains] = useState([]);
 
   const loadPlantStatus = async () => {
-    try {
-      const res = await getPlantStatus();
-      setPlantStatus(Array.isArray(res.data) ? res.data : []);
-    } catch (err) {
-      console.error("TrackSentinel Telemetry Error:", err);
-    }
-  };
+  try {
+    const res = await getPlantStatus();
+    setPlantStatus(Array.isArray(res.data) ? res.data : []);
+  } catch (err) {
+    console.error("TrackSentinel Telemetry Error:", err);
+  }
+};
+
+const loadTrains = async () => {
+  try {
+    const data = await getTrains();
+    setTrains(Array.isArray(data) ? data : []);
+  } catch (err) {
+    console.error("TrackSentinel Train Load Error:", err);
+  }
+};
 
   const loadData = async () => {
-    try {
-      await loadPlantStatus();
+  try {
+    await loadPlantStatus();
+    const loadTrains = async () => {
+  try {
+    const data = await getTrains();
+    setTrains(Array.isArray(data) ? data : []);
+  } catch (err) {
+    console.error("TrackSentinel Train Load Error:", err);
+  }
+};
+    const [
+      devicesRes,
+      vulnerabilitiesRes,
+      dashboardRes,
+      alertsRes,
+      incidentsRes,
+      trainsRes,
+    ] = await Promise.all([
+      getDevices(),
+      getVulnerabilities(),
+      getDashboard(),
+      getAlerts(),
+      getIncidents(),
+      getTrains(),
+    ]);
 
-      const [
-        devicesRes,
-        vulnerabilitiesRes,
-        dashboardRes,
-        alertsRes,
-        incidentsRes,
-      ] = await Promise.all([
-        getDevices(),
-        getVulnerabilities(),
-        getDashboard(),
-        getAlerts(),
-        getIncidents(),
-      ]);
+    setDevices(
+      Array.isArray(devicesRes.data)
+        ? devicesRes.data
+        : []
+    );
 
-      setDevices(Array.isArray(devicesRes.data) ? devicesRes.data : []);
-      setVulnerabilities(
-        Array.isArray(vulnerabilitiesRes.data)
-          ? vulnerabilitiesRes.data
-          : []
-      );
-      setDashboard(dashboardRes.data || null);
-      setAlerts(Array.isArray(alertsRes.data) ? alertsRes.data : []);
-      setIncidents(Array.isArray(incidentsRes.data) ? incidentsRes.data : []);
-    } catch (err) {
-      console.error("TrackSentinel Load Data Error:", err);
-    }
-  };
+    setVulnerabilities(
+      Array.isArray(vulnerabilitiesRes.data)
+        ? vulnerabilitiesRes.data
+        : []
+    );
+
+    setDashboard(
+      dashboardRes.data || null
+    );
+
+    setAlerts(
+      Array.isArray(alertsRes.data)
+        ? alertsRes.data
+        : []
+    );
+
+    setIncidents(
+      Array.isArray(incidentsRes.data)
+        ? incidentsRes.data
+        : []
+    );
+
+    setTrains(
+      Array.isArray(trainsRes)
+        ? trainsRes
+        : []
+    );
+  } catch (err) {
+    console.error("TrackSentinel Load Data Error:", err);
+  }
+};
 
   useEffect(() => {
     loadData();
   }, []);
 
   useEffect(() => {
-    const interval = setInterval(loadPlantStatus, 3000);
-    return () => clearInterval(interval);
-  }, []);
+  const interval = setInterval(() => {
+    loadPlantStatus();
+    loadTrains();
+  }, 3000);
+
+  return () => clearInterval(interval);
+}, []);
 
   const simulateAttack = async (attackType) => {
     try {
@@ -156,6 +206,7 @@ function App() {
 
   const highAlerts = alerts.filter((a) => a.severity === "High").length;
 
+  
   const openIncidents = incidents.filter(
     (i) => i.status !== "Closed"
   ).length;
@@ -170,7 +221,7 @@ function App() {
   } else if (highAlerts > 0 || offlineAssets > 0 || highRiskAssets > 0) {
     threatLevel = "Elevated";
   }
-
+  console.log("App trains:", trains);
   return (
     <BrowserRouter>
       <div className="app-shell">
@@ -270,23 +321,12 @@ function App() {
                     incidents={incidents}
                     vulnerabilities={vulnerabilities}
                     devices={devices}
+                    trains={trains}
                     threatLevel={threatLevel}
                   />
                 }
               />
-              <Route
-                path="/"
-                element={
-                  <Dashboard
-                    dashboard={dashboard}
-                    alerts={alerts}
-                    incidents={incidents}
-                    vulnerabilities={vulnerabilities}
-                    devices={devices}
-                    threatLevel={threatLevel}
-                  />
-                }
-              />
+             
               <Route
                 path="/executive"
                 element={
@@ -372,8 +412,7 @@ function App() {
                 element={<Vulnerabilities vulnerabilities={vulnerabilities} />}
               />
 
-              <Route path="/reports" element={<Reports />} />
-
+             
               <Route path="/settings" element={<Settings />} />
             </Routes>
 

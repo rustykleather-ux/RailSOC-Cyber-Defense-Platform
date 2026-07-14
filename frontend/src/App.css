@@ -734,6 +734,8 @@ td {
 
 .main-track {
   height: 34px;
+  left: 12%;
+  right: 12%;
   background:
     linear-gradient(#94a3b8, #94a3b8) top / 100% 5px no-repeat,
     linear-gradient(#94a3b8, #94a3b8) bottom / 100% 5px no-repeat;
@@ -2150,4 +2152,21 @@ td {
   line-height: 1.35;
   white-space: nowrap;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+/* Mileposts aligned to the train coordinate system */
+
+.mp80 {
+  left: 12%;
+}
+
+.mp824 {
+  left: 24%;
+}
+
+.mp871 {
+  left: 47.5%;
+}
+
+.mp952 {
+  left: 88%;
 }

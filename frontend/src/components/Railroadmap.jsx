@@ -18,6 +18,7 @@ function RailroadMap({
   devices = [],
   incidents = [],
   trains = [],
+  trackBlocks = [],
 }) {
   const [selectedAsset, setSelectedAsset] = useState(null);
 
@@ -50,11 +51,15 @@ function RailroadMap({
         incident.status !== "Closed"
     ).length;
 
+  const getBlockClass = (block) => {
+    if (!block) return "unknown";
+    return block.occupied ? "occupied" : "clear";
+  };
+
   const getTrainPosition = (milepost) => {
     const minimumMilepost = 80.0;
     const maximumMilepost = 95.2;
 
-    // Match the visible rail boundaries.
     const trackStartPercent = 12;
     const trackEndPercent = 88;
 
@@ -79,6 +84,38 @@ function RailroadMap({
         (trackEndPercent - trackStartPercent)
     );
   };
+
+  const fallbackBlocks = [
+    {
+      id: 1,
+      name: "Block A",
+      start_mp: 80.0,
+      end_mp: 82.4,
+      occupied: false,
+      occupied_by: null,
+    },
+    {
+      id: 2,
+      name: "Block B",
+      start_mp: 82.4,
+      end_mp: 87.1,
+      occupied: false,
+      occupied_by: null,
+    },
+    {
+      id: 3,
+      name: "Block C",
+      start_mp: 87.1,
+      end_mp: 95.2,
+      occupied: false,
+      occupied_by: null,
+    },
+  ];
+
+  const displayedBlocks =
+    trackBlocks.length > 0
+      ? trackBlocks
+      : fallbackBlocks;
 
   const mapAssets = [
     {
@@ -161,13 +198,51 @@ function RailroadMap({
         <h2>Interactive Railroad Operations Map</h2>
 
         <p>
-          Simulated rail subdivision showing live OT asset health, cyber risk,
-          safety sensors, infrastructure monitoring, and operational status.
+          Simulated rail subdivision showing live OT asset health,
+          cyber risk, safety sensors, infrastructure monitoring,
+          train movement, and block occupancy.
         </p>
       </div>
 
       <div className="subdivision-map expanded">
-        <div className="track-line main-track"></div>
+        
+        
+        {/* Main track occupancy blocks */}
+        <div className="track-blocks">
+  {displayedBlocks.map((block) => (
+    <div
+      key={block.id}
+      className={`track-block ${
+        block.occupied ? "occupied" : "clear"
+      }`}
+    >
+      <span className="track-block-name">
+        {block.name}
+      </span>
+
+      <span className="track-block-status">
+        {block.occupied
+          ? `Occupied: ${block.occupied_by || "Unknown"}`
+          : "Clear"}
+      </span>
+
+      {/* DEBUG */}
+      <small
+        style={{
+          color: "white",
+          display: "block",
+          marginTop: "18px",
+          fontSize: "10px",
+        }}
+      >
+        occupied = {String(block.occupied)}
+      </small>
+
+    </div>
+  ))}
+</div>
+
+        {/* Siding */}
         <div className="track-line siding-track"></div>
 
         {/* Moving trains */}
@@ -178,7 +253,9 @@ function RailroadMap({
               train.direction?.toLowerCase() || "unknown"
             }`}
             style={{
-              left: `${getTrainPosition(train.milepost)}%`,
+              left: `${getTrainPosition(
+                train.milepost
+              )}%`,
             }}
           >
             <div className="train-icon">
@@ -195,17 +272,28 @@ function RailroadMap({
               </strong>
 
               <span>
-                {train.direction || "Unknown Direction"}
+                {train.direction ||
+                  "Unknown Direction"}
               </span>
 
               <span>
                 MP{" "}
-                {Number.isFinite(Number(train.milepost))
-                  ? Number(train.milepost).toFixed(2)
+                {Number.isFinite(
+                  Number(train.milepost)
+                )
+                  ? Number(
+                      train.milepost
+                    ).toFixed(2)
                   : "Unknown"}
               </span>
 
-              <span>{train.speed ?? 0} MPH</span>
+              <span>
+                {train.speed ?? 0} MPH
+              </span>
+
+              <span>
+                {train.status || "Unknown Status"}
+              </span>
             </div>
           </div>
         ))}
@@ -242,11 +330,14 @@ function RailroadMap({
         {/* Railroad OT assets */}
         {mapAssets.map((asset) => {
           const device = getDevice(asset.name);
-          const statusClass = getStatusClass(device);
+          const statusClass =
+            getStatusClass(device);
           const activeIncidentCount =
             getIncidentCount(asset.name);
           const AssetIcon = asset.icon;
 
+          console.log("Track Blocks:", displayedBlocks);
+          console.log("APP trackBlocks:", trackBlocks);
           return (
             <button
               key={asset.name}
@@ -277,7 +368,9 @@ function RailroadMap({
               {activeIncidentCount > 0 && (
                 <span className="map-incident-badge">
                   {activeIncidentCount} incident
-                  {activeIncidentCount > 1 ? "s" : ""}
+                  {activeIncidentCount > 1
+                    ? "s"
+                    : ""}
                 </span>
               )}
             </button>
@@ -305,6 +398,16 @@ function RailroadMap({
           <i className="legend-dot unknown"></i>
           Unknown
         </span>
+
+        <span>
+          <i className="legend-dot clear"></i>
+          Clear Track
+        </span>
+
+        <span>
+          <i className="legend-dot occupied"></i>
+          Occupied Track
+        </span>
       </div>
 
       {selectedAsset && (
@@ -312,12 +415,16 @@ function RailroadMap({
           <div className="rail-asset-panel-header">
             <div>
               <h3>{selectedAsset.name}</h3>
-              <p>{selectedAsset.device_type}</p>
+              <p>
+                {selectedAsset.device_type}
+              </p>
             </div>
 
             <button
               type="button"
-              onClick={() => setSelectedAsset(null)}
+              onClick={() =>
+                setSelectedAsset(null)
+              }
               aria-label="Close asset details"
             >
               ×
@@ -358,11 +465,15 @@ function RailroadMap({
 
             <p>
               <strong>Active Incidents:</strong>{" "}
-              {getIncidentCount(selectedAsset.name)}
+              {getIncidentCount(
+                selectedAsset.name
+              )}
             </p>
 
             <p>
-              <strong>Last Communication:</strong>{" "}
+              <strong>
+                Last Communication:
+              </strong>{" "}
               {selectedAsset.last_seen
                 ? new Date(
                     selectedAsset.last_seen

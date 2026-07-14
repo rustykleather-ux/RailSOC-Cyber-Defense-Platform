@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
-import { BrowserRouter, Routes, Route, NavLink } from "react-router-dom";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  NavLink,
+} from "react-router-dom";
 import "./App.css";
-import API from "./api";
 
 import InvestigationWorkspace from "./pages/InvestigationWorkspace";
 import ExecutiveDashboard from "./pages/ExecutiveDashboard";
@@ -18,8 +22,9 @@ import Training from "./pages/Training";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import Vulnerabilities from "./pages/Vulnerabilities";
-import {getTrains } from "./services/trainService";
 
+import { getTrains } from "./services/trainService";
+import { getTrackBlocks } from "./services/blockService";
 
 import {
   getIncidents,
@@ -65,109 +70,157 @@ function App() {
   const [plantStatus, setPlantStatus] = useState([]);
   const [incidents, setIncidents] = useState([]);
   const [trains, setTrains] = useState([]);
+  const [trackBlocks, setTrackBlocks] = useState([]);
 
   const loadPlantStatus = async () => {
-  try {
-    const res = await getPlantStatus();
-    setPlantStatus(Array.isArray(res.data) ? res.data : []);
-  } catch (err) {
-    console.error("TrackSentinel Telemetry Error:", err);
-  }
-};
+    try {
+      const response = await getPlantStatus();
 
-const loadTrains = async () => {
-  try {
-    const data = await getTrains();
-    setTrains(Array.isArray(data) ? data : []);
-  } catch (err) {
-    console.error("TrackSentinel Train Load Error:", err);
-  }
-};
+      setPlantStatus(
+        Array.isArray(response.data)
+          ? response.data
+          : []
+      );
+    } catch (err) {
+      console.error(
+        "TrackSentinel Telemetry Error:",
+        err
+      );
+    }
+  };
+
+  const loadTrains = async () => {
+    try {
+      const data = await getTrains();
+
+      setTrains(
+        Array.isArray(data)
+          ? data
+          : []
+      );
+    } catch (err) {
+      console.error(
+        "TrackSentinel Train Load Error:",
+        err
+      );
+    }
+  };
+
+  const loadTrackBlocks = async () => {
+    try {
+      const data = await getTrackBlocks();
+
+      setTrackBlocks(
+        Array.isArray(data)
+          ? data
+          : []
+      );
+    } catch (err) {
+      console.error(
+        "TrackSentinel Track Block Error:",
+        err
+      );
+    }
+  };
 
   const loadData = async () => {
-  try {
-    await loadPlantStatus();
-    const loadTrains = async () => {
-  try {
-    const data = await getTrains();
-    setTrains(Array.isArray(data) ? data : []);
-  } catch (err) {
-    console.error("TrackSentinel Train Load Error:", err);
-  }
-};
-    const [
-      devicesRes,
-      vulnerabilitiesRes,
-      dashboardRes,
-      alertsRes,
-      incidentsRes,
-      trainsRes,
-    ] = await Promise.all([
-      getDevices(),
-      getVulnerabilities(),
-      getDashboard(),
-      getAlerts(),
-      getIncidents(),
-      getTrains(),
-    ]);
+    try {
+      const [
+        devicesRes,
+        vulnerabilitiesRes,
+        dashboardRes,
+        alertsRes,
+        incidentsRes,
+        trainsRes,
+        trackBlocksRes,
+        plantStatusRes,
+      ] = await Promise.all([
+        getDevices(),
+        getVulnerabilities(),
+        getDashboard(),
+        getAlerts(),
+        getIncidents(),
+        getTrains(),
+        getTrackBlocks(),
+        getPlantStatus(),
+      ]);
 
-    setDevices(
-      Array.isArray(devicesRes.data)
-        ? devicesRes.data
-        : []
-    );
+      setDevices(
+        Array.isArray(devicesRes.data)
+          ? devicesRes.data
+          : []
+      );
 
-    setVulnerabilities(
-      Array.isArray(vulnerabilitiesRes.data)
-        ? vulnerabilitiesRes.data
-        : []
-    );
+      setVulnerabilities(
+        Array.isArray(vulnerabilitiesRes.data)
+          ? vulnerabilitiesRes.data
+          : []
+      );
 
-    setDashboard(
-      dashboardRes.data || null
-    );
+      setDashboard(
+        dashboardRes.data || null
+      );
 
-    setAlerts(
-      Array.isArray(alertsRes.data)
-        ? alertsRes.data
-        : []
-    );
+      setAlerts(
+        Array.isArray(alertsRes.data)
+          ? alertsRes.data
+          : []
+      );
 
-    setIncidents(
-      Array.isArray(incidentsRes.data)
-        ? incidentsRes.data
-        : []
-    );
+      setIncidents(
+        Array.isArray(incidentsRes.data)
+          ? incidentsRes.data
+          : []
+      );
 
-    setTrains(
-      Array.isArray(trainsRes)
-        ? trainsRes
-        : []
-    );
-  } catch (err) {
-    console.error("TrackSentinel Load Data Error:", err);
-  }
-};
+      setTrains(
+        Array.isArray(trainsRes)
+          ? trainsRes
+          : []
+      );
+
+      setTrackBlocks(
+        Array.isArray(trackBlocksRes)
+          ? trackBlocksRes
+          : []
+      );
+
+      setPlantStatus(
+        Array.isArray(plantStatusRes.data)
+          ? plantStatusRes.data
+          : []
+      );
+    } catch (err) {
+      console.error(
+        "TrackSentinel Load Data Error:",
+        err
+      );
+    }
+  };
 
   useEffect(() => {
     loadData();
+
+    const intervalId = window.setInterval(() => {
+      loadPlantStatus();
+      loadTrains();
+      loadTrackBlocks();
+    }, 3000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
   }, []);
-
-  useEffect(() => {
-  const interval = setInterval(() => {
-    loadPlantStatus();
-    loadTrains();
-  }, 3000);
-
-  return () => clearInterval(interval);
-}, []);
 
   const simulateAttack = async (attackType) => {
     try {
       await simulateAttackRequest(attackType);
       await loadData();
     } catch (err) {
-      console.error("TrackSentinel Simulation Error:", err);
+      console.error(
+        "TrackSentinel Simulation Error:",
+        err
+      );
     }
   };
 
@@ -176,58 +229,125 @@ const loadTrains = async () => {
       await resetDemoRequest();
       await loadData();
     } catch (err) {
-      console.error("TrackSentinel Reset Error:", err);
+      console.error(
+        "TrackSentinel Reset Error:",
+        err
+      );
     }
   };
 
   const acknowledgeIncident = async (incidentId) => {
-    await acknowledgeIncidentRequest(incidentId);
-    await loadData();
+    try {
+      await acknowledgeIncidentRequest(incidentId);
+      await loadData();
+    } catch (err) {
+      console.error(
+        "Incident acknowledgement failed:",
+        err
+      );
+    }
   };
 
-  const assignIncident = async (incidentId, assignedTo) => {
-    await assignIncidentRequest(incidentId, assignedTo);
-    await loadData();
+  const assignIncident = async (
+    incidentId,
+    assignedTo
+  ) => {
+    try {
+      await assignIncidentRequest(
+        incidentId,
+        assignedTo
+      );
+
+      await loadData();
+    } catch (err) {
+      console.error(
+        "Incident assignment failed:",
+        err
+      );
+    }
   };
 
-  const updateIncidentNotes = async (incidentId, notes) => {
-    await updateIncidentNotesRequest(incidentId, notes);
-    await loadData();
+  const updateIncidentNotes = async (
+    incidentId,
+    notes
+  ) => {
+    try {
+      await updateIncidentNotesRequest(
+        incidentId,
+        notes
+      );
+
+      await loadData();
+    } catch (err) {
+      console.error(
+        "Incident notes update failed:",
+        err
+      );
+    }
   };
 
-  const closeIncident = async (incidentId, closedBy) => {
-    await closeIncidentRequest(incidentId, closedBy);
-    await loadData();
+  const closeIncident = async (
+    incidentId,
+    closedBy
+  ) => {
+    try {
+      await closeIncidentRequest(
+        incidentId,
+        closedBy
+      );
+
+      await loadData();
+    } catch (err) {
+      console.error(
+        "Incident closure failed:",
+        err
+      );
+    }
   };
 
   const criticalAlerts = alerts.filter(
-    (a) => a.severity === "Critical"
+    (alert) => alert.severity === "Critical"
   ).length;
 
-  const highAlerts = alerts.filter((a) => a.severity === "High").length;
+  const highAlerts = alerts.filter(
+    (alert) => alert.severity === "High"
+  ).length;
 
-  
   const openIncidents = incidents.filter(
-    (i) => i.status !== "Closed"
+    (incident) => incident.status !== "Closed"
   ).length;
 
-  const offlineAssets = dashboard?.offline_devices || 0;
-  const highRiskAssets = dashboard?.high_risk_devices || 0;
+  const offlineAssets =
+    dashboard?.offline_devices || 0;
+
+  const highRiskAssets =
+    dashboard?.high_risk_devices || 0;
 
   let threatLevel = "Normal";
 
-  if (criticalAlerts > 0 || openIncidents > 0) {
+  if (
+    criticalAlerts > 0 ||
+    openIncidents > 0
+  ) {
     threatLevel = "Critical";
-  } else if (highAlerts > 0 || offlineAssets > 0 || highRiskAssets > 0) {
+  } else if (
+    highAlerts > 0 ||
+    offlineAssets > 0 ||
+    highRiskAssets > 0
+  ) {
     threatLevel = "Elevated";
   }
-  console.log("App trains:", trains);
+
   return (
     <BrowserRouter>
       <div className="app-shell">
         <aside className="sidebar">
           <div className="sidebar-brand">
-            <img src="/logo.png" alt="TrackSentinel" />
+            <img
+              src="/logo.png"
+              alt="TrackSentinel"
+            />
+
             <div>
               <strong>TrackSentinel</strong>
               <span>RailSOC Platform</span>
@@ -322,11 +442,12 @@ const loadTrains = async () => {
                     vulnerabilities={vulnerabilities}
                     devices={devices}
                     trains={trains}
+                    trackBlocks={trackBlocks}
                     threatLevel={threatLevel}
                   />
                 }
               />
-             
+
               <Route
                 path="/executive"
                 element={
@@ -339,10 +460,16 @@ const loadTrains = async () => {
                   />
                 }
               />
+
               <Route
                 path="/timeline"
-                element={<IncidentTimeline incidents={incidents} />}
+                element={
+                  <IncidentTimeline
+                    incidents={incidents}
+                  />
+                }
               />
+
               <Route
                 path="/reports"
                 element={
@@ -355,6 +482,7 @@ const loadTrains = async () => {
                   />
                 }
               />
+
               <Route
                 path="/training"
                 element={
@@ -364,6 +492,7 @@ const loadTrains = async () => {
                   />
                 }
               />
+
               <Route
                 path="/investigation"
                 element={
@@ -372,24 +501,49 @@ const loadTrains = async () => {
                   />
                 }
               />
-              <Route path="/topology" element={<Topology devices={devices} />} />
+
+              <Route
+                path="/topology"
+                element={
+                  <Topology
+                    devices={devices}
+                  />
+                }
+              />
 
               <Route
                 path="/telemetry"
-                element={<Telemetry plantStatus={plantStatus} />}
+                element={
+                  <Telemetry
+                    plantStatus={plantStatus}
+                  />
+                }
               />
 
-              <Route path="/alerts" element={<Alerts alerts={alerts} />} />
+              <Route
+                path="/alerts"
+                element={
+                  <Alerts alerts={alerts} />
+                }
+              />
 
               <Route
                 path="/incidents"
                 element={
                   <Incidents
                     incidents={incidents}
-                    acknowledgeIncident={acknowledgeIncident}
-                    assignIncident={assignIncident}
-                    updateIncidentNotes={updateIncidentNotes}
-                    closeIncident={closeIncident}
+                    acknowledgeIncident={
+                      acknowledgeIncident
+                    }
+                    assignIncident={
+                      assignIncident
+                    }
+                    updateIncidentNotes={
+                      updateIncidentNotes
+                    }
+                    closeIncident={
+                      closeIncident
+                    }
                   />
                 }
               />
@@ -405,19 +559,34 @@ const loadTrains = async () => {
                   />
                 }
               />
-              <Route path="/assets" element={<Assets devices={devices} />} />
+
+              <Route
+                path="/assets"
+                element={
+                  <Assets devices={devices} />
+                }
+              />
 
               <Route
                 path="/vulnerabilities"
-                element={<Vulnerabilities vulnerabilities={vulnerabilities} />}
+                element={
+                  <Vulnerabilities
+                    vulnerabilities={
+                      vulnerabilities
+                    }
+                  />
+                }
               />
 
-             
-              <Route path="/settings" element={<Settings />} />
+              <Route
+                path="/settings"
+                element={<Settings />}
+              />
             </Routes>
 
             <footer className="app-footer">
-              TrackSentinel v1.0 · Railroad OT Cyber Defense Platform · Portfolio Demonstration
+              TrackSentinel v1.0 · Railroad OT Cyber
+              Defense Platform · Portfolio Demonstration
             </footer>
           </main>
         </div>

@@ -4,13 +4,14 @@ from datetime import datetime
 
 from database import SessionLocal
 from models import Train, TrainHistory
+from railroad import TRACK_BLOCKS
 
 
 class TrainSimulationEngine:
     def __init__(
         self,
         interval_seconds: int = 3,
-        minimum_milepost: float = 80.,
+        minimum_milepost: float = 80.0,
         maximum_milepost: float = 95.2,
     ):
         self.interval_seconds = interval_seconds
@@ -63,7 +64,6 @@ class TrainSimulationEngine:
             )
 
             self._thread.start()
-
             return True
 
     def stop(self) -> bool:
@@ -72,7 +72,6 @@ class TrainSimulationEngine:
                 return False
 
             self._running = False
-
             return True
 
     def _run_loop(self):
@@ -85,13 +84,19 @@ class TrainSimulationEngine:
             time.sleep(self.interval_seconds)
 
     def tick(self):
+        """
+        Advance every train one simulation interval, update track events,
+        update block occupancy, record train history, and commit the changes.
+        """
         db = SessionLocal()
 
         try:
-            trains = db.query(Train).all()
+            trains = db.query(Train).order_by(Train.id).all()
 
             for train in trains:
                 self._update_train(train, db)
+
+            self.update_block_occupancy(db)
 
             db.commit()
 
@@ -116,16 +121,28 @@ class TrainSimulationEngine:
             self._record_history(train, db)
             return
 
-        previous_milepost = float(train.milepost or self.minimum_milepost)
+        previous_milepost = float(
+            train.milepost
+            if train.milepost is not None
+            else self.minimum_milepost
+        )
 
-        milepost_change = self._calculate_milepost_change(train.speed)
+        milepost_change = self._calculate_milepost_change(
+            train.speed
+        )
 
-        direction = (train.direction or "Eastbound").strip().lower()
+        direction = (
+            train.direction or "Eastbound"
+        ).strip().lower()
 
         if direction == "westbound":
-            next_milepost = previous_milepost - milepost_change
+            next_milepost = (
+                previous_milepost - milepost_change
+            )
         else:
-            next_milepost = previous_milepost + milepost_change
+            next_milepost = (
+                previous_milepost + milepost_change
+            )
 
         if next_milepost >= self.maximum_milepost:
             train.milepost = self.maximum_milepost
@@ -141,7 +158,9 @@ class TrainSimulationEngine:
 
         else:
             train.milepost = round(next_milepost, 3)
-            train.current_signal = self._calculate_signal_state(train)
+            train.current_signal = (
+                self._calculate_signal_state(train)
+            )
 
         train.last_updated = datetime.utcnow()
 
@@ -155,21 +174,83 @@ class TrainSimulationEngine:
             self._process_track_event(
                 train=train,
                 event=event,
-                db=db,
             )
 
         self._record_history(train, db)
 
-    def _calculate_milepost_change(self, speed_mph: int) -> float:
+    def update_block_occupancy(self, db):
         """
-        Convert train speed into distance traveled during one simulation tick.
-        """
+        Mark each track block clear or occupied based on the current
+        train positions.
 
-        hours_per_tick = self.interval_seconds / 3600.0
+        Block boundaries use:
+        - start milepost inclusive
+        - end milepost exclusive
+        - final block end milepost inclusive
+        """
+        trains = db.query(Train).all()
+
+        for block in TRACK_BLOCKS:
+            block.occupied = False
+            block.occupied_by = None
+
+        for train in trains:
+            if train.milepost is None:
+                continue
+
+            milepost = float(train.milepost)
+
+            for index, block in enumerate(TRACK_BLOCKS):
+                is_last_block = (
+                    index == len(TRACK_BLOCKS) - 1
+                )
+
+                if is_last_block:
+                    inside_block = (
+                        block.start_mp
+                        <= milepost
+                        <= block.end_mp
+                    )
+                else:
+                    inside_block = (
+                        block.start_mp
+                        <= milepost
+                        < block.end_mp
+                    )
+
+                if inside_block:
+                    block.occupied = True
+
+                    if block.occupied_by:
+                        existing = block.occupied_by.split(", ")
+                        if train.symbol not in existing:
+                            block.occupied_by = (
+                                f"{block.occupied_by}, "
+                                f"{train.symbol}"
+                            )
+                    else:
+                        block.occupied_by = train.symbol
+
+                    break
+
+    def _calculate_milepost_change(
+        self,
+        speed_mph: int,
+    ) -> float:
+        """
+        Convert speed in miles per hour to distance traveled during
+        one simulation interval.
+        """
+        hours_per_tick = (
+            self.interval_seconds / 3600.0
+        )
 
         return float(speed_mph) * hours_per_tick
 
-    def _calculate_signal_state(self, train: Train) -> str:
+    def _calculate_signal_state(
+        self,
+        train: Train,
+    ) -> str:
         if train.status == "Restricted":
             return "Approach"
 
@@ -191,22 +272,22 @@ class TrainSimulationEngine:
         direction: str,
     ):
         """
-        Return every track event crossed during one simulation tick.
-
-        Eastbound:
-            lowest milepost to highest milepost
-
-        Westbound:
-            highest milepost to lowest milepost
+        Return track events crossed during the current simulation tick
+        in physical travel order.
         """
-
-        normalized_direction = (direction or "eastbound").strip().lower()
+        normalized_direction = (
+            direction or "eastbound"
+        ).strip().lower()
 
         if normalized_direction == "westbound":
             crossed_events = [
                 event
                 for event in self.track_events
-                if current_milepost <= event["milepost"] < previous_milepost
+                if (
+                    current_milepost
+                    <= event["milepost"]
+                    < previous_milepost
+                )
             ]
 
             return sorted(
@@ -218,7 +299,11 @@ class TrainSimulationEngine:
         crossed_events = [
             event
             for event in self.track_events
-            if previous_milepost < event["milepost"] <= current_milepost
+            if (
+                previous_milepost
+                < event["milepost"]
+                <= current_milepost
+            )
         ]
 
         return sorted(
@@ -230,7 +315,6 @@ class TrainSimulationEngine:
         self,
         train: Train,
         event: dict,
-        db,
     ):
         event_type = event["type"]
         event_name = event["name"]
@@ -269,12 +353,15 @@ class TrainSimulationEngine:
         event_name: str,
         event_milepost: float,
     ):
-        train.current_signal = self._calculate_signal_state(train)
+        train.current_signal = (
+            self._calculate_signal_state(train)
+        )
 
         print(
-            f"[SIGNAL] {train.symbol} passed {event_name} "
-            f"at MP {event_milepost}. "
-            f"Signal indication: {train.current_signal}"
+            f"[SIGNAL] {train.symbol} passed "
+            f"{event_name} at MP {event_milepost}. "
+            f"Signal indication: "
+            f"{train.current_signal}"
         )
 
     def _process_crossing_event(
@@ -284,8 +371,8 @@ class TrainSimulationEngine:
         event_milepost: float,
     ):
         print(
-            f"[CROSSING] {train.symbol} entered {event_name} "
-            f"at MP {event_milepost}. "
+            f"[CROSSING] {train.symbol} entered "
+            f"{event_name} at MP {event_milepost}. "
             "Crossing activation sequence triggered."
         )
 
@@ -296,12 +383,16 @@ class TrainSimulationEngine:
         event_milepost: float,
     ):
         print(
-            f"[DETECTOR] {train.symbol} passed {event_name} "
-            f"at MP {event_milepost}. "
+            f"[DETECTOR] {train.symbol} passed "
+            f"{event_name} at MP {event_milepost}. "
             "Detector inspection completed."
         )
 
-    def _record_history(self, train: Train, db):
+    def _record_history(
+        self,
+        train: Train,
+        db,
+    ):
         history = TrainHistory(
             train_id=train.id,
             milepost=float(train.milepost),
@@ -319,7 +410,11 @@ class TrainSimulationEngine:
         db = SessionLocal()
 
         try:
-            trains = db.query(Train).order_by(Train.id).all()
+            trains = (
+                db.query(Train)
+                .order_by(Train.id)
+                .all()
+            )
 
             for index, train in enumerate(trains):
                 direction = (
@@ -328,12 +423,14 @@ class TrainSimulationEngine:
 
                 if direction == "westbound":
                     train.milepost = round(
-                        self.maximum_milepost - (index * 0.5),
+                        self.maximum_milepost
+                        - (index * 0.5),
                         3,
                     )
                 else:
                     train.milepost = round(
-                        self.minimum_milepost + (index * 0.5),
+                        self.minimum_milepost
+                        + (index * 0.5),
                         3,
                     )
 
@@ -348,6 +445,8 @@ class TrainSimulationEngine:
                 synchronize_session=False
             )
 
+            self.update_block_occupancy(db)
+
             db.commit()
 
         except Exception:
@@ -360,6 +459,6 @@ class TrainSimulationEngine:
 
 train_simulation = TrainSimulationEngine(
     interval_seconds=3,
-    minimum_milepost=80.,
+    minimum_milepost=80.0,
     maximum_milepost=95.2,
 )

@@ -18,6 +18,7 @@ from models import (
 )
 from services.risk_engine import calculate_device_risk
 from train_simulation import train_simulation
+from railroad import TRACK_BLOCKS
 
 
 # =========================================================
@@ -58,6 +59,24 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# =========================================================
+# Track Blocks API endpoint
+# =========================================================
+
+@app.get("/track-blocks")
+def get_track_blocks():
+
+    return [
+        {
+            "id": b.id,
+            "name": b.name,
+            "start_mp": b.start_mp,
+            "end_mp": b.end_mp,
+            "occupied": b.occupied,
+            "occupied_by": b.occupied_by,
+        }
+        for b in TRACK_BLOCKS
+    ]
 
 # =========================================================
 # Request models

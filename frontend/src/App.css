@@ -2170,3 +2170,89 @@ td {
 .mp952 {
   left: 88%;
 }
+
+
+/* =========================================================
+   Live Track Occupancy Override
+========================================================= */
+
+.track-blocks {
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  top: 52%;
+  height: 34px;
+
+  display: grid;
+  grid-template-columns: 2.4fr 4.7fr 8.1fr;
+  z-index: 20;
+
+  
+}
+
+.track-block {
+  position: relative;
+  height: 34px;
+  transition:
+    background-color 0.3s ease,
+    box-shadow 0.3s ease,
+    border-color 0.3s ease;
+}
+
+/* Two visible rails for a clear block */
+.track-block.clear {
+  background:
+    linear-gradient(#22c55e, #22c55e)
+      top / 100% 6px no-repeat,
+    linear-gradient(#22c55e, #22c55e)
+      bottom / 100% 6px no-repeat;
+}
+
+/* Two visible rails for an occupied block */
+.track-block.occupied {
+  background:
+    linear-gradient(#ef4444, #ef4444)
+      top / 100% 6px no-repeat,
+    linear-gradient(#ef4444, #ef4444)
+      bottom / 100% 6px no-repeat;
+
+  box-shadow:
+    0 0 8px rgba(239, 68, 68, 0.75),
+    0 0 16px rgba(239, 68, 68, 0.35);
+}
+
+.track-block + .track-block {
+  border-left: 3px solid #e2e8f0;
+}
+
+.track-block-name {
+  position: absolute;
+  left: 50%;
+  top: -28px;
+  transform: translateX(-50%);
+
+  color: #e2e8f0;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.track-block-status {
+  position: absolute;
+  left: 50%;
+  top: 40px;
+  transform: translateX(-50%);
+
+  color: #86efac;
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.track-block.occupied .track-block-status {
+  color: #fca5a5;
+}
+
+.track-block.occupied .track-block-name {
+  color: #fecaca;
+}

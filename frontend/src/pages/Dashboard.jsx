@@ -1,10 +1,22 @@
 import EnvironmentOverview from "../components/EnvironmentOverview";
 import RailroadMap from "../components/RailroadMap";
 
-function Dashboard({ dashboard, alerts, incidents, vulnerabilities, devices, trains, threatLevel }) {
+function Dashboard({
+  dashboard,
+  alerts,
+  incidents,
+  vulnerabilities,
+  devices,
+  trains = [],
+  trackBlocks = [],
+  threatLevel,
+}) {
   const recentIncidents = (incidents || []).slice(0, 3);
   const topAlerts = (alerts || []).slice(0, 3);
-console.log("Dashboard trains:", trains);
+
+  console.log("Dashboard trains:", trains);
+  console.log("Dashboard trackBlocks:", trackBlocks);
+
   return (
     <>
       <EnvironmentOverview
@@ -15,12 +27,11 @@ console.log("Dashboard trains:", trains);
         threatLevel={threatLevel}
       />
 
-      
-
       <RailroadMap
         devices={devices}
         incidents={incidents}
         trains={trains}
+        trackBlocks={trackBlocks}
       />
 
       <div className="dashboard-summary-grid">
@@ -32,12 +43,22 @@ console.log("Dashboard trains:", trains);
           ) : (
             recentIncidents.map((incident) => (
               <div className="summary-item" key={incident.id}>
-                <span className={`badge ${(incident.severity || "low").toLowerCase()}`}>
+                <span
+                  className={`badge ${
+                    incident.severity || "low"
+                  }`.toLowerCase()}
+                >
                   {incident.severity}
                 </span>
+
                 <div>
-                  <strong>{incident.alert_type || "Rail OT Incident"}</strong>
-                  <p>{incident.device || "Unknown Rail Asset"}</p>
+                  <strong>
+                    {incident.alert_type || "Rail OT Incident"}
+                  </strong>
+
+                  <p>
+                    {incident.device || "Unknown Rail Asset"}
+                  </p>
                 </div>
               </div>
             ))
@@ -52,12 +73,22 @@ console.log("Dashboard trains:", trains);
           ) : (
             topAlerts.map((alert) => (
               <div className="summary-item" key={alert.id}>
-                <span className={`badge ${(alert.severity || "low").toLowerCase()}`}>
+                <span
+                  className={`badge ${
+                    alert.severity || "low"
+                  }`.toLowerCase()}
+                >
                   {alert.severity}
                 </span>
+
                 <div>
-                  <strong>{alert.alert_type || "Security Alert"}</strong>
-                  <p>{alert.device || "Unknown Rail Asset"}</p>
+                  <strong>
+                    {alert.alert_type || "Security Alert"}
+                  </strong>
+
+                  <p>
+                    {alert.device || "Unknown Rail Asset"}
+                  </p>
                 </div>
               </div>
             ))

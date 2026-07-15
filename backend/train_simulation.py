@@ -3,7 +3,7 @@ import time
 from datetime import datetime
 
 from database import SessionLocal
-from models import Train, TrainHistory
+from models import OTDevice, Train, TrainHistory
 from railroad import TRACK_BLOCKS
 
 
@@ -22,7 +22,6 @@ class TrainSimulationEngine:
         self._thread = None
         self._lock = threading.Lock()
 
-        # Ordered railroad infrastructure.
         self.track_events = [
             {
                 "name": "Signal Controller 14A",
@@ -64,6 +63,7 @@ class TrainSimulationEngine:
             )
 
             self._thread.start()
+
             return True
 
     def stop(self) -> bool:
@@ -72,6 +72,7 @@ class TrainSimulationEngine:
                 return False
 
             self._running = False
+
             return True
 
     def _run_loop(self):
@@ -84,19 +85,20 @@ class TrainSimulationEngine:
             time.sleep(self.interval_seconds)
 
     def tick(self):
-        """
-        Advance every train one simulation interval, update track events,
-        update block occupancy, record train history, and commit the changes.
-        """
         db = SessionLocal()
 
         try:
-            trains = db.query(Train).order_by(Train.id).all()
+            trains = (
+                db.query(Train)
+                .order_by(Train.id)
+                .all()
+            )
 
             for train in trains:
                 self._update_train(train, db)
 
             self.update_block_occupancy(db)
+            self.update_signal_states(db)
 
             db.commit()
 
@@ -179,15 +181,6 @@ class TrainSimulationEngine:
         self._record_history(train, db)
 
     def update_block_occupancy(self, db):
-        """
-        Mark each track block clear or occupied based on the current
-        train positions.
-
-        Block boundaries use:
-        - start milepost inclusive
-        - end milepost exclusive
-        - final block end milepost inclusive
-        """
         trains = db.query(Train).all()
 
         for block in TRACK_BLOCKS:
@@ -222,8 +215,9 @@ class TrainSimulationEngine:
                     block.occupied = True
 
                     if block.occupied_by:
-                        existing = block.occupied_by.split(", ")
-                        if train.symbol not in existing:
+                        symbols = block.occupied_by.split(", ")
+
+                        if train.symbol not in symbols:
                             block.occupied_by = (
                                 f"{block.occupied_by}, "
                                 f"{train.symbol}"
@@ -233,14 +227,84 @@ class TrainSimulationEngine:
 
                     break
 
+    def update_signal_states(self, db):
+        block_by_name = {
+            block.name: block
+            for block in TRACK_BLOCKS
+        }
+
+        signal_rules = [
+            {
+                "device_name": "Signal Controller 14A",
+                "protected_block": "Block A",
+                "next_block": "Block B",
+            },
+            {
+                "device_name": "Signal Controller 14B",
+                "protected_block": "Block B",
+                "next_block": "Block C",
+            },
+            {
+                "device_name": "Signal Controller 15C",
+                "protected_block": "Block C",
+                "next_block": None,
+            },
+        ]
+
+        for rule in signal_rules:
+            signal = (
+                db.query(OTDevice)
+                .filter(
+                    OTDevice.name
+                    == rule["device_name"]
+                )
+                .first()
+            )
+
+            if not signal:
+                continue
+
+            protected_block = block_by_name.get(
+                rule["protected_block"]
+            )
+
+            next_block = (
+                block_by_name.get(rule["next_block"])
+                if rule["next_block"]
+                else None
+            )
+
+            if (
+                protected_block
+                and protected_block.occupied
+            ):
+                indication = "Stop"
+
+            elif (
+                next_block
+                and next_block.occupied
+            ):
+                indication = "Approach"
+
+            else:
+                indication = "Clear"
+
+            signal.status = "Online"
+            signal.last_seen = datetime.utcnow()
+
+            # Temporary storage until a dedicated
+            # signal_indication field is added.
+            signal.firmware_version = indication
+
+            print(
+                f"[SIGNAL STATE] "
+                f"{signal.name}: {indication}"
+            )
+
     def _calculate_milepost_change(
         self,
         speed_mph: int,
     ) -> float:
-        """
-        Convert speed in miles per hour to distance traveled during
-        one simulation interval.
-        """
         hours_per_tick = (
             self.interval_seconds / 3600.0
         )
@@ -271,10 +335,6 @@ class TrainSimulationEngine:
         current_milepost: float,
         direction: str,
     ):
-        """
-        Return track events crossed during the current simulation tick
-        in physical travel order.
-        """
         normalized_direction = (
             direction or "eastbound"
         ).strip().lower()
@@ -446,6 +506,7 @@ class TrainSimulationEngine:
             )
 
             self.update_block_occupancy(db)
+            self.update_signal_states(db)
 
             db.commit()
 

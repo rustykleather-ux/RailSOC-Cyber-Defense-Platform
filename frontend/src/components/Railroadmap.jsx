@@ -226,17 +226,7 @@ function RailroadMap({
           : "Clear"}
       </span>
 
-      {/* DEBUG */}
-      <small
-        style={{
-          color: "white",
-          display: "block",
-          marginTop: "18px",
-          fontSize: "10px",
-        }}
-      >
-        occupied = {String(block.occupied)}
-      </small>
+      
 
     </div>
   ))}

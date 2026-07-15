@@ -118,6 +118,29 @@ attack_catalog = {
         "mitre_name": "Brute Force",
         "compatible_types": ["Workstation", "Server", "Network Device"],
         "condition": "Multiple Failed Login Attempts"
+    },
+
+    "data_Exfiltration": {
+        "attack_id": "Data_Exfiltration",
+        "name": "Data Exfiltration",
+        "description": "Simulating unauthorized data exfiltration from a system.",
+        "severity": "Critical",
+        "mitre_id": "T1041",
+        "mitre_name": "Exfiltration Over C2 Channel",
+        "compatible_types": ["Workstation", "Server"],
+        "condition": "Unexpected Data Transfer"
+    },
+
+    "door_access": {
+        "attack_id": "door_access",
+        "name": "Unauthorized Door Access",
+        "description": "Simulating unauthorized access to restricted door areas.",
+        "severity": "High",
+        "mitre_id": "T1078",
+        "mitre_name": "Valid Accounts",
+        "compatible_types": ["Access Control Device"],
+        "condition": "Unexpected Door Access"
     }
+
 
 }

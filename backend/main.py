@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 
+from backend import attack_catalog
 from database import Base, engine, SessionLocal
 from models import (
     OTDevice,
@@ -112,6 +113,27 @@ class CloseIncidentRequest(BaseModel):
 class IncidentNotesRequest(BaseModel):
     investigation_notes: str
 
+# =========================================================
+# Attack Simulation API endpoint
+# ======================================================
+@app.get("/attack_catalog")
+def get_attack_catalog():
+    
+    attacks = []
+    
+    for _, attack in attack_catalog.items():
+        
+        attacks.append({
+            "attack_id": attack["attack_id"],
+            "name": attack["name"],
+            "description": attack["description"],
+            "severity": attack["severity"],
+            "mitre_id": attack["mitre_id"],
+            "mitre_name": attack["mitre_name"],
+            "compatible_types": attack["compatible_types"],
+            "condition": attack["condition"]
+        })
+    return attacks
 # =========================================================
 # Train API endpoints
 # =========================================================

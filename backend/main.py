@@ -8,8 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-
-from backend import attack_catalog
+from attack_catalog import attack_catalog   
 from database import Base, engine, SessionLocal
 from models import (
     OTDevice,
@@ -142,13 +141,34 @@ def launch_custom_scenario(
             detail="Attack definition not found",
         )
 
-    targets = request.target_ids
-    notes = request.notes
+    if not request.target_ids:
+        raise HTTPException(
+            status_code=400,
+            detail="Select at least one target",
+        )
+
+    targets = (
+        db.query(OTDevice)
+        .filter(OTDevice.id.in_(request.target_ids))
+        .all()
+    )
+
+    if not targets:
+        raise HTTPException(
+            status_code=404,
+            detail="No matching targets were found",
+        )
 
     return {
-        "attack": attack["name"],
-        "target_ids": targets,
-        "notes": notes,
+        "message": "Custom scenario request received",
+        "attack_id": request.attack_id,
+        "attack_name": attack["name"],
+        "target_ids": request.target_ids,
+        "target_names": [
+            target.name
+            for target in targets
+        ],
+        "notes": request.notes,
     }
 # =========================================================
 # Train API endpoints

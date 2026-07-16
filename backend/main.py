@@ -1,6 +1,7 @@
 import random
 from datetime import datetime
 from typing import Optional
+from urllib import request
 
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -80,6 +81,18 @@ def get_track_blocks():
     ]
 
 # =========================================================
+# Custom Scenario Base models
+# =========================================================
+
+class CustomScenario(BaseModel):
+    attack_id: str
+    target_ids: list[int]
+    notes: Optional[str] = None
+
+ 
+
+
+# =========================================================
 # Request models
 # =========================================================
 
@@ -116,24 +129,27 @@ class IncidentNotesRequest(BaseModel):
 # =========================================================
 # Attack Simulation API endpoint
 # ======================================================
-@app.get("/attack_catalog")
-def get_attack_catalog():
-    
-    attacks = []
-    
-    for _, attack in attack_catalog.items():
-        
-        attacks.append({
-            "attack_id": attack["attack_id"],
-            "name": attack["name"],
-            "description": attack["description"],
-            "severity": attack["severity"],
-            "mitre_id": attack["mitre_id"],
-            "mitre_name": attack["mitre_name"],
-            "compatible_types": attack["compatible_types"],
-            "condition": attack["condition"]
-        })
-    return attacks
+@app.post("/training/custom-scenario")
+def launch_custom_scenario(
+    request: CustomScenario,
+    db: Session = Depends(get_db),
+):
+    attack = attack_catalog.get(request.attack_id)
+
+    if not attack:
+        raise HTTPException(
+            status_code=404,
+            detail="Attack definition not found",
+        )
+
+    targets = request.target_ids
+    notes = request.notes
+
+    return {
+        "attack": attack["name"],
+        "target_ids": targets,
+        "notes": notes,
+    }
 # =========================================================
 # Train API endpoints
 # =========================================================

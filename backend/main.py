@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from attack_catalog import attack_catalog   
+from attack_manager import launch_attack
 from database import Base, engine, SessionLocal
 from models import (
     OTDevice,
@@ -191,17 +192,16 @@ def launch_custom_scenario(
             },
         )
 
+    attack_instance = launch_attack(
+    attack=attack,
+    targets=targets,
+    notes=request.notes,
+)
+
     return {
-        "message": "Custom scenario request validated successfully",
-        "attack_id": request.attack_id,
-        "attack_name": attack["name"],
-        "target_ids": request.target_ids,
-        "target_names": [
-            target.name
-            for target in targets
-        ],
-        "notes": request.notes,
-    }
+    "message": "Custom scenario launched successfully",
+    "scenario": attack_instance,
+}
 # =========================================================
 # Train API endpoints
 # =========================================================

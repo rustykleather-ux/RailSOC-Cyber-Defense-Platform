@@ -6,7 +6,7 @@ attack_catalog = {
         "severity": "Critical",
         "mitre_id": "T0859",
         "mitre_name": "Modify Controller Tasking",
-        "compatible_types": ["Signal Contoller", 
+        "compatible_types": ["Signal Controller", 
                              "PLC", 
                              "Switch Controller"],
         "condition": "Configuration Drift",

@@ -149,7 +149,9 @@ def launch_custom_scenario(
 
     targets = (
         db.query(OTDevice)
-        .filter(OTDevice.id.in_(request.target_ids))
+        .filter(
+            OTDevice.id.in_(request.target_ids)
+        )
         .all()
     )
 
@@ -159,8 +161,38 @@ def launch_custom_scenario(
             detail="No matching targets were found",
         )
 
+    invalid_targets = []
+
+    for target in targets:
+        print("===================================")
+        print("Target Name:", target.name)
+        print("Target Type:", target.device_type)
+        print("Compatible Types:", attack["compatible_types"])
+        print("Comparison Result:", target.device_type in attack["compatible_types"])
+        print("===================================")
+        if target.device_type not in attack["compatible_types"]:
+            invalid_targets.append(target)
+
+    if invalid_targets:
+        invalid_target_names = []
+
+        for target in invalid_targets:
+            invalid_target_names.append(target.name)
+
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "message": (
+                    "One or more targets are incompatible "
+                    "with this attack"
+                ),
+                "invalid_targets": invalid_target_names,
+                "compatible_types": attack["compatible_types"],
+            },
+        )
+
     return {
-        "message": "Custom scenario request received",
+        "message": "Custom scenario request validated successfully",
         "attack_id": request.attack_id,
         "attack_name": attack["name"],
         "target_ids": request.target_ids,

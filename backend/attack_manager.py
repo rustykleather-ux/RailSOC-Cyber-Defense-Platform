@@ -35,3 +35,6 @@ def launch_attack(
     active_attacks.append(attack_instance)
 
     return attack_instance
+
+def get_active_attacks():
+        return active_attacks

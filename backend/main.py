@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from attack_catalog import attack_catalog   
-from attack_manager import launch_attack
+from attack_manager import launch_attack, get_active_attacks 
 from database import Base, engine, SessionLocal
 from models import (
     OTDevice,
@@ -125,6 +125,17 @@ class CloseIncidentRequest(BaseModel):
 
 class IncidentNotesRequest(BaseModel):
     investigation_notes: str
+
+# =========================================================
+# Track Active Attacks API endpoint
+# =========================================================
+@app.get("/active-attacks")
+def read_active_attacks():
+    attacks = get_active_attacks()
+    return {
+        "count": len(attacks),
+        "attacks": attacks
+    }
 
 # =========================================================
 # Attack Simulation API endpoint

@@ -1,4 +1,4 @@
-attack_catalog = {
+Attack_Catalog = {
     "logic_modification": {
         "attack_id": "logic_modification",
         "name": "Unauthorized Logic Modification",

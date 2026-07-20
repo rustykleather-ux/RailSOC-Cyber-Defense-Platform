@@ -18,10 +18,11 @@ import Alerts from "./pages/Alerts";
 import Incidents from "./pages/Incidents";
 import Topology from "./pages/Topology";
 import Telemetry from "./pages/Telemetry";
-import Training from "./pages/Training";
+import ScenarioBuilder from "./pages/ScenarioBuilder";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import Vulnerabilities from "./pages/Vulnerabilities";
+import CreateScenario from "./pages/CreateScenario";
 
 import { getTrains } from "./services/trainService";
 import { getTrackBlocks } from "./services/blockService";
@@ -360,9 +361,9 @@ function App() {
               <span>Dashboard</span>
             </NavLink>
 
-            <NavLink to="/training">
+            <NavLink to="/scenarios">
               <Target size={18} />
-              <span>Training Exercises</span>
+              <span>Scenario Builder</span>
             </NavLink>
 
             <NavLink to="/topology">
@@ -482,16 +483,28 @@ function App() {
                   />
                 }
               />
-
               <Route
-                path="/training"
+                path="/scenarios"
                 element={
-                  <Training
+                  <ScenarioBuilder
                     simulateAttack={simulateAttack}
                     resetDemo={resetDemo}
+                    onScenarioComplete={loadData}
                   />
                 }
               />
+              <Route
+                path="/training"
+                element={
+                  <ScenarioBuilder
+                    simulateAttack={simulateAttack}
+                    resetDemo={resetDemo}
+                    onScenarioComplete={loadData}
+                  />
+                }
+              />
+
+
 
               <Route
                 path="/investigation"

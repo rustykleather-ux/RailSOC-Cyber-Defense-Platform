@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from simulation_engine import apply_attack
-from attack_catalog import attack_catalog   
+from attack_catalog import Attack_Catalog   
 from attack_manager import launch_attack, get_active_attacks 
 from database import Base, engine, SessionLocal
 from models import (
@@ -137,7 +137,28 @@ def read_active_attacks():
         "count": len(attacks),
         "attacks": attacks
     }
+# =========================================================
+# Attack Catalog Endpoint
+# ======================================================
 
+@app.get("/attacks")
+def get_attacks():
+    return {
+        "attacks": [
+            {
+                "id": attack["attack_id"],
+                "attack_id": attack["attack_id"],
+                "name": attack["name"],
+                "description": attack["description"],
+                "severity": attack["severity"],
+                "mitre_id": attack.get("mitre_id"),
+                "mitre_name": attack.get("mitre_name"),
+                "compatible_types": attack.get("compatible_types", []),
+                "condition": attack.get("condition"),
+            }
+            for attack in Attack_Catalog.values()
+        ]
+    }
 # =========================================================
 # Attack Simulation API endpoint
 # ======================================================
@@ -146,7 +167,7 @@ def launch_custom_scenario(
     request: CustomScenario,
     db: Session = Depends(get_db),
 ):
-    attack = attack_catalog.get(request.attack_id)
+    attack = Attack_Catalog.get(request.attack_id)
 
     if not attack:
         raise HTTPException(

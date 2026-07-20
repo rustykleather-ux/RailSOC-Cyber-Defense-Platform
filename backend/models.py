@@ -43,40 +43,6 @@ class Alert(Base):
 
     device = relationship("OTDevice", back_populates="alerts")
 
-class Incident(Base):
-    _tablename_="incidents"
-
-    id = Column(Integer, primary_key=True, index=True)
-
-    device_id = Column(
-        Integer,
-        ForeignKey("ot_devices.id"),
-        nullable=True,
-    )
-
-    severity = Column(String, nullable=False)
-
-    title = Column(String, nullable=False)
-
-    description = Column(String, nullable=False)
-
-    status = Column(
-        String,
-        default="Open",
-    )
-
-    assigned_to = Column(
-        String,
-        default="Unassigned",
-    )
-
-    created_at = Column(
-        DateTime,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow,
-    )
-
-    device = relationship("OTDevice")
 
 class Vulnerability(Base):
     __tablename__ = "vulnerabilities"

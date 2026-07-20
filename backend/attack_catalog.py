@@ -10,6 +10,9 @@ attack_catalog = {
                              "PLC", 
                              "Switch Controller"],
         "condition": "Configuration Drift",
+        "simulation_effect": {
+            "status": "Compromised",
+        },
     },
     "credential_abuse": {
         "attack_id": "credential_abuse",
@@ -19,7 +22,11 @@ attack_catalog = {
         "mitre_id": "T1078",
         "mitre_name": "Valid Accounts",
         "compatible_types": ["Workstation", "Server", "Network Device"],
-        "condition": "Unusual Login Activity"
+        "condition": "Unusual Login Activity",
+        "simulation_effect": {
+        "status": "Compromised"
+        },       
+        
     },
     "network_recon": {
         "attack_id": "network_recon",
@@ -29,7 +36,10 @@ attack_catalog = {
         "mitre_id": "T1046",
         "mitre_name": "Network Service Scanning",
         "compatible_types": ["Workstation", "Server", "Network Device"],
-        "condition": "Unusual Network Traffic"
+        "condition": "Unusual Network Traffic",
+        "simulation_effect": {
+        "status": "Operational"
+        },
     },
 
     "firmware_tampering": {
@@ -40,18 +50,24 @@ attack_catalog = {
         "mitre_id": "T1609",
         "mitre_name": "Firmware Modification",
         "compatible_types": ["PLC", "Switch Controller", "IoT Device"],
-        "condition": "Unexpected Firmware Changes"
+        "condition": "Unexpected Firmware Changes",
+        "simulation_effect": {
+        "status": "Maintenance"
+        },
     },
     
-    "Denial_of_Service": {
-        "attack_id": "Denial_of_Service",
+    "denial_of_service": {
+        "attack_id": "denial_of_service",
         "name": "Denial of Service",
         "description": "Simulating a denial of service attack.",
         "severity": "High",
         "mitre_id": "T1499",
         "mitre_name": "Endpoint Denial of Service",
         "compatible_types": ["Server", "Network Device"],
-        "condition": "Service Unavailability"
+        "condition": "Service Unavailability",
+        "simulation_effect": {
+        "status": "Degraded"
+        },
     },
 
     "communication_failure": {
@@ -61,8 +77,11 @@ attack_catalog = {
         "severity": "Medium",
         "mitre_id": "T1601",
         "mitre_name": "Communication Disruption",
-        "compatible_types": ["PLC", "Switch Controller", "IoT Device"],
-        "condition": "Unexpected Communication Loss"
+        "compatible_types": ["PLC", "Switch Controller", "IoT Device", "Signal Controller"],
+        "condition": "Unexpected Communication Loss",
+        "simulation_effect": {
+        "status": "Offline"
+        },
     },
 
     "malware_injection": {
@@ -73,7 +92,10 @@ attack_catalog = {
         "mitre_id": "T1059",
         "mitre_name": "Command and Scripting Interpreter",
         "compatible_types": ["Workstation", "Server"],
-        "condition": "Unexpected Process Execution"
+        "condition": "Unexpected Process Execution",
+        "simulation_effect": {
+        "status": "Compromised"
+        },
     },
 
     "ransomware_attack": {
@@ -84,7 +106,10 @@ attack_catalog = {
         "mitre_id": "T1486",
         "mitre_name": "Data Encrypted for Impact",
         "compatible_types": ["Workstation", "Server"],
-        "condition": "Unexpected File Encryption"
+        "condition": "Unexpected File Encryption",
+        "simulation_effect": {
+        "status": "Offline"
+        },
     },
 
     "sensor_tampering": {
@@ -95,7 +120,10 @@ attack_catalog = {
         "mitre_id": "T1602",
         "mitre_name": "Sensor Manipulation",
         "compatible_types": ["IoT Device", "PLC"],
-        "condition": "Unexpected Sensor Readings"
+        "condition": "Unexpected Sensor Readings",
+        "simulation_effect": {
+        "status": "Compromised"
+        },
     },
 
     "power_fluctuation": {
@@ -106,10 +134,13 @@ attack_catalog = {
         "mitre_id": "T1603",
         "mitre_name": "Power Disruption",
         "compatible_types": ["PLC", "Switch Controller", "IoT Device"],
-        "condition": "Unexpected Power Variations"
+        "condition": "Unexpected Power Variations",
+        "simulation_effect": {
+        "status": "Degraded"
+        },
     },
 
-    "braute_force_attack": {
+    "brute_force_attack": {
         "attack_id": "brute_force_attack",
         "name": "Brute Force Attack",
         "description": "Simulating a brute force attack on authentication mechanisms.",
@@ -117,18 +148,24 @@ attack_catalog = {
         "mitre_id": "T1110",
         "mitre_name": "Brute Force",
         "compatible_types": ["Workstation", "Server", "Network Device"],
-        "condition": "Multiple Failed Login Attempts"
+        "condition": "Multiple Failed Login Attempts",
+        "simulation_effect": {
+        "status": "Operational"
+        },
     },
 
-    "data_Exfiltration": {
-        "attack_id": "Data_Exfiltration",
+    "data_exfiltration": {
+        "attack_id": "data_exfiltration",
         "name": "Data Exfiltration",
         "description": "Simulating unauthorized data exfiltration from a system.",
         "severity": "Critical",
         "mitre_id": "T1041",
         "mitre_name": "Exfiltration Over C2 Channel",
         "compatible_types": ["Workstation", "Server"],
-        "condition": "Unexpected Data Transfer"
+        "condition": "Unexpected Data Transfer",
+        "simulation_effect": {
+        "status": "Compromised"
+        },
     },
 
     "door_access": {
@@ -139,8 +176,11 @@ attack_catalog = {
         "mitre_id": "T1078",
         "mitre_name": "Valid Accounts",
         "compatible_types": ["Access Control Device"],
-        "condition": "Unexpected Door Access"
+        "condition": "Unexpected Door Access",
+        "simulation_effect": {
+        "status": "Compromised"
+        },
     }
-
+## Planned move to move status, alert, incidient, dashboard color and requires operator action into simulation_effect ##
 
 }

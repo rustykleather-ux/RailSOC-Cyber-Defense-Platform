@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from simulation_engine import apply_attack
 from attack_catalog import attack_catalog   
 from attack_manager import launch_attack, get_active_attacks 
 from database import Base, engine, SessionLocal
@@ -203,15 +204,22 @@ def launch_custom_scenario(
             },
         )
 
+    simulation_results = apply_attack(
+        db=db,
+        attack=attack,
+        targets=targets,
+   )   
+    
     attack_instance = launch_attack(
-    attack=attack,
-    targets=targets,
-    notes=request.notes,
-)
+        attack=attack,
+        targets=targets,
+        notes=request.notes,
+    )
 
     return {
     "message": "Custom scenario launched successfully",
     "scenario": attack_instance,
+    "simulation": simulation_results,
 }
 # =========================================================
 # Train API endpoints

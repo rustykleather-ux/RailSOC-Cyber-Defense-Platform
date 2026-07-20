@@ -1,3 +1,6 @@
+from services.alert_service import create_alert
+
+
 def apply_attack(
     db,
     attack,
@@ -13,6 +16,12 @@ def apply_attack(
 
         target.status = new_status
 
+        alert = create_alert(
+            db=db,
+            device=target,
+            attack=attack,
+        )
+
         simulation_results.append(
             {
                 "device_id": target.id,
@@ -20,6 +29,9 @@ def apply_attack(
                 "previous_status": previous_status,
                 "new_status": new_status,
                 "detected_condition": attack.get("condition"),
+                "alert_id": alert.id,
+                "alert_type": alert.alert_type,
+                "alert_severity": alert.severity,
             }
         )
 

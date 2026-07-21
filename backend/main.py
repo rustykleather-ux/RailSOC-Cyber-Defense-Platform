@@ -155,6 +155,7 @@ def get_attacks():
                 "mitre_name": attack.get("mitre_name"),
                 "compatible_types": attack.get("compatible_types", []),
                 "condition": attack.get("condition"),
+                "simulation_effect": attack.get("simulations_effect", {}),
             }
             for attack in Attack_Catalog.values()
         ]

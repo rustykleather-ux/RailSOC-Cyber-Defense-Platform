@@ -1,4 +1,7 @@
 function DeviceInventory({ devices }) {
+  console.log("DeviceInventory devices:", devices);
+console.log("Is array:", Array.isArray(devices));
+console.log("Type:", typeof devices);
   return (
     <>
       <h2>Railroad OT Asset Inventory</h2>
@@ -21,7 +24,13 @@ function DeviceInventory({ devices }) {
         </thead>
 
         <tbody>
-          {(devices || []).map((device) => (
+          {(
+  Array.isArray(devices)
+    ? devices
+    : Array.isArray(devices?.devices)
+    ? devices.devices
+    : []
+).map((device) => (
             <tr key={device.id}>
               <td>{device.name}</td>
 

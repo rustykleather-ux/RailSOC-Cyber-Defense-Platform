@@ -1,13 +1,14 @@
 import random
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Any, Dict, List
 from urllib import request
 
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
+from scenario_manager import scenario_manager
 from simulation_engine import apply_attack
 from attack_catalog import Attack_Catalog   
 from attack_manager import launch_attack, get_active_attacks 
@@ -23,7 +24,28 @@ from services.risk_engine import calculate_device_risk
 from train_simulation import train_simulation
 from railroad import TRACK_BLOCKS
 
+class ScenarioCreateRequest(BaseModel):
+    attack_id: str
+    target_ids: List[int] = Field(min_length=1)
+    notes: Optional[str] = None
+    created_by: Optional[str] = None
 
+
+class ScenarioProgressRequest(BaseModel):
+    progress: int = Field(ge=0, le=100)
+    current_step: Optional[str] = None
+
+
+class ScenarioTimelineEventRequest(BaseModel):
+    event_type: str
+    title: str
+    message: str
+    severity: str = "Info"
+    progress: Optional[int] = Field(default=None, ge=0, le=100)
+    metadata: Optional[Dict[str, Any]] = None
+
+
+    
 # =========================================================
 # Database setup
 # =========================================================
@@ -61,7 +83,32 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+# =========================================================
+# Scenario endpoint
+# =========================================================
 
+@app.post("/training/scenarios")
+def create_training_scenario(request: ScenarioCreateRequest):
+    attack = Attack_Catalog.get(request.attack_id)
+
+    if attack is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f'Attack "{request.attack_id}" was not found.',
+        )
+
+    scenario = scenario_manager.create_scenario(
+        attack_id=request.attack_id,
+        attack_name=attack["name"],
+        target_ids=request.target_ids,
+        notes=request.notes,
+        created_by=request.created_by,
+    )
+
+    return {
+        "message": "Scenario created successfully.",
+        "scenario": scenario,
+    }
 # =========================================================
 # Track Blocks API endpoint
 # =========================================================
@@ -155,7 +202,6 @@ def get_attacks():
                 "mitre_name": attack.get("mitre_name"),
                 "compatible_types": attack.get("compatible_types", []),
                 "condition": attack.get("condition"),
-                "simulation_effect": attack.get("simulations_effect", {}),
             }
             for attack in Attack_Catalog.values()
         ]

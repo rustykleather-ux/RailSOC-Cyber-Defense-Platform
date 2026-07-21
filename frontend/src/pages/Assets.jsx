@@ -10,8 +10,13 @@ function Assets() {
   useEffect(() => {
     async function loadDevices() {
       try {
-        const data = await getDevices();
-        setDevices(data);
+        const response = await getDevices();
+
+        setDevices(
+          Array.isArray(response.data)
+            ? response.data
+            : []
+        );
       } catch (err) {
         console.error("Failed to load devices:", err);
         setError("Unable to load railroad assets.");

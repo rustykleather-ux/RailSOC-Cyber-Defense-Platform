@@ -49,7 +49,7 @@ Attack_Catalog = {
         "severity": "Critical",
         "mitre_id": "T1609",
         "mitre_name": "Firmware Modification",
-        "compatible_types": ["PLC", "Switch Controller", "IoT Device"],
+        "compatible_types": ["PLC", "Switch Controller", "IoT Device", "Dispatch SCADA"],
         "condition": "Unexpected Firmware Changes",
         "simulation_effect": {
         "status": "Maintenance"

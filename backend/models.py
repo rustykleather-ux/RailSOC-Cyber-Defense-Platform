@@ -91,9 +91,11 @@ class Train(Base):
     # Operational
     current_signal = Column(String, default="Clear")
     track = Column(String, default="Main")
-    last_updated = Column(DateTime, default=datetime.utcnow)
+    last_updated = Column(
+    DateTime,
     default=datetime.utcnow,
     onupdate=datetime.utcnow
+    )
 
 class TrainHistory(Base):
     __tablename__ = "train_history"
@@ -120,3 +122,26 @@ class TrainHistory(Base):
     ptc_enabled = Column(Boolean)
 
     train = relationship("Train", backref="history")
+
+
+
+class ActivityLog(Base):
+    __tablename__ = "activity_log"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    timestamp = Column(
+        DateTime,
+        default=datetime.utcnow,
+        nullable=False,
+        index=True
+    )
+
+    event_type = Column(String, nullable=False)
+    title = Column(String, nullable=False)
+    description = Column(String, nullable=False)
+    severity = Column(String, default="Info")
+    source = Column(String, default="TrackSentinel")
+    asset_name = Column(String, default="")
+    status = Column(String, default="Completed")
+    

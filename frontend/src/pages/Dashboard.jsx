@@ -1,5 +1,6 @@
 import EnvironmentOverview from "../components/EnvironmentOverview";
 import RailroadMap from "../components/RailroadMap";
+import RecentScenarioActivity from "../components/RecentScenarioActivity";
 
 function Dashboard({
   dashboard,
@@ -13,9 +14,6 @@ function Dashboard({
 }) {
   const recentIncidents = (incidents || []).slice(0, 3);
   const topAlerts = (alerts || []).slice(0, 3);
-
-  console.log("Dashboard trains:", trains);
-  console.log("Dashboard trackBlocks:", trackBlocks);
 
   return (
     <>
@@ -34,6 +32,8 @@ function Dashboard({
         trackBlocks={trackBlocks}
       />
 
+      <RecentScenarioActivity alerts={alerts || []} />
+
       <div className="dashboard-summary-grid">
         <section className="summary-panel">
           <h2>Recent Incidents</h2>
@@ -44,11 +44,11 @@ function Dashboard({
             recentIncidents.map((incident) => (
               <div className="summary-item" key={incident.id}>
                 <span
-                  className={`badge ${
+                  className={`badge ${String(
                     incident.severity || "low"
-                  }`.toLowerCase()}
+                  ).toLowerCase()}`}
                 >
-                  {incident.severity}
+                  {incident.severity || "Low"}
                 </span>
 
                 <div>
@@ -74,11 +74,11 @@ function Dashboard({
             topAlerts.map((alert) => (
               <div className="summary-item" key={alert.id}>
                 <span
-                  className={`badge ${
+                  className={`badge ${String(
                     alert.severity || "low"
-                  }`.toLowerCase()}
+                  ).toLowerCase()}`}
                 >
-                  {alert.severity}
+                  {alert.severity || "Low"}
                 </span>
 
                 <div>
@@ -87,7 +87,9 @@ function Dashboard({
                   </strong>
 
                   <p>
-                    {alert.device || "Unknown Rail Asset"}
+                    {alert.device ||
+                      alert.device_name ||
+                      "Unknown Rail Asset"}
                   </p>
                 </div>
               </div>

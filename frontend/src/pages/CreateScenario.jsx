@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
+import ScenarioResultsDrawer from "../components/ScenarioResultsDrawer";
+
 
 function CreateScenario() {
   const [attacks, setAttacks] = useState([]);
@@ -11,6 +13,8 @@ function CreateScenario() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
+  const [scenarioResult, setScenarioResult] = useState(null);
+  
 
   useEffect(() => {
     loadScenarioData();
@@ -344,13 +348,16 @@ function CreateScenario() {
         );
       }
 
-      setResult(
+      const resultData =
         data ?? {
           message: "Scenario launched successfully.",
-        }
-      );
+        };
+
+      setResult(resultData);
+      setScenarioResult(resultData);
     } catch (err) {
-      setError(err.message || "Scenario launch failed.");
+      setError(resultData);
+      setScenarioResult(resultData)
     } finally {
       setLoading(false);
     }
@@ -824,13 +831,14 @@ function CreateScenario() {
           </div>
         )}
 
-        {result && (
-          <section className="scenario-result">
-            <h2>Scenario Launched</h2>
-
-            <pre>{JSON.stringify(result, null, 2)}</pre>
-          </section>
-        )}
+        <ScenarioResultsDrawer
+          result={scenarioResult}
+          onClose={() => setScenarioResult(null)}
+        />
+        <ScenarioResultsDrawer
+  result={scenarioResult}
+  onClose={() => setScenarioResult(null)}
+/>
       </section>
     </main>
   );

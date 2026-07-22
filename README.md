@@ -46,6 +46,49 @@ Although inspired by real OT security concepts, all attacks, alerts, telemetry, 
 
 ---
 
+# ✨ Key Features
+
+- 🚂 Interactive railroad operations map with live train simulation
+- 🚦 Dynamic signal and track block occupancy simulation
+- 🛡️ OT cybersecurity monitoring and incident response workflows
+- 📊 Executive cybersecurity dashboard with operational KPIs
+- 🎯 Custom attack scenario builder
+- 🚨 Real-time security alerts with MITRE ATT&CK for ICS mappings
+- 📝 Incident management with analyst assignments and investigation notes
+- 📈 Simulated operational telemetry across railroad OT assets
+- 🔄 Purple team exercise simulation
+- 🎮 Train simulation controls (Start, Stop, Restart, Reset)
+- 📚 Recent scenario activity tracking
+- ⚡ FastAPI REST API with React frontend
+
+---
+
+# 🆕 Latest Features
+
+### Railroad Operations
+
+- Interactive train simulation
+- Dynamic train movement
+- Track block occupancy visualization
+- Live signal state updates
+- Operator train controls
+
+### Scenario Management
+
+- Custom Scenario Builder
+- Scenario execution history
+- Recent activity timeline
+
+### Dashboard Improvements
+
+- Environment Overview
+- Railroad Operations Map
+- Executive dashboard enhancements
+- Live operational telemetry
+
+---
+
+
 # Why TrackSentinel?
 
 Industrial environments differ significantly from enterprise IT environments.
@@ -813,6 +856,31 @@ Each vulnerability includes:
 
 ---
 
+# 🚂 Live Railroad Simulation
+
+TrackSentinel now includes a live railroad operations simulator capable of modeling train movement across a simulated subdivision.
+
+### Features
+
+- Continuous train movement
+- Dynamic speed updates
+- Block occupancy
+- Signal state changes
+- Dispatch visualization
+- Operator controls
+- Automatic scenario interaction
+
+### Operator Controls
+
+- ▶ Start
+- ■ Stop
+- ⟳ Restart
+- ↺ Reset
+
+The simulation provides a realistic operational context for cybersecurity incidents, allowing analysts to understand how cyber events can impact railroad operations.
+
+---
+
 ## Example Vulnerability Workflow
 
 ```text
@@ -902,25 +970,35 @@ H --> C
 
  ┌──────────────────────────────────────────────┐
  │ Executive Dashboard                          │
- │ RailSOC Dashboard                            │
- │ Live Telemetry                               │
+ │ RailSOC Dashboard                            |
+ | Railroad Operations Map                      │
+ │ Scenario Builder                             |
+ | Incident Center                              |
+ | Environment Overview                         |
+ | Recent Activity                              |
+ | Train Controls                               |
+ | Live Telemetry                               │
  │ Operations Map                               │
- │ Incident Center                              │
+ │                                             │
  │ Investigation Workspace                      │
  │ Vulnerability Management                     │
  │ Purple Team Library                          │
  └──────────────────────────────────────────────┘
-
-                    REST API
-
-               FastAPI Application
-
-                        │
-
-        Simulation • Alerts • Incidents
-
-                        │
-
+                      |
+                      |
+ ┌──────────────────────────────────────────────┐
+ │ Simulation Engine                            │
+ │ Train Engine                                 |
+ | Scenario Engine                              │
+ │ Incident Service                             |
+ | Alert Service                                |
+ | Telemetry Service                            |
+ | Executive Metrics                            |
+ |                                              |
+ │                                              |
+ └──────────────────────────────────────────────┘
+                      |
+                      |
                  SQLite Demonstration DB
 ```
 

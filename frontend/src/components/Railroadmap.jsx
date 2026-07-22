@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   MonitorCog,
   Database,
@@ -12,7 +12,8 @@ import {
   Flame,
   Wrench,
   TrainFront,
-} from "lucide-react";
+} from "lucide-react"; 
+
 
 function RailroadMap({
   devices = [],
@@ -21,6 +22,83 @@ function RailroadMap({
   trackBlocks = [],
 }) {
   const [selectedAsset, setSelectedAsset] = useState(null);
+  const [simulationRunning, setSimulationRunning] = useState(false);
+  const [controlLoading, setControlLoading] = useState(false);
+  const [controlMessage, setControlMessage] = useState("");
+
+  const API_BASE_URL = "http://127.0.0.1:8000";
+
+  const controlTrainSimulation = async (action) => {
+    setControlLoading(true);
+    setControlMessage("");
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/train-simulation/${action}`,
+        {
+          method: "POST",
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+
+        throw new Error(
+          errorData?.detail ||
+            errorData?.message ||
+            `Unable to ${action} train simulation.`
+        );
+      }
+
+      const data = await response.json();
+
+      if (typeof data.running === "boolean") {
+        setSimulationRunning(data.running);
+      } else if (action === "reset") {
+        setSimulationRunning(false);
+      }
+
+      setControlMessage(
+        data.message ||
+          `Train simulation ${action} completed.`
+      );
+    } catch (error) {
+      console.error("Train control error:", error);
+
+      setControlMessage(
+        error.message || "Train control request failed."
+      );
+    } finally {
+      setControlLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const loadSimulationStatus = async () => {
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/train-simulation/status`
+        );
+
+        if (!response.ok) {
+          throw new Error(
+            "Unable to load train simulation status."
+          );
+        }
+
+        const data = await response.json();
+
+        setSimulationRunning(Boolean(data.running));
+      } catch (error) {
+        console.error(
+          "Train simulation status error:",
+          error
+        );
+      }
+    };
+
+    loadSimulationStatus();
+  }, []);
 
   const getDevice = (name) =>
     devices.find((device) => device.name === name);
@@ -195,14 +273,77 @@ function RailroadMap({
   return (
     <section className="rail-ops-map">
       <div className="rail-map-header">
-        <h2>Interactive Railroad Operations Map</h2>
+  <div className="rail-map-title-row">
+    <div>
+      <h2>Interactive Railroad Operations Map</h2>
 
-        <p>
-          Simulated rail subdivision showing live OT asset health,
-          cyber risk, safety sensors, infrastructure monitoring,
-          train movement, and block occupancy.
-        </p>
-      </div>
+      <p>
+        Simulated rail subdivision showing live OT asset health,
+        cyber risk, safety sensors, infrastructure monitoring,
+        train movement, and block occupancy.
+      </p>
+    </div>
+
+    <div className="train-control-status">
+      <span
+        className={`simulation-status-dot ${
+          simulationRunning ? "running" : "stopped"
+        }`}
+      />
+
+      <span>
+        Simulation:{" "}
+        <strong>
+          {simulationRunning ? "Running" : "Stopped"}
+        </strong>
+      </span>
+    </div>
+  </div>
+
+  <div className="train-control-panel">
+    <button
+      type="button"
+      className="train-control-button start"
+      disabled={controlLoading || simulationRunning}
+      onClick={() => controlTrainSimulation("start")}
+    >
+      ▶ Start Train
+    </button>
+
+    <button
+      type="button"
+      className="train-control-button stop"
+      disabled={controlLoading || !simulationRunning}
+      onClick={() => controlTrainSimulation("stop")}
+    >
+      ■ Stop Train
+    </button>
+
+    <button
+      type="button"
+      className="train-control-button restart"
+      disabled={controlLoading}
+      onClick={() => controlTrainSimulation("restart")}
+    >
+      ⟳ Restart Train
+    </button>
+
+    <button
+      type="button"
+      className="train-control-button reset"
+      disabled={controlLoading}
+      onClick={() => controlTrainSimulation("reset")}
+    >
+      ↺ Reset Train
+    </button>
+  </div>
+
+  {controlMessage && (
+    <p className="train-control-message">
+      {controlMessage}
+    </p>
+  )}
+</div>
 
       <div className="subdivision-map expanded">
         

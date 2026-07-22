@@ -616,6 +616,29 @@ def start_train_simulation():
         ),
     }
 
+@app.post("/train-simulation/stop")
+def stop_train_simulation():
+    stopped = train_simulation.stop()
+    return{
+        "running": train_simulation.is_running,
+        "message":(
+        "Train simulation stopped."
+        if stopped
+        else "Train simulation was already stopped"
+        ),
+    }
+
+@app.post("/train-simulation/restart")
+def restart_traing_simulation():
+    train_simulation.stop()
+    train_simulation.reset_trains()
+    train_simulation.start()
+
+    return{
+        "running": train_simulation.is_running,
+        "message": "Train simulation restarted"
+    }
+
 
 @app.get("/train-simulation/status")
 def train_simulation_status():

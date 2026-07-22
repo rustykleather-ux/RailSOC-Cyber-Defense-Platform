@@ -161,9 +161,6 @@ Telemetry automatically changes during simulated attack scenarios to reflect the
   <img src="https://raw.githubusercontent.com/rustykleather-ux/RailSOC-Cyber-Defense-Platform/main/Screenshots/executive-dashboard.jpg" alt="TrackSentinel Banner" width="100%">
 </p>
 
-```text
-screenshots/executive-dashboard.png
-```
 
 ### Capabilities
 
@@ -193,12 +190,10 @@ screenshots/executive-dashboard.png
 > The operational command center used by analysts during daily monitoring.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/rustykleather-ux/RailSOC-Cyber-Defense-Platform/main/Screenshots/dashboard.jpg" alt="Dashboard" width="100%">
+  <img src="https://raw.githubusercontent.com/rustykleather-ux/RailSOC-Cyber-Defense-Platform/main/Screenshots/dashboard2.0.jpg" alt="Dashboard" width="100%">
 </p>
 
-```text
-screenshots/dashboard.png
-```
+
 
 ### Capabilities
 
@@ -227,9 +222,7 @@ screenshots/dashboard.png
   <img src="https://raw.githubusercontent.com/rustykleather-ux/RailSOC-Cyber-Defense-Platform/main/Screenshots\operations-map.jpg" alt="Operations" width="100%">
 </p>
 
-```text
-screenshots/operations-map.png
-```
+
 
 ### Capabilities
 
@@ -263,9 +256,7 @@ screenshots/operations-map.png
   <img src="https://raw.githubusercontent.com/rustykleather-ux/RailSOC-Cyber-Defense-Platform/main/Screenshots/telemetry.jpg" alt="TrackSentinel Banner" width="100%">
 </p>
 
-```text
-screenshots/live-telemetry.png
-```
+
 
 ### Asset Categories
 
@@ -342,9 +333,7 @@ screenshots/live-telemetry.png
   <img src="https://raw.githubusercontent.com/rustykleather-ux/RailSOC-Cyber-Defense-Platform/main/Screenshots/topology.jpg" alt="TrackSentinel Banner" width="100%">
 </p>
 
-```text
-screenshots/topology.png
-```
+
 
 ### Network Zones
 
@@ -380,9 +369,6 @@ Each node dynamically reflects:
   <img src="https://raw.githubusercontent.com/rustykleather-ux/RailSOC-Cyber-Defense-Platform/main/Screenshots\security-alerts.jpg" alt="TrackSentinel Banner" width="100%">
 </p>
 
-```text
-screenshots/alerts.png
-```
 
 ### Alert Types
 
@@ -418,9 +404,7 @@ Each alert includes
   <img src="https://raw.githubusercontent.com/rustykleather-ux/RailSOC-Cyber-Defense-Platform/main/Screenshots/incident-center.jpg" alt="TrackSentinel Banner" width="100%">
 </p>
 
-```text
-screenshots/incident-center.png
-```
+
 
 ### Capabilities
 
@@ -450,9 +434,7 @@ screenshots/incident-center.png
   <img src="https://raw.githubusercontent.com/rustykleather-ux/RailSOC-Cyber-Defense-Platform/main/Screenshots/investigation-workspace.jpg" alt="TrackSentinel Banner" width="100%">
 </p>
 
-```text
-screenshots/investigation-workspace.png
-```
+
 
 ### Capabilities
 
@@ -880,6 +862,32 @@ TrackSentinel now includes a live railroad operations simulator capable of model
 The simulation provides a realistic operational context for cybersecurity incidents, allowing analysts to understand how cyber events can impact railroad operations.
 
 ---
+
+# 🎯 Scenario Builder
+
+TrackSentinel allows analysts to launch predefined and custom operational scenarios.
+
+Examples include:
+
+- Signal controller compromise
+- PTC communication failure
+- Unauthorized engineering workstation login
+- OT network reconnaissance
+- Communications outage
+- Track obstruction
+- Equipment malfunction
+
+Running a scenario automatically updates:
+
+- Alerts
+- Incidents
+- Asset health
+- Telemetry
+- Executive metrics
+- Railroad map
+- Train operations
+
+--
 
 ## Example Vulnerability Workflow
 

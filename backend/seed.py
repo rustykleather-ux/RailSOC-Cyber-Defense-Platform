@@ -6,6 +6,8 @@ from models import OTDevice, Alert, Vulnerability,Train
 
 
 
+
+
 Base.metadata.create_all(bind=engine)
 
 db = SessionLocal()
@@ -352,7 +354,107 @@ vulnerabilities = [
         status="Open",
         recommendation="Check radio path, switch port, firewall rules, and remote access logs before restoring service."
     )
+
+    
 ]
+from sqlalchemy.orm import Session
+
+import models
+
+
+def seed_track_blocks(db: Session) -> None:
+    """
+    Create baseline railroad track blocks if none exist.
+    """
+
+    existing_blocks = db.query(models.TrackBlock).count()
+
+    if existing_blocks > 0:
+        print("Track blocks already exist. Skipping seed.")
+        return
+
+    track_blocks = [
+        models.TrackBlock(
+            name="Block E80",
+            subdivision="Emporia Subdivision",
+            track="Main",
+            start_milepost=80.0,
+            end_milepost=82.0,
+            occupied=False,
+            signal_aspect="Clear",
+            authority="Main Track",
+            speed_limit=49,
+            communications_status="Online",
+            security_status="Healthy",
+            maintenance=False,
+            notes="Eastern entry block.",
+        ),
+        models.TrackBlock(
+            name="Block E82",
+            subdivision="Emporia Subdivision",
+            track="Main",
+            start_milepost=82.0,
+            end_milepost=84.0,
+            occupied=False,
+            signal_aspect="Clear",
+            authority="Main Track",
+            speed_limit=49,
+            communications_status="Online",
+            security_status="Healthy",
+            maintenance=False,
+            notes="Includes grade crossing near MP 82.4.",
+        ),
+        models.TrackBlock(
+            name="Block E84",
+            subdivision="Emporia Subdivision",
+            track="Main",
+            start_milepost=84.0,
+            end_milepost=86.0,
+            occupied=False,
+            signal_aspect="Clear",
+            authority="Main Track",
+            speed_limit=49,
+            communications_status="Online",
+            security_status="Healthy",
+            maintenance=False,
+            notes="Central subdivision block.",
+        ),
+        models.TrackBlock(
+            name="Block E86",
+            subdivision="Emporia Subdivision",
+            track="Main",
+            start_milepost=86.0,
+            end_milepost=88.0,
+            occupied=False,
+            signal_aspect="Clear",
+            authority="Main Track",
+            speed_limit=40,
+            communications_status="Online",
+            security_status="Healthy",
+            maintenance=False,
+            notes="Reduced-speed territory.",
+        ),
+        models.TrackBlock(
+            name="Block E88",
+            subdivision="Emporia Subdivision",
+            track="Main",
+            start_milepost=88.0,
+            end_milepost=90.0,
+            occupied=False,
+            signal_aspect="Clear",
+            authority="Main Track",
+            speed_limit=49,
+            communications_status="Online",
+            security_status="Healthy",
+            maintenance=False,
+            notes="Western exit block.",
+        ),
+    ]
+
+    db.add_all(track_blocks)
+    db.commit()
+
+    print(f"Created {len(track_blocks)} track blocks.")
 
 db.add_all(vulnerabilities)
 db.commit()

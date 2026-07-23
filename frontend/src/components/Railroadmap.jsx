@@ -1,621 +1,1259 @@
-import { useEffect, useState } from "react";
-import {
-  MonitorCog,
-  Database,
-  TrafficCone,
-  Construction,
-  RadioTower,
-  Zap,
-  Thermometer,
-  DoorOpen,
-  Landmark,
-  Flame,
-  Wrench,
-  TrainFront,
-} from "lucide-react"; 
+import { useCallback, useEffect, useMemo, useState } from "react";
+import "./RailroadMap.css";
 
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
 
-function RailroadMap({
-  devices = [],
-  incidents = [],
-  trains = [],
-  trackBlocks = [],
-}) {
-  const [selectedAsset, setSelectedAsset] = useState(null);
-  const [simulationRunning, setSimulationRunning] = useState(false);
-  const [controlLoading, setControlLoading] = useState(false);
-  const [controlMessage, setControlMessage] = useState("");
+const REFRESH_INTERVAL_MS = 3000;
 
-  const API_BASE_URL = "http://127.0.0.1:8000";
+function normalize(value) {
+  return String(value || "").trim().toLowerCase();
+}
 
-  const controlTrainSimulation = async (action) => {
-    setControlLoading(true);
-    setControlMessage("");
+function getBlockState(block) {
+  const communications = normalize(block.communications_status);
+  const security = normalize(block.security_status);
+  const signal = normalize(block.signal_aspect);
 
-    try {
-      const response = await fetch(
-        `${API_BASE_URL}/train-simulation/${action}`,
-        {
-          method: "POST",
-        }
-      );
+  if (
+    communications &&
+    !["online", "normal", "healthy"].includes(communications)
+  ) {
+    return "communications";
+  }
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
+  if (block.maintenance) {
+    return "maintenance";
+  }
 
-        throw new Error(
-          errorData?.detail ||
-            errorData?.message ||
-            `Unable to ${action} train simulation.`
-        );
-      }
+  if (
+    security &&
+    !["healthy", "normal", "low"].includes(security)
+  ) {
+    return "security";
+  }
 
-      const data = await response.json();
+  if (block.occupied) {
+    return "occupied";
+  }
 
-      if (typeof data.running === "boolean") {
-        setSimulationRunning(data.running);
-      } else if (action === "reset") {
-        setSimulationRunning(false);
-      }
+  if (signal === "stop" || signal === "dark") {
+    return "stop";
+  }
 
-      setControlMessage(
-        data.message ||
-          `Train simulation ${action} completed.`
-      );
-    } catch (error) {
-      console.error("Train control error:", error);
+  if (
+    signal === "approach" ||
+    signal === "restricting" ||
+    signal === "restricted"
+  ) {
+    return "approach";
+  }
 
-      setControlMessage(
-        error.message || "Train control request failed."
-      );
-    } finally {
-      setControlLoading(false);
-    }
-  };
+  return "clear";
+}
 
-  useEffect(() => {
-    const loadSimulationStatus = async () => {
-      try {
-        const response = await fetch(
-          `${API_BASE_URL}/train-simulation/status`
-        );
+function getSignalSymbol(signalAspect) {
+  const signal = normalize(signalAspect);
 
-        if (!response.ok) {
-          throw new Error(
-            "Unable to load train simulation status."
-          );
-        }
+  if (signal === "stop") {
+    return "●";
+  }
 
-        const data = await response.json();
+  if (
+    signal === "approach" ||
+    signal === "restricting" ||
+    signal === "restricted"
+  ) {
+    return "●";
+  }
 
-        setSimulationRunning(Boolean(data.running));
-      } catch (error) {
-        console.error(
-          "Train simulation status error:",
-          error
-        );
-      }
-    };
+  if (signal === "dark") {
+    return "○";
+  }
 
-    loadSimulationStatus();
-  }, []);
+  return "●";
+}
 
-  const getDevice = (name) =>
-    devices.find((device) => device.name === name);
+function formatMilepost(value) {
+  const number = Number(value);
 
-  const getStatusClass = (device) => {
-    if (!device) return "unknown";
+  if (!Number.isFinite(number)) {
+    return "—";
+  }
 
-    if (
-      device.status === "Offline" ||
-      device.status === "Degraded"
-    ) {
-      return "offline";
-    }
+  return number.toFixed(1);
+}
 
-    const risk = device.calculated_risk || device.risk_level;
+function formatTimestamp(value) {
+  if (!value) {
+    return "Not available";
+  }
 
-    if (risk === "Critical") return "critical";
-    if (risk === "High") return "warning";
-    if (risk === "Medium") return "medium";
+  const date = new Date(value);
 
+  if (Number.isNaN(date.getTime())) {
+    return String(value);
+  }
+
+  return date.toLocaleString();
+}
+
+function getTrainPosition(train, minimumMilepost, maximumMilepost) {
+  const milepost = Number(train.milepost);
+
+  if (
+    !Number.isFinite(milepost) ||
+    maximumMilepost <= minimumMilepost
+  ) {
+    return 0;
+  }
+
+  const percentage =
+    ((milepost - minimumMilepost) /
+      (maximumMilepost - minimumMilepost)) *
+    100;
+
+  return Math.min(100, Math.max(0, percentage));
+}
+
+function getDirectionArrow(direction) {
+  return normalize(direction) === "westbound" ? "←" : "→";
+}
+function getAssetIcon(device) {
+  const name = normalize(device.name);
+  const type = normalize(device.device_type);
+
+  if (name.includes("scada") || type.includes("scada")) {
+    return "🖥️";
+  }
+
+  if (
+    name.includes("bridge") ||
+    type.includes("infrastructure")
+  ) {
+    return "🌉";
+  }
+
+  if (
+    name.includes("crossing") ||
+    type.includes("crossing")
+  ) {
+    return "🚧";
+  }
+
+  if (
+    name.includes("signal") ||
+    type.includes("signal")
+  ) {
+    return "🚦";
+  }
+
+  if (
+    name.includes("ptc") ||
+    name.includes("radio") ||
+    type.includes("communications")
+  ) {
+    return "📡";
+  }
+
+  if (
+    name.includes("hot box") ||
+    name.includes("bearing")
+  ) {
+    return "🔥";
+  }
+
+  if (
+    name.includes("aei") ||
+    name.includes("reader")
+  ) {
+    return "📷";
+  }
+
+  if (
+    name.includes("weather") ||
+    type.includes("environmental")
+  ) {
+    return "🌦️";
+  }
+
+  if (
+    name.includes("power") ||
+    name.includes("ups") ||
+    type.includes("power")
+  ) {
+    return "⚡";
+  }
+
+  if (
+    name.includes("engineering") ||
+    type.includes("workstation")
+  ) {
+    return "💻";
+  }
+
+  if (
+    name.includes("historian") ||
+    type.includes("historian")
+  ) {
+    return "📊";
+  }
+
+  if (
+    name.includes("firewall") ||
+    name.includes("security")
+  ) {
+    return "🛡️";
+  }
+
+  if (
+    name.includes("camera") ||
+    type.includes("physical security")
+  ) {
+    return "📹";
+  }
+
+  if (
+    name.includes("fire") ||
+    type.includes("safety")
+  ) {
+    return "🚨";
+  }
+
+  return "⚙️";
+}
+
+function getAssetState(device) {
+  const status = normalize(device.status);
+  const risk = normalize(
+    device.calculated_risk ||
+      device.risk_level,
+  );
+
+  if (
+    status === "offline" ||
+    risk === "critical"
+  ) {
+    return "critical";
+  }
+
+  if (
+    status === "degraded" ||
+    risk === "high"
+  ) {
+    return "warning";
+  }
+
+  if (
+    status === "online" &&
+    ["low", "normal", "healthy", ""].includes(risk)
+  ) {
     return "healthy";
+  }
+
+  return "unknown";
+}
+
+function extractDeviceMilepost(device) {
+  const searchableText = [
+    device.name,
+    device.location,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const match = searchableText.match(
+    /\bMP\s*([0-9]+(?:\.[0-9]+)?)/i,
+  );
+
+  if (!match) {
+    return null;
+  }
+
+  const milepost = Number(match[1]);
+
+  return Number.isFinite(milepost)
+    ? milepost
+    : null;
+}
+
+function getKnownDeviceMilepost(device) {
+  const name = normalize(device.name);
+
+  const knownLocations = {
+    "signal controller 14a": 80.5,
+    "grade crossing controller mp 82.4": 82.4,
+    "ptc radio gateway": 94.5,
+    "dispatch scada server": 80.2,
+    "rail engineering workstation": 98.0,
   };
 
-  const getIncidentCount = (assetName) =>
-    incidents.filter(
-      (incident) =>
-        incident.device === assetName &&
-        incident.status !== "Closed"
-    ).length;
+  return knownLocations[name] ?? null;
+}
 
-  const getBlockClass = (block) => {
-    if (!block) return "unknown";
-    return block.occupied ? "occupied" : "clear";
-  };
+function getDevicePosition(
+  device,
+  index,
+  deviceCount,
+  minimumMilepost,
+  maximumMilepost,
+) {
+  const explicitMilepost =
+    extractDeviceMilepost(device);
 
-  const getTrainPosition = (milepost) => {
-    const minimumMilepost = 80.0;
-    const maximumMilepost = 95.2;
+  const knownMilepost =
+    getKnownDeviceMilepost(device);
 
-    const trackStartPercent = 12;
-    const trackEndPercent = 88;
+  const milepost =
+    explicitMilepost ?? knownMilepost;
 
-    const value = Number(milepost);
+  if (
+    milepost !== null &&
+    maximumMilepost > minimumMilepost
+  ) {
+    const percentage =
+      ((milepost - minimumMilepost) /
+        (maximumMilepost - minimumMilepost)) *
+      100;
 
-    if (!Number.isFinite(value)) {
-      return trackStartPercent;
-    }
-
-    const progress =
-      (value - minimumMilepost) /
-      (maximumMilepost - minimumMilepost);
-
-    const clampedProgress = Math.max(
-      0,
-      Math.min(1, progress)
+    return Math.min(
+      97,
+      Math.max(3, percentage),
     );
+  }
 
-    return (
-      trackStartPercent +
-      clampedProgress *
-        (trackEndPercent - trackStartPercent)
-    );
-  };
+  const name = normalize(device.name);
+  const type = normalize(device.device_type);
 
-  const fallbackBlocks = [
-    {
-      id: 1,
-      name: "Block A",
-      start_mp: 80.0,
-      end_mp: 82.4,
-      occupied: false,
-      occupied_by: null,
-    },
-    {
-      id: 2,
-      name: "Block B",
-      start_mp: 82.4,
-      end_mp: 87.1,
-      occupied: false,
-      occupied_by: null,
-    },
-    {
-      id: 3,
-      name: "Block C",
-      start_mp: 87.1,
-      end_mp: 95.2,
-      occupied: false,
-      occupied_by: null,
-    },
-  ];
+  if (
+    name.includes("dispatch") ||
+    type.includes("scada") ||
+    type.includes("historian") ||
+    type.includes("jump server")
+  ) {
+    return 6 + index * 3;
+  }
 
-  const displayedBlocks =
-    trackBlocks.length > 0
-      ? trackBlocks
-      : fallbackBlocks;
+  if (
+    name.includes("engineering") ||
+    name.includes("maintenance")
+  ) {
+    return 88 + (index % 3) * 3;
+  }
 
-  const mapAssets = [
-    {
-      name: "Dispatch SCADA Server",
-      label: "Dispatch Center",
-      icon: MonitorCog,
-      position: "dispatch",
-    },
-    {
-      name: "Operations Historian",
-      label: "Historian",
-      icon: Database,
-      position: "historian",
-    },
-    {
-      name: "Signal Controller 14A",
-      label: "Signal 14A",
-      icon: TrafficCone,
-      position: "signal-a",
-    },
-    {
-      name: "Signal Controller 14B",
-      label: "Signal 14B",
-      icon: TrafficCone,
-      position: "signal-b",
-    },
-    {
-      name: "Grade Crossing Controller MP 82.4",
-      label: "Crossing MP 82.4",
-      icon: Construction,
-      position: "crossing-a",
-    },
-    {
-      name: "PTC Radio Gateway",
-      label: "PTC Radio",
-      icon: RadioTower,
-      position: "ptc",
-    },
-    {
-      name: "UPS System",
-      label: "UPS Power",
-      icon: Zap,
-      position: "ups",
-    },
-    {
-      name: "Hydrogen Gas Detector",
-      label: "Gas Detector",
-      icon: Thermometer,
-      position: "gas",
-    },
-    {
-      name: "Cabinet Intrusion Sensor",
-      label: "Cabinet Sensor",
-      icon: DoorOpen,
-      position: "cabinet",
-    },
-    {
-      name: "Bridge Structural Monitor",
-      label: "Bridge Monitor",
-      icon: Landmark,
-      position: "bridge",
-    },
-    {
-      name: "Hot Bearing Detector",
-      label: "Hot Bearing",
-      icon: Flame,
-      position: "bearing",
-    },
-    {
-      name: "Rail Engineering Workstation",
-      label: "Engineering",
-      icon: Wrench,
-      position: "maintenance",
-    },
-  ];
+  if (deviceCount <= 1) {
+    return 50;
+  }
 
   return (
-    <section className="rail-ops-map">
-      <div className="rail-map-header">
-  <div className="rail-map-title-row">
-    <div>
-      <h2>Interactive Railroad Operations Map</h2>
+    8 +
+    (index / (deviceCount - 1)) * 84
+  );
+}
 
-      <p>
-        Simulated rail subdivision showing live OT asset health,
-        cyber risk, safety sensors, infrastructure monitoring,
-        train movement, and block occupancy.
-      </p>
-    </div>
+function RailAssetMarker({
+  device,
+  index,
+  deviceCount,
+  minimumMilepost,
+  maximumMilepost,
+  onSelect,
+}) {
+  const left = getDevicePosition(
+    device,
+    index,
+    deviceCount,
+    minimumMilepost,
+    maximumMilepost,
+  );
 
-    <div className="train-control-status">
-      <span
-        className={`simulation-status-dot ${
-          simulationRunning ? "running" : "stopped"
-        }`}
-      />
+  const state = getAssetState(device);
 
-      <span>
-        Simulation:{" "}
-        <strong>
-          {simulationRunning ? "Running" : "Stopped"}
-        </strong>
-      </span>
-    </div>
-  </div>
+  const placement = index % 2 === 0 ? "above" : "below";
 
-  <div className="train-control-panel">
+  return (
     <button
       type="button"
-      className="train-control-button start"
-      disabled={controlLoading || simulationRunning}
-      onClick={() => controlTrainSimulation("start")}
-    >
-      ▶ Start Train
-    </button>
-
-    <button
-      type="button"
-      className="train-control-button stop"
-      disabled={controlLoading || !simulationRunning}
-      onClick={() => controlTrainSimulation("stop")}
-    >
-      ■ Stop Train
-    </button>
-
-    <button
-      type="button"
-      className="train-control-button restart"
-      disabled={controlLoading}
-      onClick={() => controlTrainSimulation("restart")}
-    >
-      ⟳ Restart Train
-    </button>
-
-    <button
-      type="button"
-      className="train-control-button reset"
-      disabled={controlLoading}
-      onClick={() => controlTrainSimulation("reset")}
-    >
-      ↺ Reset Train
-    </button>
-  </div>
-
-  {controlMessage && (
-    <p className="train-control-message">
-      {controlMessage}
-    </p>
-  )}
-</div>
-
-      <div className="subdivision-map expanded">
-        
-        
-        {/* Main track occupancy blocks */}
-        <div className="track-blocks">
-  {displayedBlocks.map((block) => (
-    <div
-      key={block.id}
-      className={`track-block ${
-        block.occupied ? "occupied" : "clear"
+      className={`rail-asset-marker rail-asset-marker--${state} rail-asset-marker--${placement}`}
+      style={{
+        left: `${left}%`,
+      }}
+      onClick={() => onSelect(device)}
+      title={`${device.name} — ${
+        device.status || "Unknown"
       }`}
     >
-      <span className="track-block-name">
-        {block.name}
+      <span className="rail-asset-marker__stem" />
+
+      <span className="rail-asset-marker__body">
+        <span className="rail-asset-marker__icon">
+          {getAssetIcon(device)}
+        </span>
+
+        <span className="rail-asset-marker__label">
+          <strong>{device.name}</strong>
+
+          <small>
+            {device.status || "Unknown"}
+          </small>
+        </span>
       </span>
+    </button>
+  );
+}
+function BlockCard({ block, isSelected, onSelect }) {
+  const state = getBlockState(block);
 
-      <span className="track-block-status">
-        {block.occupied
-          ? `Occupied: ${block.occupied_by || "Unknown"}`
-          : "Clear"}
+  return (
+    <button
+      type="button"
+      className={`track-block track-block--${state} ${
+        isSelected ? "track-block--selected" : ""
+      }`}
+      onClick={() => onSelect(block)}
+      aria-label={`Open details for ${block.name}`}
+    >
+      <div className="track-block__top">
+        <div>
+          <span className="track-block__name">
+            {block.name}
+          </span>
+
+          <span className="track-block__range">
+            MP {formatMilepost(block.start_mp)}–
+            {formatMilepost(block.end_mp)}
+          </span>
+        </div>
+
+        <span
+          className={`signal-indicator signal-indicator--${state}`}
+          title={block.signal_aspect || "Unknown"}
+        >
+          {getSignalSymbol(block.signal_aspect)}
+        </span>
+      </div>
+
+      <div className="track-block__rail">
+        <span className="track-block__tie" />
+        <span className="track-block__tie" />
+        <span className="track-block__tie" />
+        <span className="track-block__tie" />
+      </div>
+
+      <div className="track-block__status-row">
+        <span>{block.signal_aspect || "Unknown"}</span>
+
+        <span>
+          {block.occupied
+            ? block.occupied_by || "Occupied"
+            : "Unoccupied"}
+        </span>
+      </div>
+
+      <div className="track-block__footer">
+        <span>{block.speed_limit || "—"} MPH</span>
+        <span>{block.communications_status || "Unknown"}</span>
+      </div>
+    </button>
+  );
+}
+
+function TrainMarker({
+  train,
+  minimumMilepost,
+  maximumMilepost,
+  onSelect,
+}) {
+  const left = getTrainPosition(
+    train,
+    minimumMilepost,
+    maximumMilepost,
+  );
+
+  return (
+    <button
+      type="button"
+      className="train-marker"
+      style={{ left: `${left}%` }}
+      onClick={() => onSelect(train)}
+      title={`${train.symbol || "Train"} at MP ${
+        train.milepost ?? "Unknown"
+      }`}
+    >
+      <span className="train-marker__icon">🚆</span>
+
+      <span className="train-marker__label">
+        <strong>{train.symbol || `Train ${train.id}`}</strong>
+        <small>
+          {getDirectionArrow(train.direction)} MP{" "}
+          {formatMilepost(train.milepost)}
+        </small>
       </span>
+    </button>
+  );
+}
 
-      
-
+function MetricCard({ label, value, tone = "neutral" }) {
+  return (
+    <div className={`map-metric map-metric--${tone}`}>
+      <span className="map-metric__label">{label}</span>
+      <strong className="map-metric__value">{value}</strong>
     </div>
+  );
+}
+
+export default function RailroadMap({
+  devices = [],
+}) {
+  const [trackBlocks, setTrackBlocks] = useState([]);
+  const [trains, setTrains] = useState([]);
+  const [selectedDevice, setSelectedDevice] = useState(null);
+  const [simulationRunning, setSimulationRunning] =
+    useState(false);
+  const [selectedBlock, setSelectedBlock] = useState(null);
+  const [selectedTrain, setSelectedTrain] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [commandPending, setCommandPending] = useState(false);
+  const [error, setError] = useState("");
+
+  const fetchJson = useCallback(async (path, options = {}) => {
+    const response = await fetch(`${API_BASE_URL}${path}`, {
+      headers: {
+        "Content-Type": "application/json",
+        ...options.headers,
+      },
+      ...options,
+    });
+
+    if (!response.ok) {
+      const body = await response.text();
+
+      throw new Error(
+        body ||
+          `${response.status} ${response.statusText}`,
+      );
+    }
+
+    return response.json();
+  }, []);
+
+  const loadMapData = useCallback(async () => {
+    try {
+      const [blockData, trainData] = await Promise.all([
+        fetchJson("/track-blocks"),
+        fetchJson("/trains"),
+      ]);
+
+      setTrackBlocks(
+        Array.isArray(blockData)
+          ? [...blockData].sort(
+              (a, b) =>
+                Number(a.start_mp) - Number(b.start_mp),
+            )
+          : [],
+      );
+
+      setTrains(Array.isArray(trainData) ? trainData : []);
+      setError("");
+    } catch (loadError) {
+      console.error("Map data load failed:", loadError);
+      setError(
+        loadError.message ||
+          "Unable to load railroad map data.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchJson]);
+
+  const loadSimulationStatus = useCallback(async () => {
+    try {
+      const status = await fetchJson(
+        "/train-simulation/status",
+      );
+
+      setSimulationRunning(
+        Boolean(
+          status.running ??
+            status.is_running ??
+            status.active,
+        ),
+      );
+    } catch (statusError) {
+      console.warn(
+        "Simulation status endpoint unavailable:",
+        statusError,
+      );
+    }
+  }, [fetchJson]);
+
+  useEffect(() => {
+    loadMapData();
+    loadSimulationStatus();
+
+    const refreshTimer = window.setInterval(() => {
+      loadMapData();
+      loadSimulationStatus();
+    }, REFRESH_INTERVAL_MS);
+
+    return () => window.clearInterval(refreshTimer);
+  }, [loadMapData, loadSimulationStatus]);
+
+  const runSimulationCommand = async (command) => {
+    setCommandPending(true);
+
+    try {
+      await fetchJson(`/train-simulation/${command}`, {
+        method: "POST",
+      });
+
+      await Promise.all([
+        loadMapData(),
+        loadSimulationStatus(),
+      ]);
+
+      setError("");
+    } catch (commandError) {
+      console.error(
+        `Simulation ${command} failed:`,
+        commandError,
+      );
+
+      setError(
+        commandError.message ||
+          `Unable to ${command} the simulation.`,
+      );
+    } finally {
+      setCommandPending(false);
+    }
+  };
+
+  const territory = useMemo(() => {
+    if (trackBlocks.length === 0) {
+      return {
+        minimum: 0,
+        maximum: 1,
+      };
+    }
+
+    return {
+      minimum: Math.min(
+        ...trackBlocks.map((block) =>
+          Number(block.start_mp),
+        ),
+      ),
+      maximum: Math.max(
+        ...trackBlocks.map((block) =>
+          Number(block.end_mp),
+        ),
+      ),
+    };
+  }, [trackBlocks]);
+
+  const metrics = useMemo(() => {
+    const occupied = trackBlocks.filter(
+      (block) => block.occupied,
+    ).length;
+
+    const restrictive = trackBlocks.filter((block) =>
+      ["stop", "approach", "restricting", "restricted", "dark"].includes(
+        normalize(block.signal_aspect),
+      ),
+    ).length;
+
+    const communicationsIssues = trackBlocks.filter(
+      (block) =>
+        !["online", "normal", "healthy"].includes(
+          normalize(block.communications_status),
+        ),
+    ).length;
+
+    const movingTrains = trains.filter((train) =>
+      ["moving", "restricted"].includes(
+        normalize(train.status),
+      ),
+    ).length;
+
+    return {
+      occupied,
+      restrictive,
+      communicationsIssues,
+      movingTrains,
+    };
+  }, [trackBlocks, trains]);
+
+  const closeDrawer = () => {
+    setSelectedBlock(null);
+    setSelectedTrain(null);
+    setSelectedDevice(null);
+  };
+
+  return (
+    <section className="operations-map">
+      <header className="operations-map__header">
+        <div>
+          <p className="operations-map__eyebrow">
+            TRACKSENTINEL DIGITAL TERRITORY
+          </p>
+
+          <h2>Interactive Railroad Operations Map</h2>
+
+          <p>
+            Live train movement, block occupancy, signal
+            indications, communications health, and operational
+            risk.
+          </p>
+        </div>
+
+        <div
+          className={`simulation-badge ${
+            simulationRunning
+              ? "simulation-badge--running"
+              : "simulation-badge--stopped"
+          }`}
+        >
+          <span className="simulation-badge__dot" />
+          {simulationRunning ? "Simulation Running" : "Simulation Stopped"}
+        </div>
+      </header>
+
+      <div className="operations-map__toolbar">
+        <button
+          type="button"
+          className="map-button map-button--primary"
+          disabled={simulationRunning || commandPending}
+          onClick={() => runSimulationCommand("start")}
+        >
+          ▶ Start
+        </button>
+
+        <button
+          type="button"
+          className="map-button"
+          disabled={!simulationRunning || commandPending}
+          onClick={() => runSimulationCommand("stop")}
+        >
+          ■ Stop
+        </button>
+
+        <button
+          type="button"
+          className="map-button"
+          disabled={commandPending}
+          onClick={() => runSimulationCommand("restart")}
+        >
+          ↻ Restart
+        </button>
+
+        <button
+          type="button"
+          className="map-button"
+          disabled={commandPending}
+          onClick={() => runSimulationCommand("reset")}
+        >
+          ⟲ Reset
+        </button>
+
+        <button
+          type="button"
+          className="map-button map-button--refresh"
+          disabled={loading}
+          onClick={loadMapData}
+        >
+          Refresh Data
+        </button>
+      </div>
+
+      {error && (
+        <div className="operations-map__error">
+          <strong>Map data error:</strong> {error}
+        </div>
+      )}
+
+      <div className="operations-map__metrics">
+        <MetricCard
+          label="Active Trains"
+          value={trains.length}
+        />
+
+        <MetricCard
+          label="Moving"
+          value={metrics.movingTrains}
+          tone="good"
+        />
+
+        <MetricCard
+          label="Occupied Blocks"
+          value={metrics.occupied}
+          tone={metrics.occupied > 0 ? "warning" : "good"}
+        />
+
+        <MetricCard
+          label="Restrictive Signals"
+          value={metrics.restrictive}
+          tone={metrics.restrictive > 0 ? "warning" : "good"}
+        />
+
+        <MetricCard
+          label="Communication Issues"
+          value={metrics.communicationsIssues}
+          tone={
+            metrics.communicationsIssues > 0
+              ? "critical"
+              : "good"
+          }
+        />
+      </div>
+
+      <div className="territory-panel">
+        <div className="territory-panel__title-row">
+          <div>
+            <span className="territory-panel__label">
+              PRAIRIE SUBDIVISION
+            </span>
+
+            <strong>
+              MP {formatMilepost(territory.minimum)}–MP{" "}
+              {formatMilepost(territory.maximum)}
+            </strong>
+          </div>
+
+          <div className="map-legend">
+            <span>
+              <i className="legend-dot legend-dot--clear" />
+              Clear
+            </span>
+
+            <span>
+              <i className="legend-dot legend-dot--approach" />
+              Approach
+            </span>
+
+            <span>
+              <i className="legend-dot legend-dot--occupied" />
+              Occupied
+            </span>
+
+            <span>
+              <i className="legend-dot legend-dot--issue" />
+              Issue
+            </span>
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="operations-map__empty">
+            Loading railroad territory…
+          </div>
+        ) : trackBlocks.length === 0 ? (
+          <div className="operations-map__empty">
+            No track blocks were returned by the API.
+          </div>
+        ) : (
+          <div className="territory-scroll">
+            <div
+              className="territory-canvas"
+              style={{
+                minWidth: `${Math.max(
+                  trackBlocks.length * 190,
+                  1000,
+                )}px`,
+              }}
+            >
+              <div className="railroad-territory-lane">
+  <div className="railroad-territory-lane__label">
+    Main Line and Wayside OT Assets
+  </div>
+
+  <div className="railroad-territory-lane__track">
+    <div className="railroad-territory-lane__rail railroad-territory-lane__rail--top" />
+    <div className="railroad-territory-lane__rail railroad-territory-lane__rail--bottom" />
+
+    <div className="railroad-territory-lane__ties">
+      {Array.from({ length: 50 }).map((_, index) => (
+        <span key={`tie-${index}`} />
+      ))}
+    </div>
+  </div>
+
+  {devices.map((device, index) => (
+    <RailAssetMarker
+      key={device.id}
+      device={device}
+      index={index}
+      deviceCount={devices.length}
+      minimumMilepost={territory.minimum}
+      maximumMilepost={territory.maximum}
+      onSelect={(selected) => {
+        setSelectedDevice(selected);
+        setSelectedTrain(null);
+        setSelectedBlock(null);
+      }}
+    />
+  ))}
+
+  {trains.map((train) => (
+    <TrainMarker
+      key={train.id}
+      train={train}
+      minimumMilepost={territory.minimum}
+      maximumMilepost={territory.maximum}
+      onSelect={(selected) => {
+        setSelectedTrain(selected);
+        setSelectedBlock(null);
+        setSelectedDevice(null);
+      }}
+    />
   ))}
 </div>
 
-        {/* Siding */}
-        <div className="track-line siding-track"></div>
+              <div
+                className="track-block-grid"
+                style={{
+                  gridTemplateColumns: `repeat(${trackBlocks.length}, minmax(170px, 1fr))`,
+                }}
+              >
+                {trackBlocks.map((block) => (
+                  <BlockCard
+                    key={block.id}
+                    block={block}
+                    isSelected={
+                      selectedBlock?.id === block.id
+                    }
+                    onSelect={(selected) => {
+                      setSelectedBlock(selected);
+                      setSelectedTrain(null);
+                    }}
+                  />
+                ))}
+              </div>
 
-        {/* Moving trains */}
-        {trains.map((train) => (
-          <div
-            key={train.id}
-            className={`train-marker ${
-              train.direction?.toLowerCase() || "unknown"
-            }`}
-            style={{
-              left: `${getTrainPosition(
-                train.milepost
-              )}%`,
-            }}
-          >
-            <div className="train-icon">
-              <TrainFront
-                size={34}
-                strokeWidth={1.8}
-                aria-hidden="true"
-              />
-            </div>
+              <div className="milepost-scale">
+                {trackBlocks.map((block) => (
+                  <div
+                    className="milepost-scale__mark"
+                    key={`mp-${block.id}`}
+                  >
+                    <span />
+                    <strong>
+                      MP {formatMilepost(block.start_mp)}
+                    </strong>
+                  </div>
+                ))}
 
-            <div className="train-label">
-              <strong>
-                {train.symbol || "Unknown Train"}
-              </strong>
-
-              <span>
-                {train.direction ||
-                  "Unknown Direction"}
-              </span>
-
-              <span>
-                MP{" "}
-                {Number.isFinite(
-                  Number(train.milepost)
-                )
-                  ? Number(
-                      train.milepost
-                    ).toFixed(2)
-                  : "Unknown"}
-              </span>
-
-              <span>
-                {train.speed ?? 0} MPH
-              </span>
-
-              <span>
-                {train.status || "Unknown Status"}
-              </span>
+                <div className="milepost-scale__mark">
+                  <span />
+                  <strong>
+                    MP {formatMilepost(territory.maximum)}
+                  </strong>
+                </div>
+              </div>
             </div>
           </div>
-        ))}
+        )}
+      </div>
 
-        {/* Track ties */}
-        <div className="track-tie tie-1"></div>
-        <div className="track-tie tie-2"></div>
-        <div className="track-tie tie-3"></div>
-        <div className="track-tie tie-4"></div>
-        <div className="track-tie tie-5"></div>
-        <div className="track-tie tie-6"></div>
+      {(selectedBlock ||
+        selectedTrain ||
+        selectedDevice) && (
+        <>
+          <button
+            type="button"
+            className="map-drawer-backdrop"
+            aria-label="Close details"
+            onClick={closeDrawer}
+          />
 
-        {/* Mileposts */}
-        <div className="milepost mp80">
-          <div className="milepost-marker"></div>
-          <span>MP 80.0</span>
-        </div>
-
-        <div className="milepost mp824">
-          <div className="milepost-marker"></div>
-          <span>MP 82.4</span>
-        </div>
-
-        <div className="milepost mp871">
-          <div className="milepost-marker"></div>
-          <span>MP 87.1</span>
-        </div>
-
-        <div className="milepost mp952">
-          <div className="milepost-marker"></div>
-          <span>MP 95.2</span>
-        </div>
-
-        {/* Railroad OT assets */}
-        {mapAssets.map((asset) => {
-          const device = getDevice(asset.name);
-          const statusClass =
-            getStatusClass(device);
-          const activeIncidentCount =
-            getIncidentCount(asset.name);
-          const AssetIcon = asset.icon;
-
-          console.log("Track Blocks:", displayedBlocks);
-          console.log("APP trackBlocks:", trackBlocks);
-          return (
-            <button
-              key={asset.name}
-              className={`map-asset ${asset.position} ${statusClass}`}
-              onClick={() => {
-                if (device) {
-                  setSelectedAsset(device);
-                }
-              }}
-              type="button"
-            >
-              <span className="map-asset-icon">
-                <AssetIcon
-                  size={22}
-                  strokeWidth={1.8}
-                  aria-hidden="true"
-                />
-              </span>
-
-              <span className="map-asset-label">
-                {asset.label}
-              </span>
-
-              <span className="map-asset-status">
-                {device?.status || "Unknown"}
-              </span>
-
-              {activeIncidentCount > 0 && (
-                <span className="map-incident-badge">
-                  {activeIncidentCount} incident
-                  {activeIncidentCount > 1
-                    ? "s"
-                    : ""}
+          <aside className="map-drawer">
+            <div className="map-drawer__header">
+              <div>
+                <span className="map-drawer__eyebrow">
+                  {selectedBlock
+                    ? "TRACK BLOCK"
+                    : selectedTrain
+                      ? "TRAIN TELEMETRY"
+                      : "RAIL OT ASSET"}
                 </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
 
-      <div className="map-legend">
-        <span>
-          <i className="legend-dot healthy"></i>
-          Healthy
-        </span>
+                <h3>
+                  {selectedBlock
+                    ? selectedBlock.name
+                    : selectedTrain
+                      ? selectedTrain.symbol ||
+                      `Train ${selectedTrain.id}`
+                      : selectedDevice?.name}
+                </h3>
+              </div>
 
-        <span>
-          <i className="legend-dot warning"></i>
-          Elevated Risk
-        </span>
-
-        <span>
-          <i className="legend-dot critical"></i>
-          Critical / Offline
-        </span>
-
-        <span>
-          <i className="legend-dot unknown"></i>
-          Unknown
-        </span>
-
-        <span>
-          <i className="legend-dot clear"></i>
-          Clear Track
-        </span>
-
-        <span>
-          <i className="legend-dot occupied"></i>
-          Occupied Track
-        </span>
-      </div>
-
-      {selectedAsset && (
-        <div className="rail-asset-panel">
-          <div className="rail-asset-panel-header">
-            <div>
-              <h3>{selectedAsset.name}</h3>
-              <p>
-                {selectedAsset.device_type}
-              </p>
+              <button
+                type="button"
+                className="map-drawer__close"
+                onClick={closeDrawer}
+              >
+                ×
+              </button>
             </div>
 
-            <button
-              type="button"
-              onClick={() =>
-                setSelectedAsset(null)
-              }
-              aria-label="Close asset details"
-            >
-              ×
-            </button>
-          </div>
+            {selectedBlock && (
+              <div className="map-drawer__content">
+                <div className="drawer-status">
+                  <span
+                    className={`drawer-status__indicator drawer-status__indicator--${getBlockState(
+                      selectedBlock,
+                    )}`}
+                  />
 
-          <div className="asset-detail-grid">
-            <p>
-              <strong>Status:</strong>{" "}
-              {selectedAsset.status}
-            </p>
+                  <div>
+                    <strong>
+                      {selectedBlock.signal_aspect ||
+                        "Unknown signal"}
+                    </strong>
 
-            <p>
-              <strong>Risk:</strong>{" "}
-              {selectedAsset.calculated_risk ||
-                selectedAsset.risk_level}
-            </p>
+                    <span>
+                      {selectedBlock.occupied
+                        ? "Block occupied"
+                        : "Block available"}
+                    </span>
+                  </div>
+                </div>
 
-            <p>
-              <strong>IP Address:</strong>{" "}
-              {selectedAsset.ip_address}
-            </p>
+                <dl className="detail-list">
+                  <div>
+                    <dt>Milepost limits</dt>
+                    <dd>
+                      {formatMilepost(
+                        selectedBlock.start_mp,
+                      )}{" "}
+                      –{" "}
+                      {formatMilepost(selectedBlock.end_mp)}
+                    </dd>
+                  </div>
 
-            <p>
-              <strong>Vendor:</strong>{" "}
-              {selectedAsset.vendor}
-            </p>
+                  <div>
+                    <dt>Occupied by</dt>
+                    <dd>
+                      {selectedBlock.occupied_by || "None"}
+                    </dd>
+                  </div>
 
-            <p>
-              <strong>Firmware:</strong>{" "}
-              {selectedAsset.firmware_version}
-            </p>
+                  <div>
+                    <dt>Authority</dt>
+                    <dd>
+                      {selectedBlock.authority || "Unknown"}
+                    </dd>
+                  </div>
 
-            <p>
-              <strong>Location:</strong>{" "}
-              {selectedAsset.location}
-            </p>
+                  <div>
+                    <dt>Speed limit</dt>
+                    <dd>
+                      {selectedBlock.speed_limit || "—"} MPH
+                    </dd>
+                  </div>
 
-            <p>
-              <strong>Active Incidents:</strong>{" "}
-              {getIncidentCount(
-                selectedAsset.name
-              )}
-            </p>
+                  <div>
+                    <dt>Communications</dt>
+                    <dd>
+                      {selectedBlock.communications_status ||
+                        "Unknown"}
+                    </dd>
+                  </div>
 
-            <p>
-              <strong>
-                Last Communication:
-              </strong>{" "}
-              {selectedAsset.last_seen
-                ? new Date(
-                    selectedAsset.last_seen
-                  ).toLocaleString()
-                : "Unknown"}
-            </p>
-          </div>
-        </div>
+                  <div>
+                    <dt>Security</dt>
+                    <dd>
+                      {selectedBlock.security_status ||
+                        "Unknown"}
+                    </dd>
+                  </div>
+
+                  <div>
+                    <dt>Maintenance</dt>
+                    <dd>
+                      {selectedBlock.maintenance
+                        ? "Active"
+                        : "None"}
+                    </dd>
+                  </div>
+
+                  <div>
+                    <dt>Last update</dt>
+                    <dd>
+                      {formatTimestamp(
+                        selectedBlock.last_updated,
+                      )}
+                    </dd>
+                  </div>
+                </dl>
+              </div>
+            )}
+
+            {selectedTrain && (
+              <div className="map-drawer__content">
+                <div className="drawer-status">
+                  <span className="drawer-status__train">
+                    🚆
+                  </span>
+
+                  <div>
+                    <strong>
+                      {selectedTrain.status || "Unknown"}
+                    </strong>
+
+                    <span>
+                      {selectedTrain.direction || "Unknown direction"}
+                    </span>
+                  </div>
+                </div>
+
+                <dl className="detail-list">
+                  <div>
+                    <dt>Milepost</dt>
+                    <dd>
+                      MP{" "}
+                      {formatMilepost(
+                        selectedTrain.milepost,
+                      )}
+                    </dd>
+                  </div>
+
+                  <div>
+                    <dt>Speed</dt>
+                    <dd>{selectedTrain.speed || 0} MPH</dd>
+                  </div>
+
+                  <div>
+                    <dt>Signal</dt>
+                    <dd>
+                      {selectedTrain.current_signal ||
+                        "Unknown"}
+                    </dd>
+                  </div>
+
+                  <div>
+                    <dt>Authority</dt>
+                    <dd>
+                      {selectedTrain.authority || "Unknown"}
+                    </dd>
+                  </div>
+
+                  <div>
+                    <dt>PTC</dt>
+                    <dd>
+                      {selectedTrain.ptc_enabled
+                        ? "Enabled"
+                        : "Disabled"}
+                    </dd>
+                  </div>
+
+                  <div>
+                    <dt>Last update</dt>
+                    <dd>
+                      {formatTimestamp(
+                        selectedTrain.last_updated,
+                      )}
+                    </dd>
+                  </div>
+                </dl>
+              </div>
+            )}
+            {selectedDevice && (
+  <div className="map-drawer__content">
+    <div className="drawer-status">
+      <span className="drawer-status__asset">
+        {getAssetIcon(selectedDevice)}
+      </span>
+
+      <div>
+        <strong>
+          {selectedDevice.status || "Unknown"}
+        </strong>
+
+        <span>
+          {selectedDevice.device_type ||
+            "Rail OT Asset"}
+        </span>
+      </div>
+    </div>
+
+    <dl className="detail-list">
+      <div>
+        <dt>Asset type</dt>
+        <dd>
+          {selectedDevice.device_type ||
+            "Unknown"}
+        </dd>
+      </div>
+
+      <div>
+        <dt>Location</dt>
+        <dd>
+          {selectedDevice.location ||
+            "Not assigned"}
+        </dd>
+      </div>
+
+      <div>
+        <dt>IP address</dt>
+        <dd>
+          {selectedDevice.ip_address ||
+            "Not available"}
+        </dd>
+      </div>
+
+      <div>
+        <dt>Vendor</dt>
+        <dd>
+          {selectedDevice.vendor ||
+            "Unknown"}
+        </dd>
+      </div>
+
+      <div>
+        <dt>Firmware</dt>
+        <dd>
+          {selectedDevice.firmware_version ||
+            "Unknown"}
+        </dd>
+      </div>
+
+      <div>
+        <dt>Operational status</dt>
+        <dd>
+          {selectedDevice.status ||
+            "Unknown"}
+        </dd>
+      </div>
+
+      <div>
+        <dt>Risk level</dt>
+        <dd>
+          {selectedDevice.calculated_risk ||
+            selectedDevice.risk_level ||
+            "Unknown"}
+        </dd>
+      </div>
+
+      <div>
+        <dt>Risk score</dt>
+        <dd>
+          {selectedDevice.risk_score ?? "—"}
+        </dd>
+      </div>
+
+      <div>
+        <dt>Last seen</dt>
+        <dd>
+          {formatTimestamp(
+            selectedDevice.last_seen,
+          )}
+        </dd>
+      </div>
+    </dl>
+  </div>
+)}
+          </aside>
+        </>
       )}
     </section>
   );
 }
-
-export default RailroadMap;

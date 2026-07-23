@@ -7,22 +7,25 @@ from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
+from ai_assistant import build_operations_brief
 
 from scenario_manager import scenario_manager
 from simulation_engine import apply_attack
 from attack_catalog import Attack_Catalog   
 from attack_manager import launch_attack, get_active_attacks 
 from database import Base, engine, SessionLocal
+import models
 from models import (
     OTDevice,
     Alert,
     Vulnerability,
     Train,
     TrainHistory,
+    
 )
 from services.risk_engine import calculate_device_risk
 from train_simulation import train_simulation
-from railroad import TRACK_BLOCKS
+
 
 class ScenarioCreateRequest(BaseModel):
     attack_id: str
@@ -43,24 +46,6 @@ class ScenarioTimelineEventRequest(BaseModel):
     severity: str = "Info"
     progress: Optional[int] = Field(default=None, ge=0, le=100)
     metadata: Optional[Dict[str, Any]] = None
-
-
-    
-# =========================================================
-# Database setup
-# =========================================================
-
-Base.metadata.create_all(bind=engine)
-
-
-def get_db():
-    db = SessionLocal()
-
-    try:
-        yield db
-    finally:
-        db.close()
-
 
 # =========================================================
 # FastAPI application
@@ -83,6 +68,58 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+# =========================================================
+# Database setup
+# =========================================================
+
+Base.metadata.create_all(bind=engine)
+
+
+def get_db():
+    db = SessionLocal()
+
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+
+# =========================================================
+# AI Operations Brief
+# =========================================================
+
+@app.get("/ai/operations-brief")
+def get_ai_operations_brief(
+    db: Session = Depends(get_db),
+):
+    devices = db.query(models.OTDevice).all()
+    alerts = db.query(models.Alert).all()
+    vulnerabilities = db.query(
+        models.Vulnerability
+    ).all()
+    trains = db.query(models.Train).all()
+    track_blocks = db.query(models.TrackBlock).all()
+
+    activity_logs = (
+        db.query(models.ActivityLog)
+        .order_by(models.ActivityLog.timestamp.desc())
+        .limit(50)
+        .all()
+    )
+
+    # The Incident model will be added later.
+    incidents = []
+
+    return build_operations_brief(
+        devices=devices,
+        alerts=alerts,
+        vulnerabilities=vulnerabilities,
+        trains=trains,
+        track_blocks=track_blocks,
+        activity_logs=activity_logs,
+        incidents=incidents,
+    )
 # =========================================================
 # Scenario endpoint
 # =========================================================
@@ -114,18 +151,43 @@ def create_training_scenario(request: ScenarioCreateRequest):
 # =========================================================
 
 @app.get("/track-blocks")
-def get_track_blocks():
+def get_track_blocks(
+    db: Session = Depends(get_db),
+):
+    blocks = (
+        db.query(models.TrackBlock)
+        .order_by(models.TrackBlock.start_milepost)
+        .all()
+    )
 
     return [
         {
-            "id": b.id,
-            "name": b.name,
-            "start_mp": b.start_mp,
-            "end_mp": b.end_mp,
-            "occupied": b.occupied,
-            "occupied_by": b.occupied_by,
+            "id": block.id,
+            "name": block.name,
+            "subdivision": block.subdivision,
+            "track": block.track,
+            "start_mp": block.start_milepost,
+            "end_mp": block.end_milepost,
+            "occupied": block.occupied,
+            "occupied_train_id": (
+                block.occupied_train_id
+            ),
+            "occupied_by": (
+                block.occupied_train.symbol
+                if block.occupied_train
+                else None
+            ),
+            "signal_aspect": block.signal_aspect,
+            "authority": block.authority,
+            "speed_limit": block.speed_limit,
+            "communications_status": (
+                block.communications_status
+            ),
+            "security_status": block.security_status,
+            "maintenance": block.maintenance,
+            "last_updated": block.last_updated,
         }
-        for b in TRACK_BLOCKS
+        for block in blocks
     ]
 
 # =========================================================

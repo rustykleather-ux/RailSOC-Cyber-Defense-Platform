@@ -144,4 +144,86 @@ class ActivityLog(Base):
     source = Column(String, default="TrackSentinel")
     asset_name = Column(String, default="")
     status = Column(String, default="Completed")
-    
+
+
+class TrackBlock(Base):
+    __tablename__ = "track_blocks"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    # Railroad Identity
+    name = Column(String, nullable=False, unique=True)
+    subdivision = Column(String, nullable=False)
+    track = Column(String, default="Main")
+
+    # Territory
+    start_milepost = Column(Float, nullable=False)
+    end_milepost = Column(Float, nullable=False)
+
+    # Occupancy
+    occupied = Column(Boolean, default=False)
+
+    occupied_train_id = Column(
+        Integer,
+        ForeignKey("trains.id"),
+        nullable=True
+    )
+
+    # Operations
+    signal_aspect = Column(
+        String,
+        default="Clear"
+    )
+
+    authority = Column(
+        String,
+        default="Main Track"
+    )
+
+    speed_limit = Column(
+        Integer,
+        default=49
+    )
+
+    # Cyber / OT
+    controlling_device_id = Column(
+        Integer,
+        ForeignKey("ot_devices.id"),
+        nullable=True
+    )
+
+    communications_status = Column(
+        String,
+        default="Online"
+    )
+
+    security_status = Column(
+        String,
+        default="Healthy"
+    )
+
+    # Maintenance
+    maintenance = Column(
+        Boolean,
+        default=False
+    )
+
+    notes = Column(String, default="")
+
+    # Time
+    last_updated = Column(
+        DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow
+    )
+
+    # Relationships
+    occupied_train = relationship(
+        "Train",
+        foreign_keys=[occupied_train_id]
+    )
+
+    controlling_device = relationship(
+        "OTDevice",
+        foreign_keys=[controlling_device_id]
+    )

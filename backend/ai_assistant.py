@@ -388,8 +388,198 @@ def analyze_incidents(
         "unassigned": len(unassigned_incidents),
         "open_items": open_incidents,
     }
+# =========================================================
+# Single incident analysis
+# =========================================================
+def analyze_single_incident(
+    incident: Any,
+) -> Dict[str, Any]:
+    """
+    Analyze one TrackSentinel incident.
 
+    This is a deterministic incident assessment.
+    It does not require an LLM.
+    """
 
+    if incident is None:
+        return {
+            "found": False,
+            "error": "Incident not found.",
+        }
+
+    incident_id = get_value(incident, "id")
+    severity = get_value(
+        incident,
+        "severity",
+        "Medium",
+    )
+    status = get_value(
+        incident,
+        "status",
+        "Open",
+    )
+    acknowledged = bool(
+        get_value(
+            incident,
+            "acknowledged",
+            False,
+        )
+    )
+    assigned_to = get_value(
+        incident,
+        "assigned_to",
+        "",
+    )
+    device_name = get_value(
+        incident,
+        "device",
+        "Unknown",
+    )
+    alert_type = get_value(
+        incident,
+        "alert_type",
+        "General",
+    )
+    message = get_value(
+        incident,
+        "message",
+        "",
+    )
+    mitre_technique = get_value(
+        incident,
+        "mitre_technique",
+        "",
+    )
+    investigation_notes = get_value(
+        incident,
+        "investigation_notes",
+        "",
+    )
+    incident_time = serialize_datetime(
+        get_value(
+            incident,
+            "time",
+            get_value(
+                incident,
+                "timestamp",
+            ),
+        )
+    )
+    closed_at = serialize_datetime(
+        get_value(
+            incident,
+            "closed_at",
+        )
+    )
+
+    normalized_status = normalize_text(status)
+    normalized_severity = normalize_text(severity)
+
+    is_open = normalized_status not in {
+        "closed",
+        "resolved",
+    }
+
+    is_assigned = normalize_text(
+        assigned_to
+    ) not in {
+        "",
+        "unassigned",
+        "none",
+    }
+
+    immediate_actions = []
+
+    if not acknowledged and is_open:
+        immediate_actions.append(
+            "Acknowledge the incident and begin triage."
+        )
+
+    if not is_assigned and is_open:
+        immediate_actions.append(
+            "Assign the incident to an analyst or responsible team."
+        )
+
+    if normalized_severity in {
+        "critical",
+        "high",
+    }:
+        immediate_actions.append(
+            "Validate the affected asset through an independent operational channel."
+        )
+
+    if not investigation_notes and is_open:
+        immediate_actions.append(
+            "Document initial investigation findings and actions taken."
+        )
+
+    if mitre_technique:
+        immediate_actions.append(
+            f"Review detection and containment guidance for {mitre_technique}."
+        )
+
+    if not immediate_actions:
+        immediate_actions.append(
+            "Continue monitoring and verify that corrective actions remain effective."
+        )
+
+    priority = 3
+
+    if normalized_severity == "critical":
+        priority = 1
+    elif normalized_severity == "high":
+        priority = 1
+    elif normalized_severity == "medium":
+        priority = 2
+
+    if is_open and not acknowledged:
+        priority = min(priority, 1)
+
+    assessment_status = "Closed"
+
+    if is_open:
+        assessment_status = (
+            "Immediate Attention Required"
+            if priority == 1
+            else "Investigation Required"
+        )
+
+    summary = (
+        f"{severity} severity {alert_type} incident affecting "
+        f"{device_name}. Current status is {status}."
+    )
+
+    if is_open and not acknowledged:
+        summary += " The incident has not been acknowledged."
+
+    if is_open and not is_assigned:
+        summary += " The incident is currently unassigned."
+
+    return {
+        "found": True,
+        "incident": {
+            "id": incident_id,
+            "time": incident_time,
+            "severity": severity,
+            "status": status,
+            "device": device_name,
+            "alert_type": alert_type,
+            "message": message,
+            "acknowledged": acknowledged,
+            "assigned_to": assigned_to or "Unassigned",
+            "investigation_notes": investigation_notes,
+            "closed_at": closed_at,
+            "mitre_technique": mitre_technique,
+        },
+        "assessment": {
+            "is_open": is_open,
+            "is_assigned": is_assigned,
+            "priority": priority,
+            "status": assessment_status,
+        },
+        "summary": summary,
+        "recommended_actions": immediate_actions,
+    }
 # =========================================================
 # Risk score
 # =========================================================

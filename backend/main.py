@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from ai_assistant import build_operations_brief
+from services.alert_service import create_alert
 
 from scenario_manager import scenario_manager
 from simulation_engine import apply_attack
@@ -21,6 +22,7 @@ from models import (
     Vulnerability,
     Train,
     TrainHistory,
+    Incident
     
 )
 from services.risk_engine import calculate_device_risk
@@ -647,16 +649,17 @@ def simulate_attack(attack_type: str, db: Session = Depends(get_db)):
     if "firmware" in scenario:
         device.firmware_version = scenario["firmware"]
 
-    alert = Alert(
-        device_id=device.id,
-        severity=scenario["severity"],
-        alert_type=scenario["alert_type"],
-        message=scenario["message"],
-        status="Open",
-        acknowledged=False
-    )
+    alert = create_alert(
+    db=db,
+    device=device,
+    attack={
+        "severity": scenario["severity"],
+        "name": scenario["alert_type"],
+        "description": scenario["message"],
+        "mitre_technique": scenario.get("mitre_technique", ""),
+    },
+)
 
-    db.add(alert)
     db.commit()
 
     return {
@@ -1037,7 +1040,17 @@ def reset_demo(db: Session = Depends(get_db)):
         if device.name == "Rail Engineering Workstation":
             device.firmware_version = "Windows 11 24H2"
 
-    db.query(Alert).delete()
+    db.query(Incident).delete(
+    synchronize_session=False
+    )
+
+    db.query(Vulnerability).delete(
+        synchronize_session=False
+        )
+    
+    db.query(Alert).delete(
+    synchronize_session=False
+    )
     db.commit()
 
     return {"message": "TrackSentinel environment restored to operational baseline."}

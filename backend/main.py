@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from ai_assistant import build_operations_brief
+from ai_assistant import analyze_single_incident
 from services.alert_service import create_alert
 
 from scenario_manager import scenario_manager
@@ -148,6 +149,43 @@ def create_training_scenario(request: ScenarioCreateRequest):
         "message": "Scenario created successfully.",
         "scenario": scenario,
     }
+# =========================================================
+# AI Incidence Analysis
+# =========================================================
+
+    @app.get("/incidents/{incident_id}/analysis")
+    def get_incident_analysis(
+    incident_id: int,
+    db: Session = Depends(get_db)
+    ):
+        incident = db.query(Incident).filter(
+        Incident.id == incident_id
+    ).first()
+
+    if not incident:
+        raise HTTPException(
+            status_code=404,
+            detail="Incident not found"
+        )
+
+    incident_data = {
+        "id": incident.id,
+        "severity": incident.severity,
+        "device": incident.device,
+        "alert_type": incident.alert_type,
+        "message": incident.message,
+        "status": incident.status,
+        "acknowledged": incident.acknowledged,
+        "assigned_to": incident.assigned_to,
+        "investigation_notes": incident.investigation_notes,
+        "mitre_technique": incident.mitre_technique,
+        "closed_by": incident.closed_by,
+        "closed_at": incident.closed_at.isoformat()
+        if incident.closed_at
+        else None,
+    }
+
+    return analyze_single_incident(incident_data)
 # =========================================================
 # Track Blocks API endpoint
 # =========================================================
@@ -1034,23 +1072,29 @@ def reset_demo(db: Session = Depends(get_db)):
         if device.name == "Grade Crossing Controller MP 82.4":
             device.firmware_version = "6.3.1"
 
-        if device.name == "PTC Radio Gateway":
+        elif device.name == "PTC Radio Gateway":
             device.firmware_version = "5.2.1"
 
-        if device.name == "Rail Engineering Workstation":
+        elif device.name == "Rail Engineering Workstation":
             device.firmware_version = "Windows 11 24H2"
 
+    # Delete child records before alerts
     db.query(Incident).delete(
-    synchronize_session=False
+        synchronize_session=False
     )
 
-    db.query(Vulnerability).delete(
-        synchronize_session=False
-        )
-    
     db.query(Alert).delete(
-    synchronize_session=False
+        synchronize_session=False
     )
+
+    # Do not delete vulnerabilities unless you recreate them
+    db.commit()
+
+    return {
+        "message": "Operational baseline restored",
+        "alerts_cleared": True,
+        "incidents_cleared": True
+    }
     db.commit()
 
     return {"message": "TrackSentinel environment restored to operational baseline."}

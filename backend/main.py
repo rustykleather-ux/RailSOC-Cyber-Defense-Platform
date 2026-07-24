@@ -186,6 +186,98 @@ def create_training_scenario(request: ScenarioCreateRequest):
     }
 
     return analyze_single_incident(incident_data)
+
+@app.get("/incidents/{incident_id}/analysis")
+def get_incident_analysis(
+    incident_id: int,
+    db: Session = Depends(get_db)
+):
+    incident = db.query(Incident).filter(
+        Incident.id == incident_id
+    ).first()
+
+    if not incident:
+        raise HTTPException(
+            status_code=404,
+            detail="Incident not found"
+        )
+
+    device = None
+
+    if incident.device_id:
+        device = db.query(OTDevice).filter(
+            OTDevice.id == incident.device_id
+        ).first()
+
+    vulnerabilities = []
+
+    if incident.device_id:
+        vulnerabilities = db.query(Vulnerability).filter(
+            Vulnerability.device_id == incident.device_id
+        ).all()
+
+    open_vulnerabilities = 0
+
+    for vulnerability in vulnerabilities:
+        vulnerability_status = (
+            vulnerability.status or "Open"
+        ).lower()
+
+        if vulnerability_status not in {
+            "closed",
+            "resolved",
+            "remediated"
+        }:
+            open_vulnerabilities += 1
+
+    previous_incidents = 0
+
+    if incident.device_id:
+        previous_incidents = db.query(Incident).filter(
+            Incident.device_id == incident.device_id,
+            Incident.id != incident.id
+        ).count()
+
+    incident_data = {
+        "id": incident.id,
+        "severity": incident.severity,
+        "device": incident.device,
+        "alert_type": incident.alert_type,
+        "message": incident.message,
+        "status": incident.status,
+        "acknowledged": incident.acknowledged,
+        "assigned_to": incident.assigned_to,
+        "investigation_notes": incident.investigation_notes,
+        "mitre_technique": incident.mitre_technique,
+        "closed_by": incident.closed_by,
+        "closed_at": (
+            incident.closed_at.isoformat()
+            if incident.closed_at
+            else None
+        )
+    }
+
+    device_context = {
+        "status": device.status if device else "Unknown",
+        "risk_level": device.risk_level if device else "Unknown",
+        "firmware_version": (
+            device.firmware_version
+            if device
+            else None
+        ),
+        "last_seen": (
+            device.last_seen.isoformat()
+            if device and device.last_seen
+            else None
+        ),
+        "open_vulnerabilities": open_vulnerabilities,
+        "previous_incidents": previous_incidents
+    }
+
+    return analyze_single_incident(
+        incident=incident_data,
+        device_context=device_context
+    )
 # =========================================================
 # Track Blocks API endpoint
 # =========================================================

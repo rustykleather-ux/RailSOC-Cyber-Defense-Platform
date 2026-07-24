@@ -334,7 +334,7 @@ alerts = [
 
 db.add_all(alerts)
 
-# RailSOC Vulnerabilities
+# TracSentinel Vulnerabilities
 vulnerabilities = [
     Vulnerability(
         device_id=crossing82.id,

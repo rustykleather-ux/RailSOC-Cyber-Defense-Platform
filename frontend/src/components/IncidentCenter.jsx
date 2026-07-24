@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
 
 function IncidentCenter({
   incidents,
@@ -10,6 +11,93 @@ function IncidentCenter({
   const [selectedIncident, setSelectedIncident] = useState(null);
   const [notes, setNotes] = useState("");
   const [assignedTo, setAssignedTo] = useState("Unassigned");
+  const [incidentAnalysis, setIncidentAnalysis] = useState(null);
+  const [analysisLoading, setAnalysisLoading] = useState(false);
+  const [analysisError, setAnalysisError] = useState("");
+  
+  const getAnalysisLevelClass = (level = "") => {
+  switch (level.toLowerCase()) {
+    case "critical":
+      return "ai-level-critical";
+
+    case "high":
+      return "ai-level-high";
+
+    case "moderate":
+    case "medium":
+      return "ai-level-moderate";
+
+    case "low":
+      return "ai-level-low";
+
+    default:
+      return "ai-level-unknown";
+  }
+};
+
+  useEffect(() => {
+  if (!selectedIncident?.id) {
+    setIncidentAnalysis(null);
+    setAnalysisError("");
+    setAnalysisLoading(false);
+    return;
+  }
+
+  const controller = new AbortController();
+
+  const fetchIncidentAnalysis = async () => {
+    setAnalysisLoading(true);
+    setAnalysisError("");
+    setIncidentAnalysis(null);
+
+    try {
+      const response = await fetch(
+        `http://localhost:8000/incidents/${selectedIncident.id}/analysis`,
+        {
+          signal: controller.signal,
+        }
+      );
+
+      if (!response.ok) {
+        let errorMessage = "Unable to load AI incident analysis.";
+
+        try {
+          const errorData = await response.json();
+
+          if (errorData?.detail) {
+            errorMessage = errorData.detail;
+          }
+        } catch {
+          // Keep the default error message.
+        }
+
+        throw new Error(errorMessage);
+      }
+
+      const data = await response.json();
+      setIncidentAnalysis(data);
+    } catch (error) {
+      if (error.name !== "AbortError") {
+        console.error("AI incident analysis error:", error);
+        setAnalysisError(
+          error.message || "Unable to load AI incident analysis."
+        );
+      }
+    } finally {
+      if (!controller.signal.aborted) {
+        setAnalysisLoading(false);
+      }
+    }
+  };
+
+  fetchIncidentAnalysis();
+
+  return () => {
+    controller.abort();
+  };
+}, [selectedIncident?.id]);
+
+
 
   const displayAsset = (name) => {
     switch (name) {
@@ -295,7 +383,111 @@ function IncidentCenter({
                   : "Close Incident"}
               </button>
             </div>
+<div className="drawer-section ai-analysis-panel">
+  <h2>🤖 AI Incident Analysis</h2>
 
+  {analysisLoading && (
+    <p>Analyzing incident...</p>
+  )}
+
+  {analysisError && (
+    <p className="error">
+      {analysisError}
+    </p>
+  )}
+
+  {!analysisLoading && incidentAnalysis && (
+    <>
+      <div className="drawer-section">
+        <h3>Executive Summary</h3>
+
+        <p>
+          {incidentAnalysis.executive_summary}
+        </p>
+      </div>
+
+      <div className="drawer-section">
+        <h3>Operational Impact</h3>
+
+        <span
+          className={`badge ${getAnalysisLevelClass(
+            incidentAnalysis.operational_impact.level
+          )}`}
+        >
+          {incidentAnalysis.operational_impact.level}
+        </span>
+
+        <p>
+          {incidentAnalysis.operational_impact.description}
+        </p>
+      </div>
+
+      <div className="drawer-section">
+        <h3>Confidence</h3>
+
+        <h1>
+          {incidentAnalysis.likely_cause.confidence}%
+        </h1>
+      </div>
+
+      <div className="drawer-section">
+        <h3>Likely Causes</h3>
+
+        <ul>
+          {incidentAnalysis.likely_cause.causes.map((cause, index) => (
+            <li key={index}>
+              {cause}
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div className="drawer-section">
+        <h3>Recommended Investigation</h3>
+
+        <ul>
+          {incidentAnalysis.recommended_actions.map((action, index) => (
+            <li key={index}>
+              ☐ {action}
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div className="drawer-section">
+        <h3>Asset Context</h3>
+
+        <p>
+          <strong>Status:</strong>{" "}
+          {incidentAnalysis.device_context.status}
+        </p>
+
+        <p>
+          <strong>Risk:</strong>{" "}
+          {incidentAnalysis.device_context.risk_level}
+        </p>
+
+        <p>
+          <strong>Open Vulnerabilities:</strong>{" "}
+          {incidentAnalysis.device_context.open_vulnerabilities}
+        </p>
+
+        <p>
+          <strong>Previous Incidents:</strong>{" "}
+          {incidentAnalysis.device_context.previous_incidents}
+        </p>
+      </div>
+
+      <div className="drawer-section">
+        <h3>AI Recommendation</h3>
+
+        <p>
+          {incidentAnalysis.ai_recommendation}
+        </p>
+      </div>
+    </>
+  )}
+</div>
             <div className="drawer-section">
               <h3>Timeline</h3>
               <p>

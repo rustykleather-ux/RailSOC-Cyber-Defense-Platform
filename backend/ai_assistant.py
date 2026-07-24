@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 
+
 # =========================================================
 # Severity and status helpers
 # =========================================================
@@ -391,194 +392,378 @@ def analyze_incidents(
 # =========================================================
 # Single incident analysis
 # =========================================================
-def analyze_single_incident(
-    incident: Any,
-) -> Dict[str, Any]:
+def analyze_single_incident(incident, device_context=None):
     """
-    Analyze one TrackSentinel incident.
+    Generate deterministic AI-assisted analysis for one incident.
 
-    This is a deterministic incident assessment.
-    It does not require an LLM.
+    incident:
+        Dictionary containing the incident fields.
+
+    device_context:
+        Optional dictionary containing device risk, vulnerability,
+        and historical incident information.
     """
 
-    if incident is None:
+    if not incident:
         return {
-            "found": False,
-            "error": "Incident not found.",
+            "error": "Incident data was not provided."
         }
 
-    incident_id = get_value(incident, "id")
-    severity = get_value(
-        incident,
-        "severity",
-        "Medium",
-    )
-    status = get_value(
-        incident,
-        "status",
-        "Open",
-    )
-    acknowledged = bool(
-        get_value(
-            incident,
-            "acknowledged",
-            False,
-        )
-    )
-    assigned_to = get_value(
-        incident,
-        "assigned_to",
-        "",
-    )
-    device_name = get_value(
-        incident,
-        "device",
-        "Unknown",
-    )
-    alert_type = get_value(
-        incident,
-        "alert_type",
-        "General",
-    )
-    message = get_value(
-        incident,
-        "message",
-        "",
-    )
-    mitre_technique = get_value(
-        incident,
-        "mitre_technique",
-        "",
-    )
-    investigation_notes = get_value(
-        incident,
-        "investigation_notes",
-        "",
-    )
-    incident_time = serialize_datetime(
-        get_value(
-            incident,
-            "time",
-            get_value(
-                incident,
-                "timestamp",
-            ),
-        )
-    )
-    closed_at = serialize_datetime(
-        get_value(
-            incident,
-            "closed_at",
-        )
-    )
+    device_context = device_context or {}
 
-    normalized_status = normalize_text(status)
-    normalized_severity = normalize_text(severity)
+    incident_id = incident.get("id")
+    device = incident.get("device") or "Unknown railroad asset"
+    alert_type = incident.get("alert_type") or "Unknown event"
+    message = incident.get("message") or "No incident description provided."
+    severity = (incident.get("severity") or "Unknown").title()
+    status = incident.get("status") or "Open"
+    acknowledged = bool(incident.get("acknowledged"))
+    assigned_to = incident.get("assigned_to")
+    mitre_technique = incident.get("mitre_technique") or "Not mapped"
 
-    is_open = normalized_status not in {
-        "closed",
-        "resolved",
-    }
-
-    is_assigned = normalize_text(
+    assigned = bool(
         assigned_to
-    ) not in {
-        "",
-        "unassigned",
-        "none",
-    }
-
-    immediate_actions = []
-
-    if not acknowledged and is_open:
-        immediate_actions.append(
-            "Acknowledge the incident and begin triage."
-        )
-
-    if not is_assigned and is_open:
-        immediate_actions.append(
-            "Assign the incident to an analyst or responsible team."
-        )
-
-    if normalized_severity in {
-        "critical",
-        "high",
-    }:
-        immediate_actions.append(
-            "Validate the affected asset through an independent operational channel."
-        )
-
-    if not investigation_notes and is_open:
-        immediate_actions.append(
-            "Document initial investigation findings and actions taken."
-        )
-
-    if mitre_technique:
-        immediate_actions.append(
-            f"Review detection and containment guidance for {mitre_technique}."
-        )
-
-    if not immediate_actions:
-        immediate_actions.append(
-            "Continue monitoring and verify that corrective actions remain effective."
-        )
-
-    priority = 3
-
-    if normalized_severity == "critical":
-        priority = 1
-    elif normalized_severity == "high":
-        priority = 1
-    elif normalized_severity == "medium":
-        priority = 2
-
-    if is_open and not acknowledged:
-        priority = min(priority, 1)
-
-    assessment_status = "Closed"
-
-    if is_open:
-        assessment_status = (
-            "Immediate Attention Required"
-            if priority == 1
-            else "Investigation Required"
-        )
-
-    summary = (
-        f"{severity} severity {alert_type} incident affecting "
-        f"{device_name}. Current status is {status}."
+        and assigned_to.strip()
+        and assigned_to.lower() not in {
+            "unassigned",
+            "none",
+            "null"
+        }
     )
 
-    if is_open and not acknowledged:
-        summary += " The incident has not been acknowledged."
+    is_open = status.lower() not in {
+        "closed",
+        "resolved"
+    }
 
-    if is_open and not is_assigned:
-        summary += " The incident is currently unassigned."
+    device_risk = device_context.get("risk_level", "Unknown")
+    open_vulnerabilities = device_context.get(
+        "open_vulnerabilities",
+        0
+    )
+    previous_incidents = device_context.get(
+        "previous_incidents",
+        0
+    )
+    device_status = device_context.get(
+        "status",
+        "Unknown"
+    )
+    last_seen = device_context.get("last_seen")
+
+    alert_text = f"{alert_type} {message}".lower()
+    device_text = device.lower()
+
+    # ---------------------------------------
+    # Priority
+    # ---------------------------------------
+
+    priority_map = {
+        "Critical": "Critical",
+        "High": "High",
+        "Medium": "Moderate",
+        "Low": "Low"
+    }
+
+    priority = priority_map.get(severity, "Moderate")
+
+    if severity == "High" and open_vulnerabilities >= 2:
+        priority = "Critical"
+
+    if not assigned and severity in {"Critical", "High"}:
+        priority = "Critical"
+
+    # ---------------------------------------
+    # Operational impact
+    # ---------------------------------------
+
+    impact_level = "Low"
+    impact_description = (
+        "No immediate railroad operational impact has been identified."
+    )
+
+    if "ptc" in device_text or "radio gateway" in device_text:
+        impact_level = "High"
+        impact_description = (
+            "The affected asset supports Positive Train Control "
+            "communications. Loss or degradation of this system may reduce "
+            "the availability of safety-critical train-control messaging."
+        )
+
+    elif "signal" in device_text or "signal controller" in device_text:
+        impact_level = "High"
+        impact_description = (
+            "The affected signal-control asset may reduce signal visibility "
+            "or require railroad operations to use restrictive procedures "
+            "until normal service is restored."
+        )
+
+    elif "grade crossing" in device_text:
+        impact_level = "High"
+        impact_description = (
+            "The affected grade-crossing system may require immediate "
+            "operational verification and coordination with railroad "
+            "dispatch or maintenance personnel."
+        )
+
+    elif "dispatch" in device_text or "scada" in device_text:
+        impact_level = "High"
+        impact_description = (
+            "The affected dispatch system may reduce centralized monitoring "
+            "and control visibility across railroad operations."
+        )
+
+    elif "engineering workstation" in device_text:
+        impact_level = "Moderate"
+        impact_description = (
+            "The affected engineering workstation may provide access to "
+            "railroad control assets and should be evaluated for unauthorized "
+            "administrative activity."
+        )
+
+    elif severity in {"Critical", "High"}:
+        impact_level = "Moderate"
+        impact_description = (
+            "The incident may affect the reliability or availability of a "
+            "railroad operational technology asset."
+        )
+
+    # ---------------------------------------
+    # Likely causes
+    # ---------------------------------------
+
+    causes = []
+    confidence = 55
+
+    if any(term in alert_text for term in [
+        "communication loss",
+        "offline",
+        "unreachable",
+        "connection"
+    ]):
+        causes = [
+            "Network communication failure",
+            "Loss of power or hardware availability",
+            "Firewall, routing, or switching disruption",
+            "Unauthorized service interruption"
+        ]
+        confidence = 78
+
+    elif any(term in alert_text for term in [
+        "firmware",
+        "configuration",
+        "modified",
+        "change"
+    ]):
+        causes = [
+            "Unauthorized firmware or configuration change",
+            "Incomplete maintenance activity",
+            "Compromised engineering credentials",
+            "Malicious modification of the controller"
+        ]
+        confidence = 82
+
+    elif any(term in alert_text for term in [
+        "failed login",
+        "authentication",
+        "brute force",
+        "credential"
+    ]):
+        causes = [
+            "Invalid or expired credentials",
+            "Brute-force authentication activity",
+            "Unauthorized account access attempt",
+            "Misconfigured service or scheduled process"
+        ]
+        confidence = 84
+
+    elif any(term in alert_text for term in [
+        "scan",
+        "reconnaissance",
+        "port"
+    ]):
+        causes = [
+            "Unauthorized network reconnaissance",
+            "Asset discovery activity",
+            "Vulnerability scanning",
+            "Misconfigured monitoring or management tool"
+        ]
+        confidence = 80
+
+    else:
+        causes = [
+            "Equipment or service failure",
+            "Network or configuration issue",
+            "Authorized maintenance activity",
+            "Potential malicious activity"
+        ]
+
+    # ---------------------------------------
+    # Recommended actions
+    # ---------------------------------------
+
+    recommended_actions = []
+
+    if not acknowledged:
+        recommended_actions.append(
+            "Acknowledge the incident and begin analyst triage."
+        )
+
+    if not assigned:
+        recommended_actions.append(
+            "Assign the incident to an OT cybersecurity analyst."
+        )
+
+    if device_status.lower() != "online":
+        recommended_actions.append(
+            "Verify the operational status and network reachability of the "
+            "affected asset."
+        )
+
+    if any(term in alert_text for term in [
+        "communication loss",
+        "offline",
+        "connection"
+    ]):
+        recommended_actions.extend([
+            "Review switch, router, firewall, and communications gateway logs.",
+            "Verify power, cabling, radio, and network-path availability.",
+            "Confirm whether dispatch or train-control communications are degraded."
+        ])
+
+    elif any(term in alert_text for term in [
+        "firmware",
+        "configuration",
+        "modified"
+    ]):
+        recommended_actions.extend([
+            "Compare the current firmware and configuration to the approved baseline.",
+            "Review recent engineering workstation and administrator activity.",
+            "Validate whether an authorized maintenance change was scheduled."
+        ])
+
+    elif any(term in alert_text for term in [
+        "failed login",
+        "authentication",
+        "credential"
+    ]):
+        recommended_actions.extend([
+            "Review authentication logs and identify the source account and host.",
+            "Check for successful logins following the failed attempts.",
+            "Temporarily restrict suspicious accounts or remote-access paths."
+        ])
+
+    elif any(term in alert_text for term in [
+        "scan",
+        "reconnaissance",
+        "port"
+    ]):
+        recommended_actions.extend([
+            "Identify the source system responsible for the scan.",
+            "Review network flows for lateral movement or additional discovery.",
+            "Confirm whether the activity came from an authorized security tool."
+        ])
+
+    else:
+        recommended_actions.extend([
+            "Review recent asset, network, and authentication activity.",
+            "Compare the affected asset with its approved operational baseline.",
+            "Document findings and escalate if operational impact is confirmed."
+        ])
+
+    if open_vulnerabilities > 0:
+        recommended_actions.append(
+            f"Review the {open_vulnerabilities} open vulnerability record(s) "
+            "associated with this asset."
+        )
+
+    # Remove duplicates while preserving order
+    recommended_actions = list(dict.fromkeys(recommended_actions))
+
+    # ---------------------------------------
+    # Executive summary
+    # ---------------------------------------
+
+    executive_summary = (
+        f"A {severity.lower()}-severity {alert_type.lower()} incident was "
+        f"detected on {device}. The incident is currently {status.lower()}."
+    )
+
+    if not acknowledged:
+        executive_summary += " It has not yet been acknowledged."
+
+    if not assigned:
+        executive_summary += " No analyst is currently assigned."
+
+    if open_vulnerabilities:
+        executive_summary += (
+            f" The affected asset also has {open_vulnerabilities} open "
+            f"vulnerability record(s)."
+        )
+
+    executive_summary += f" {impact_description}"
+
+    # ---------------------------------------
+    # AI recommendation
+    # ---------------------------------------
+
+    if priority == "Critical":
+        ai_recommendation = (
+            "Begin immediate investigation and operational coordination. "
+            "Assign an analyst, verify the asset's current state, and determine "
+            "whether railroad safety or train-control functions are affected."
+        )
+
+    elif priority == "High":
+        ai_recommendation = (
+            "Prioritize this incident for prompt investigation. Validate the "
+            "affected asset, review related logs, and confirm whether the event "
+            "has broader operational consequences."
+        )
+
+    elif priority == "Moderate":
+        ai_recommendation = (
+            "Investigate during the current analyst workflow and monitor the "
+            "asset for escalation, repeated alerts, or operational degradation."
+        )
+
+    else:
+        ai_recommendation = (
+            "Continue monitoring and document the incident. Escalate if related "
+            "alerts or operational symptoms develop."
+        )
 
     return {
-        "found": True,
-        "incident": {
-            "id": incident_id,
-            "time": incident_time,
-            "severity": severity,
-            "status": status,
-            "device": device_name,
-            "alert_type": alert_type,
-            "message": message,
-            "acknowledged": acknowledged,
-            "assigned_to": assigned_to or "Unassigned",
-            "investigation_notes": investigation_notes,
-            "closed_at": closed_at,
-            "mitre_technique": mitre_technique,
+        "incident_id": incident_id,
+        "executive_summary": executive_summary,
+        "priority": priority,
+        "operational_impact": {
+            "level": impact_level,
+            "description": impact_description
+        },
+        "likely_cause": {
+            "confidence": confidence,
+            "causes": causes
+        },
+        "mitre": {
+            "technique": mitre_technique
+        },
+        "recommended_actions": recommended_actions,
+        "device_context": {
+            "device": device,
+            "status": device_status,
+            "risk_level": device_risk,
+            "open_vulnerabilities": open_vulnerabilities,
+            "previous_incidents": previous_incidents,
+            "last_seen": last_seen
         },
         "assessment": {
-            "is_open": is_open,
-            "is_assigned": is_assigned,
-            "priority": priority,
-            "status": assessment_status,
+            "open": is_open,
+            "acknowledged": acknowledged,
+            "assigned": assigned,
+            "assigned_to": assigned_to or "Unassigned"
         },
-        "summary": summary,
-        "recommended_actions": immediate_actions,
+        "ai_recommendation": ai_recommendation
     }
 # =========================================================
 # Risk score

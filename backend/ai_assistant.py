@@ -604,16 +604,7 @@ def analyze_single_incident(incident, device_context=None):
 
     recommended_actions = []
 
-    if acknowledged:
-        executive_summary += " The incident has been acknowledged."
-    else:
-        executive_summary += " The incident has not yet been acknowledged."
-
-    if assigned:
-        executive_summary += f" It is currently assigned to {assigned_to}."
-    else:
-        executive_summary += " No analyst is currently assigned."
-
+    
     if device_status.lower() != "online":
         recommended_actions.append(
             "Verify the operational status and network reachability of the "
@@ -689,17 +680,21 @@ def analyze_single_incident(incident, device_context=None):
         f"detected on {device}. The incident is currently {status.lower()}."
     )
 
-    if not acknowledged:
-        executive_summary += " It has not yet been acknowledged."
+    if acknowledged:
+        executive_summary += " The incident has been acknowledged."
+    else:
+        executive_summary += " The incident has not yet been acknowledged."
 
-    if not assigned:
+    if assigned:
+        executive_summary += f" It is currently assigned to {assigned_to}."
+    else:
         executive_summary += " No analyst is currently assigned."
 
     if open_vulnerabilities:
         executive_summary += (
-            f" The affected asset also has {open_vulnerabilities} open "
-            f"vulnerability record(s)."
-        )
+        f" The affected asset also has {open_vulnerabilities} open "
+        f"vulnerability record(s)."
+    )
 
     executive_summary += f" {impact_description}"
 

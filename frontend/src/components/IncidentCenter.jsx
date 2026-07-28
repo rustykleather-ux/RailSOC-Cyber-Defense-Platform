@@ -175,15 +175,28 @@ function IncidentCenter({
 };
 
   const handleSaveNotes = async () => {
-    if (!selectedIncident) return;
+  if (!selectedIncident) return;
 
-    await updateIncidentNotes(selectedIncident.id, notes);
+  try {
+    const updatedIncident = await updateIncidentNotes(
+      selectedIncident.id,
+      notes
+    );
 
-    setSelectedIncident({
-      ...selectedIncident,
-      investigation_notes: notes,
-    });
-  };
+    setSelectedIncident((currentIncident) => ({
+      ...currentIncident,
+      investigation_notes:
+        updatedIncident?.investigation_notes ?? notes,
+    }));
+
+    setAnalysisRefreshKey((currentKey) => currentKey + 1);
+  } catch (error) {
+    console.error("Unable to save investigation notes:", error);
+  }
+};
+
+  
+
 
   const handleCloseIncident = async () => {
     if (!selectedIncident) return;

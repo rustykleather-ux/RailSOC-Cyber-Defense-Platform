@@ -581,25 +581,35 @@ def close_incident(
     request: CloseIncidentRequest,
     db: Session = Depends(get_db)
 ):
-    alert = db.query(Alert).filter(Alert.id == incident_id).first()
+    incident = (
+        db.query(Incident)
+        .filter(Incident.id == incident_id)
+        .first()
+    )
 
-    if not alert:
-        return {"error": "Incident not found"}
+    if not incident:
+        raise HTTPException(
+            status_code=404,
+            detail="Incident not found"
+        )
 
-    alert.status = "Closed"
-    alert.closed_by = request.closed_by
-    alert.closed_at = datetime.utcnow()
+    incident.status = "Closed"
+    incident.closed_by = request.closed_by
+    incident.closed_at = datetime.utcnow()
 
-    db.add(alert)
     db.commit()
-    db.refresh(alert)
+    db.refresh(incident)
 
     return {
         "message": "Incident closed",
-        "incident_id": alert.id,
-        "status": alert.status,
-        "closed_by": alert.closed_by,
-        "closed_at": alert.closed_at.isoformat()
+        "incident_id": incident.id,
+        "status": incident.status,
+        "closed_by": incident.closed_by,
+        "closed_at": (
+            incident.closed_at.isoformat()
+            if incident.closed_at
+            else None
+        ),
     }
 
 @app.get("/alerts")
@@ -1006,33 +1016,44 @@ def plant_status(db: Session = Depends(get_db)):
 
 @app.get("/incidents")
 def get_incidents(db: Session = Depends(get_db)):
-    alerts = (
-        db.query(Alert)
-        .filter(Alert.status != "Closed")
-        .order_by(Alert.timestamp.desc())
+    incidents = (
+        db.query(Incident)
+        .filter(Incident.status != "Closed")
+        .order_by(Incident.time.desc())
         .all()
     )
 
-    incidents = []
-
-    for alert in alerts:
-        incidents.append({
-            "id": alert.id,
-            "time": alert.timestamp.isoformat() if alert.timestamp else None,
-            "severity": alert.severity,
-            "device": alert.device.name if alert.device else "Unknown Device",
-            "alert_type": alert.alert_type,
-            "message": alert.message,
-            "status": alert.status,
-            "acknowledged": alert.acknowledged,
-            "assigned_to": alert.assigned_to,
-            "investigation_notes": alert.investigation_notes,
-            "closed_by": alert.closed_by,
-            "closed_at": alert.closed_at.isoformat() if alert.closed_at else None,
-            "mitre_technique": get_mitre_mapping(alert.alert_type)
-        })
-
-    return incidents
+    return [
+        {
+            "id": incident.id,
+            "alert_id": incident.alert_id,
+            "device_id": incident.device_id,
+            "time": (
+                incident.time.isoformat()
+                if incident.time
+                else None
+            ),
+            "severity": incident.severity,
+            "device": incident.device,
+            "alert_type": incident.alert_type,
+            "message": incident.message,
+            "status": incident.status,
+            "acknowledged": incident.acknowledged,
+            "assigned_to": incident.assigned_to,
+            "investigation_notes": incident.investigation_notes,
+            "closed_by": incident.closed_by,
+            "closed_at": (
+                incident.closed_at.isoformat()
+                if incident.closed_at
+                else None
+            ),
+            "mitre_technique": (
+                incident.mitre_technique
+                or get_mitre_mapping(incident.alert_type)
+            ),
+        }
+        for incident in incidents
+    ]
 
 @app.post("/incidents/{incident_id}/acknowledge")
 def acknowledge_incident(
@@ -1086,26 +1107,32 @@ def update_incident_notes(
     request: IncidentNotesRequest,
     db: Session = Depends(get_db)
 ):
-    alert = db.query(Alert).filter(Alert.id == incident_id).first()
+    incident = (
+        db.query(Incident)
+        .filter(Incident.id == incident_id)
+        .first()
+    )
 
-    if not alert:
-        return {"error": "Incident not found"}
+    if not incident:
+        raise HTTPException(
+            status_code=404,
+            detail="Incident not found"
+        )
 
-    alert.investigation_notes = request.investigation_notes
+    incident.investigation_notes = request.investigation_notes
 
-    db.add(alert)
     db.commit()
-    db.refresh(alert)
+    db.refresh(incident)
 
     return {
         "message": "Investigation notes updated",
-        "incident_id": alert.id,
-        "investigation_notes": alert.investigation_notes
+        "incident_id": incident.id,
+        "investigation_notes": incident.investigation_notes
     }
 
 class AssignIncidentRequest(BaseModel):
     assigned_to: str
-
+    
 
 @app.post("/incidents/{incident_id}/assign")
 def assign_incident(

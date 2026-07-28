@@ -10,6 +10,7 @@ Attack_Catalog = {
                              "PLC", 
                              "Switch Controller"],
         "condition": "Configuration Drift",
+        "digital_twin_effect": "signal_controller_compromise",
         "simulation_effect": {
             "status": "Compromised",
         },

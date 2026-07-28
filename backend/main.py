@@ -28,6 +28,10 @@ from models import (
     
 )
 from services.risk_engine import calculate_device_risk
+from services.digital_twin_service import (
+    DigitalTwinConflictError,
+    apply_signal_controller_effect,
+)
 from seed_track_blocks import assign_signal_controller_track_blocks
 from train_simulation import train_simulation
 
@@ -457,23 +461,37 @@ def launch_custom_scenario(
             },
         )
 
-    simulation_results = apply_attack(
-        db=db,
-        attack=attack,
-        targets=targets,
-   )   
-    
-    attack_instance = launch_attack(
-        attack=attack,
-        targets=targets,
-        notes=request.notes,
-    )
+    try:
+        simulation_results = apply_attack(
+            db=db,
+            attack=attack,
+            targets=targets,
+        )
+        db.commit()
 
-    return {
-    "message": "Custom scenario launched successfully",
-    "scenario": attack_instance,
-    "simulation": simulation_results,
-}
+        for target in targets:
+            db.refresh(target)
+
+        attack_instance = launch_attack(
+            attack=attack,
+            targets=targets,
+            notes=request.notes,
+        )
+
+        return {
+            "message": "Custom scenario launched successfully",
+            "scenario": attack_instance,
+            "simulation": simulation_results,
+        }
+    except DigitalTwinConflictError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail=str(exc),
+        ) from exc
+    except Exception:
+        db.rollback()
+        raise
 # =========================================================
 # Train API endpoints
 # =========================================================
@@ -688,54 +706,6 @@ def dashboard(db: Session = Depends(get_db)):
         "overall_status": "Attention Required" if offline or high_risk or critical_alerts else "Healthy"
     }
 
-def apply_signal_controller_effect(
-    db: Session,
-    device: OTDevice,
-    scenario: dict,
-):
-    """
-    Apply signal-controller attack effects to every track block
-    controlled by the compromised device.
-    """
-    affected_blocks = (
-        db.query(TrackBlock)
-        .filter(
-            TrackBlock.controlling_device_id == device.id
-        )
-        .order_by(TrackBlock.start_milepost)
-        .all()
-    )
-
-    results = []
-    timestamp = datetime.utcnow()
-
-    for block in affected_blocks:
-        block.signal_aspect = scenario.get(
-            "signal_aspect",
-            "Stop",
-        )
-        block.communications_status = scenario.get(
-            "communications_status",
-            "Degraded",
-        )
-
-        block.security_status = scenario.get(
-            "security_status",
-            "Compromised",
-        )
-        block.last_updated = timestamp
-        results.append({
-            "id": block.id,
-            "name": block.name,
-            "signal_aspect": block.signal_aspect,
-            "communications_status": (
-                block.communications_status
-            ),
-            "security_status": block.security_status,
-        })
-
-    return results
-
 @app.post("/simulate-attack/{attack_type}")
 def simulate_attack(attack_type: str, db: Session = Depends(get_db)):
     attack_type = attack_type.lower()
@@ -825,24 +795,6 @@ def simulate_attack(attack_type: str, db: Session = Depends(get_db)):
     if not device:
         return {"error": f"{scenario['device']} not found"}
 
-    if attack_type == "signal":
-        assigned_block_count = (
-            db.query(TrackBlock)
-            .filter(TrackBlock.controlling_device_id == device.id)
-            .count()
-        )
-
-        if assigned_block_count == 0:
-            db.rollback()
-            raise HTTPException(
-                status_code=409,
-                detail=(
-                    "Signal Controller 14A has no assigned track blocks. "
-                    "Run the track-block seed/setup before simulating "
-                    "this attack."
-                ),
-            )
-
     try:
         device.status = scenario["status"]
         device.risk_level = scenario["risk"]
@@ -857,7 +809,6 @@ def simulate_attack(attack_type: str, db: Session = Depends(get_db)):
             affected_blocks = apply_signal_controller_effect(
                 db=db,
                 device=device,
-                scenario=scenario,
             )
 
         create_alert(
@@ -884,6 +835,12 @@ def simulate_attack(attack_type: str, db: Session = Depends(get_db)):
             "severity": scenario["severity"],
             "affected_track_blocks": affected_blocks,
         }
+    except DigitalTwinConflictError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail=str(exc),
+        ) from exc
     except HTTPException:
         db.rollback()
         raise

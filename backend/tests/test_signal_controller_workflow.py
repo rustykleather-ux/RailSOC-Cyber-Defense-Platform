@@ -1,6 +1,7 @@
 import sys
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from fastapi import HTTPException
 from sqlalchemy import create_engine
@@ -12,13 +13,20 @@ BACKEND_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(BACKEND_DIR))
 
 from database import Base
-from main import get_track_blocks, reset_demo, simulate_attack
+from main import (
+    CustomScenario,
+    get_track_blocks,
+    launch_custom_scenario,
+    reset_demo,
+    simulate_attack,
+)
 from models import Alert, Incident, OTDevice, TrackBlock, Train
 from seed_track_blocks import (
     SIGNAL_CONTROLLER_BLOCK_NAMES,
     seed_track_blocks,
 )
 from train_simulation import TrainSimulationEngine
+from services.digital_twin_service import apply_signal_controller_effect
 
 
 class SignalControllerWorkflowTests(unittest.TestCase):
@@ -88,7 +96,16 @@ class SignalControllerWorkflowTests(unittest.TestCase):
         )
 
     def test_signal_attack_changes_every_assigned_block(self):
-        response = simulate_attack("signal", self.db)
+        with patch(
+            "main.apply_signal_controller_effect",
+            wraps=apply_signal_controller_effect,
+        ) as shared_effect:
+            response = simulate_attack("signal", self.db)
+
+        shared_effect.assert_called_once_with(
+            db=self.db,
+            device=self.controller,
+        )
         assigned_blocks = self.assigned_blocks()
 
         self.assertEqual(self.controller.status, "Degraded")
@@ -113,6 +130,33 @@ class SignalControllerWorkflowTests(unittest.TestCase):
             "T0859 - Modify Controller Tasking",
         )
 
+    def test_custom_signal_scenario_changes_every_assigned_block(self):
+        response = launch_custom_scenario(
+            CustomScenario(
+                attack_id="logic_modification",
+                target_ids=[self.controller.id],
+            ),
+            self.db,
+        )
+        affected_blocks = response["simulation"][0][
+            "affected_track_blocks"
+        ]
+
+        self.assertEqual(
+            {block["name"] for block in affected_blocks},
+            {"Block E82", "Block E84"},
+        )
+        self.assertTrue(
+            all(
+                block.signal_aspect == "Stop"
+                and block.communications_status == "Degraded"
+                and block.security_status == "Compromised"
+                for block in self.assigned_blocks()
+            )
+        )
+        self.assertEqual(self.db.query(Alert).count(), 1)
+        self.assertEqual(self.db.query(Incident).count(), 1)
+
     def test_signal_attack_returns_409_without_assigned_blocks(self):
         for block in self.assigned_blocks():
             block.controlling_device_id = None
@@ -131,8 +175,57 @@ class SignalControllerWorkflowTests(unittest.TestCase):
         self.assertEqual(self.db.query(Alert).count(), 0)
         self.assertEqual(self.db.query(Incident).count(), 0)
 
+    def test_custom_signal_scenario_returns_409_without_blocks(self):
+        for block in self.assigned_blocks():
+            block.controlling_device_id = None
+        self.db.commit()
+
+        with self.assertRaises(HTTPException) as context:
+            launch_custom_scenario(
+                CustomScenario(
+                    attack_id="logic_modification",
+                    target_ids=[self.controller.id],
+                ),
+                self.db,
+            )
+
+        self.assertEqual(context.exception.status_code, 409)
+        self.assertIn(self.controller.name, context.exception.detail)
+        self.db.refresh(self.controller)
+        self.assertEqual(self.controller.status, "Online")
+        self.assertEqual(self.db.query(Alert).count(), 0)
+        self.assertEqual(self.db.query(Incident).count(), 0)
+
+    def test_non_signal_custom_scenario_does_not_change_blocks(self):
+        response = launch_custom_scenario(
+            CustomScenario(
+                attack_id="communication_failure",
+                target_ids=[self.controller.id],
+            ),
+            self.db,
+        )
+
+        self.assertEqual(
+            response["simulation"][0]["affected_track_blocks"],
+            [],
+        )
+        self.assertTrue(
+            all(
+                block.signal_aspect == "Clear"
+                and block.communications_status == "Online"
+                and block.security_status == "Healthy"
+                for block in self.assigned_blocks()
+            )
+        )
+
     def test_reset_restores_operational_baseline(self):
-        simulate_attack("signal", self.db)
+        launch_custom_scenario(
+            CustomScenario(
+                attack_id="logic_modification",
+                target_ids=[self.controller.id],
+            ),
+            self.db,
+        )
 
         response = reset_demo(self.db)
 

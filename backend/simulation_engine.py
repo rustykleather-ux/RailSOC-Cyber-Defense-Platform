@@ -1,4 +1,5 @@
 from services.alert_service import create_alert
+from services.digital_twin_service import apply_digital_twin_effect
 
 
 def apply_attack(
@@ -15,6 +16,11 @@ def apply_attack(
         previous_status = target.status
 
         target.status = new_status
+        affected_blocks = apply_digital_twin_effect(
+            db=db,
+            attack=attack,
+            target=target,
+        )
 
         alert = create_alert(
             db=db,
@@ -32,12 +38,8 @@ def apply_attack(
                 "alert_id": alert.id,
                 "alert_type": alert.alert_type,
                 "alert_severity": alert.severity,
+                "affected_track_blocks": affected_blocks,
             }
         )
-
-    db.commit()
-
-    for target in targets:
-        db.refresh(target)
 
     return simulation_results

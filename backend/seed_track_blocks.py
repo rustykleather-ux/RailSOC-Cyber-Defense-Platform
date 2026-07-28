@@ -1,7 +1,14 @@
 from datetime import datetime
 
 from database import SessionLocal
-from models import TrackBlock
+from models import OTDevice, TrackBlock
+
+
+SIGNAL_CONTROLLER_NAME = "Signal Controller 14A"
+SIGNAL_CONTROLLER_BLOCK_NAMES = {
+    "Block E82",
+    "Block E84",
+}
 
 
 TRACK_BLOCK_DATA = [
@@ -88,47 +95,81 @@ TRACK_BLOCK_DATA = [
 ]
 
 
-def seed_track_blocks():
-    db = SessionLocal()
+def assign_signal_controller_track_blocks(db):
+    controller = (
+        db.query(OTDevice)
+        .filter(OTDevice.name == SIGNAL_CONTROLLER_NAME)
+        .first()
+    )
+
+    if controller is None:
+        return []
+
+    assigned_blocks = (
+        db.query(TrackBlock)
+        .filter(TrackBlock.name.in_(SIGNAL_CONTROLLER_BLOCK_NAMES))
+        .all()
+    )
+
+    for block in assigned_blocks:
+        block.controlling_device_id = controller.id
+
+    return assigned_blocks
+
+
+def seed_track_blocks(db=None):
+    owns_session = db is None
+    db = db or SessionLocal()
 
     try:
-        existing_count = db.query(TrackBlock).count()
-
-        if existing_count > 0:
-            print(
-                f"Track blocks already exist. "
-                f"Current count: {existing_count}"
-            )
-            return
+        created_count = 0
 
         for block_data in TRACK_BLOCK_DATA:
-            block = TrackBlock(
-                name=block_data["name"],
-                subdivision=block_data["subdivision"],
-                track=block_data["track"],
-                start_milepost=block_data["start_milepost"],
-                end_milepost=block_data["end_milepost"],
-                occupied=False,
-                occupied_train_id=None,
-                signal_aspect="Clear",
-                authority="Main Track",
-                speed_limit=block_data["speed_limit"],
-                controlling_device_id=None,
-                communications_status="Online",
-                security_status="Healthy",
-                maintenance=False,
-                notes="",
-                last_updated=datetime.utcnow(),
+            block = (
+                db.query(TrackBlock)
+                .filter(TrackBlock.name == block_data["name"])
+                .first()
             )
 
-            db.add(block)
+            if block is None:
+                block = TrackBlock(
+                    name=block_data["name"],
+                    subdivision=block_data["subdivision"],
+                    track=block_data["track"],
+                    start_milepost=block_data["start_milepost"],
+                    end_milepost=block_data["end_milepost"],
+                    occupied=False,
+                    occupied_train_id=None,
+                    signal_aspect="Clear",
+                    authority="Main Track",
+                    speed_limit=block_data["speed_limit"],
+                    communications_status="Online",
+                    security_status="Healthy",
+                    maintenance=False,
+                    notes="",
+                    last_updated=datetime.utcnow(),
+                )
+                db.add(block)
+                created_count += 1
+
+        db.flush()
+        assigned_blocks = assign_signal_controller_track_blocks(db)
+
+        if not assigned_blocks:
+            raise RuntimeError(
+                f"{SIGNAL_CONTROLLER_NAME} must exist before "
+                "track blocks can be seeded."
+            )
 
         db.commit()
 
         print(
-            f"Successfully seeded "
-            f"{len(TRACK_BLOCK_DATA)} track blocks."
+            f"Track-block setup complete: {created_count} created, "
+            f"{len(assigned_blocks)} assigned to "
+            f"{SIGNAL_CONTROLLER_NAME}."
         )
+
+        return assigned_blocks
 
     except Exception as exc:
         db.rollback()
@@ -136,7 +177,8 @@ def seed_track_blocks():
         raise
 
     finally:
-        db.close()
+        if owns_session:
+            db.close()
 
 
 if __name__ == "__main__":

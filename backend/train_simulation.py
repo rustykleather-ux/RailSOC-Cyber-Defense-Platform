@@ -21,6 +21,9 @@ class TrainSimulationEngine:
     """
 
     ACTIVE_TRAIN_STATUSES = {"Moving", "Restricted"}
+    NORMAL_SPEED_MPH = 40
+    APPROACH_SPEED_MPH = 20
+    SIGNAL_STOP_MARGIN_MILES = 0.001
 
     def __init__(
         self,
@@ -238,10 +241,41 @@ class TrainSimulationEngine:
         Update one train for a simulation tick.
         """
         status = (train.status or "").strip()
+        observed_block = self._get_observed_block(train, db)
+        observed_aspect = (
+            (observed_block.signal_aspect or "Clear").strip().title()
+            if observed_block
+            else "Clear"
+        )
+
+        if status == "Stopped at Signal":
+            train.current_signal = observed_aspect
+
+            if observed_aspect != "Clear":
+                train.speed = 0
+                train.last_updated = datetime.utcnow()
+                self._record_history(train, db)
+                return
+
+            train.status = "Moving"
+            train.speed = self.NORMAL_SPEED_MPH
+            status = train.status
 
         if status not in self.ACTIVE_TRAIN_STATUSES:
             self._record_history(train, db)
             return
+
+        train.current_signal = observed_aspect
+
+        if observed_aspect == "Approach":
+            train.speed = min(
+                int(train.speed or self.NORMAL_SPEED_MPH),
+                self.APPROACH_SPEED_MPH,
+            )
+            train.status = "Restricted"
+        elif observed_aspect == "Clear" and status == "Restricted":
+            train.speed = self.NORMAL_SPEED_MPH
+            train.status = "Moving"
 
         if train.speed is None or float(train.speed) <= 0:
             train.speed = 0
@@ -275,6 +309,28 @@ class TrainSimulationEngine:
                 previous_milepost + milepost_change
             )
 
+        if (
+            observed_block
+            and observed_aspect == "Stop"
+            and self._would_enter_block(
+                previous_milepost,
+                next_milepost,
+                direction,
+                observed_block,
+            )
+        ):
+            train.milepost = self._stop_position(
+                previous_milepost,
+                direction,
+                observed_block,
+            )
+            train.speed = 0
+            train.status = "Stopped at Signal"
+            train.current_signal = "Stop"
+            train.last_updated = datetime.utcnow()
+            self._record_history(train, db)
+            return
+
         if next_milepost >= self.maximum_milepost:
             train.milepost = self.maximum_milepost
             train.speed = 0
@@ -289,9 +345,6 @@ class TrainSimulationEngine:
 
         else:
             train.milepost = round(next_milepost, 3)
-            train.current_signal = (
-                self._calculate_signal_state(train)
-            )
 
         train.last_updated = datetime.utcnow()
 
@@ -308,6 +361,76 @@ class TrainSimulationEngine:
             )
 
         self._record_history(train, db)
+
+    def _get_observed_block(self, train: Train, db):
+        blocks = (
+            db.query(TrackBlock)
+            .order_by(TrackBlock.start_milepost)
+            .all()
+        )
+        milepost = float(
+            train.milepost
+            if train.milepost is not None
+            else self.minimum_milepost
+        )
+        direction = (train.direction or "Eastbound").strip().lower()
+
+        for block in blocks:
+            inside_block = (
+                float(block.start_milepost)
+                <= milepost
+                < float(block.end_milepost)
+            )
+            if (
+                inside_block
+                and (block.signal_aspect or "").strip().lower() == "stop"
+                and (block.security_status or "").strip().lower()
+                == "compromised"
+            ):
+                return block
+
+        if direction == "westbound":
+            candidates = [
+                block
+                for block in blocks
+                if float(block.end_milepost) <= milepost
+            ]
+            return candidates[-1] if candidates else None
+
+        return next(
+            (
+                block
+                for block in blocks
+                if float(block.start_milepost) > milepost
+            ),
+            None,
+        )
+
+    @staticmethod
+    def _would_enter_block(
+        previous_milepost,
+        next_milepost,
+        direction,
+        block,
+    ):
+        if direction == "westbound":
+            return next_milepost <= float(block.end_milepost)
+
+        return next_milepost >= float(block.start_milepost)
+
+    def _stop_position(self, previous_milepost, direction, block):
+        if direction == "westbound":
+            boundary = (
+                float(block.end_milepost)
+                + self.SIGNAL_STOP_MARGIN_MILES
+            )
+            return round(min(previous_milepost, boundary), 3)
+
+        boundary = (
+            float(block.start_milepost)
+            - self.SIGNAL_STOP_MARGIN_MILES
+        )
+        return round(max(previous_milepost, boundary), 3)
 
     def _calculate_milepost_change(
         self,
@@ -439,8 +562,13 @@ class TrainSimulationEngine:
             communications_status = (
                 block.communications_status or "Online"
             ).strip().lower()
+            security_status = (
+                block.security_status or "Healthy"
+            ).strip().lower()
 
-            if communications_status != "online":
+            if security_status == "compromised":
+                indication = "Stop"
+            elif communications_status != "online":
                 indication = "Dark"
 
             elif bool(block.maintenance):
@@ -495,7 +623,16 @@ class TrainSimulationEngine:
         if not signal_device:
             return
 
-        if indication == "Dark":
+        block_compromised = (
+            (block.security_status or "").strip().lower()
+            == "compromised"
+        )
+        communications_degraded = (
+            (block.communications_status or "").strip().lower()
+            != "online"
+        )
+
+        if block_compromised or communications_degraded:
             signal_device.status = "Degraded"
         else:
             signal_device.status = "Online"
@@ -606,10 +743,6 @@ class TrainSimulationEngine:
         event_name: str,
         event_milepost: float,
     ) -> None:
-        train.current_signal = (
-            self._calculate_signal_state(train)
-        )
-
         print(
             f"[SIGNAL] {train.symbol} passed "
             f"{event_name} at MP {event_milepost}. "

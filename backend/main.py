@@ -23,10 +23,12 @@ from models import (
     Vulnerability,
     Train,
     TrainHistory,
-    Incident
+    Incident,
+    TrackBlock
     
 )
 from services.risk_engine import calculate_device_risk
+from seed_track_blocks import assign_signal_controller_track_blocks
 from train_simulation import train_simulation
 
 
@@ -83,6 +85,20 @@ def get_db():
 
     try:
         yield db
+    finally:
+        db.close()
+
+
+@app.on_event("startup")
+def initialize_track_block_controller_assignments():
+    db = SessionLocal()
+
+    try:
+        assign_signal_controller_track_blocks(db)
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
     finally:
         db.close()
 
@@ -272,6 +288,12 @@ def get_track_blocks(
             "occupied": block.occupied,
             "occupied_train_id": (
                 block.occupied_train_id
+            ),
+            "controlling_device_id": block.controlling_device_id,
+            "controlling_device": (
+                block.controlling_device.name
+                if block.controlling_device
+                else None
             ),
             "occupied_by": (
                 block.occupied_train.symbol
@@ -523,17 +545,6 @@ def create_train(
     db.refresh(train)
 
     return train
-
-
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-
 @app.get("/")
 def root():
    return {
@@ -570,10 +581,6 @@ def get_devices(db: Session = Depends(get_db)):
         })
 
     return results
-
-class CloseIncidentRequest(BaseModel):
-    closed_by: str
-
 
 @app.post("/incidents/{incident_id}/close")
 def close_incident(
@@ -680,6 +687,55 @@ def dashboard(db: Session = Depends(get_db)):
         "open_vulnerabilities": open_vulnerabilities,
         "overall_status": "Attention Required" if offline or high_risk or critical_alerts else "Healthy"
     }
+
+def apply_signal_controller_effect(
+    db: Session,
+    device: OTDevice,
+    scenario: dict,
+):
+    """
+    Apply signal-controller attack effects to every track block
+    controlled by the compromised device.
+    """
+    affected_blocks = (
+        db.query(TrackBlock)
+        .filter(
+            TrackBlock.controlling_device_id == device.id
+        )
+        .order_by(TrackBlock.start_milepost)
+        .all()
+    )
+
+    results = []
+    timestamp = datetime.utcnow()
+
+    for block in affected_blocks:
+        block.signal_aspect = scenario.get(
+            "signal_aspect",
+            "Stop",
+        )
+        block.communications_status = scenario.get(
+            "communications_status",
+            "Degraded",
+        )
+
+        block.security_status = scenario.get(
+            "security_status",
+            "Compromised",
+        )
+        block.last_updated = timestamp
+        results.append({
+            "id": block.id,
+            "name": block.name,
+            "signal_aspect": block.signal_aspect,
+            "communications_status": (
+                block.communications_status
+            ),
+            "security_status": block.security_status,
+        })
+
+    return results
+
 @app.post("/simulate-attack/{attack_type}")
 def simulate_attack(attack_type: str, db: Session = Depends(get_db)):
     attack_type = attack_type.lower()
@@ -734,6 +790,24 @@ def simulate_attack(attack_type: str, db: Session = Depends(get_db)):
             "alert_type": "Engineering Workstation Malware",
             "message": "Simulated rail OT event: Malware-like behavior detected on rail engineering workstation.",
         },
+        "signal": {
+            "device": "Signal Controller 14A",
+            "status": "Degraded",
+            "risk": "Critical",
+            "severity": "Critical",
+            "alert_type": "Unauthorized Signal Logic Modification",
+            "message": (
+                "Simulated rail OT event: Unauthorized logic "
+                "modification detected on Signal Controller 14A. "
+                "The controlled signal has been forced to Stop."
+            ),
+            "signal_aspect": "Stop",
+            "communications_status": "Degraded",
+            "security_status": "Compromised",
+            "mitre_technique": (
+                "T0859 - Modify Controller Tasking"
+            ),
+        },
     }
 
     scenario = scenarios.get(attack_type)
@@ -751,31 +825,74 @@ def simulate_attack(attack_type: str, db: Session = Depends(get_db)):
     if not device:
         return {"error": f"{scenario['device']} not found"}
 
-    device.status = scenario["status"]
-    device.risk_level = scenario["risk"]
-    device.last_seen = datetime.utcnow()
+    if attack_type == "signal":
+        assigned_block_count = (
+            db.query(TrackBlock)
+            .filter(TrackBlock.controlling_device_id == device.id)
+            .count()
+        )
 
-    if "firmware" in scenario:
-        device.firmware_version = scenario["firmware"]
+        if assigned_block_count == 0:
+            db.rollback()
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    "Signal Controller 14A has no assigned track blocks. "
+                    "Run the track-block seed/setup before simulating "
+                    "this attack."
+                ),
+            )
 
-    alert = create_alert(
-    db=db,
-    device=device,
-    attack={
-        "severity": scenario["severity"],
-        "name": scenario["alert_type"],
-        "description": scenario["message"],
-        "mitre_technique": scenario.get("mitre_technique", ""),
-    },
-)
+    try:
+        device.status = scenario["status"]
+        device.risk_level = scenario["risk"]
+        device.last_seen = datetime.utcnow()
 
-    db.commit()
+        if "firmware" in scenario:
+            device.firmware_version = scenario["firmware"]
 
-    return {
-        "message": f"{scenario['alert_type']} simulation created.",
-        "device": device.name,
-        "severity": scenario["severity"]
-    }
+        affected_blocks = []
+
+        if attack_type == "signal":
+            affected_blocks = apply_signal_controller_effect(
+                db=db,
+                device=device,
+                scenario=scenario,
+            )
+
+        create_alert(
+            db=db,
+            device=device,
+            attack={
+                "severity": scenario["severity"],
+                "name": scenario["alert_type"],
+                "description": scenario["message"],
+                "mitre_technique": scenario.get(
+                    "mitre_technique",
+                    "",
+                ),
+            },
+        )
+
+        db.commit()
+
+        return {
+            "message": (
+                f"{scenario['alert_type']} simulation created."
+            ),
+            "device": device.name,
+            "severity": scenario["severity"],
+            "affected_track_blocks": affected_blocks,
+        }
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail="Attack simulation failed; no changes were committed.",
+        ) from exc
 
 @app.post("/train-simulation/start")
 def start_train_simulation():
@@ -1097,10 +1214,6 @@ def get_mitre_mapping(alert_type):
 
 
 
-class IncidentNotesRequest(BaseModel):
-    investigation_notes: str
-
-
 @app.post("/incidents/{incident_id}/notes")
 def update_incident_notes(
     incident_id: int,
@@ -1129,10 +1242,6 @@ def update_incident_notes(
         "incident_id": incident.id,
         "investigation_notes": incident.investigation_notes
     }
-
-class AssignIncidentRequest(BaseModel):
-    assigned_to: str
-    
 
 @app.post("/incidents/{incident_id}/assign")
 def assign_incident(
@@ -1165,39 +1274,37 @@ def assign_incident(
 
 @app.post("/reset-demo")
 def reset_demo(db: Session = Depends(get_db)):
-    devices = db.query(OTDevice).all()
+    try:
+        timestamp = datetime.utcnow()
+        devices = db.query(OTDevice).all()
 
-    for device in devices:
-        device.status = "Online"
-        device.risk_level = "Low"
-        device.last_seen = datetime.utcnow()
+        for device in devices:
+            device.status = "Online"
+            device.risk_level = "Low"
+            device.last_seen = timestamp
 
-        if device.name == "Grade Crossing Controller MP 82.4":
-            device.firmware_version = "6.3.1"
+            if device.name == "Grade Crossing Controller MP 82.4":
+                device.firmware_version = "6.3.1"
+            elif device.name == "PTC Radio Gateway":
+                device.firmware_version = "5.2.1"
+            elif device.name == "Rail Engineering Workstation":
+                device.firmware_version = "Windows 11 24H2"
 
-        elif device.name == "PTC Radio Gateway":
-            device.firmware_version = "5.2.1"
+        for block in db.query(TrackBlock).all():
+            block.signal_aspect = "Clear"
+            block.communications_status = "Online"
+            block.security_status = "Healthy"
+            block.last_updated = timestamp
 
-        elif device.name == "Rail Engineering Workstation":
-            device.firmware_version = "Windows 11 24H2"
+        db.query(Incident).delete(synchronize_session=False)
+        db.query(Alert).delete(synchronize_session=False)
+        db.commit()
 
-    # Delete child records before alerts
-    db.query(Incident).delete(
-        synchronize_session=False
-    )
-
-    db.query(Alert).delete(
-        synchronize_session=False
-    )
-
-    # Do not delete vulnerabilities unless you recreate them
-    db.commit()
-
-    return {
-        "message": "Operational baseline restored",
-        "alerts_cleared": True,
-        "incidents_cleared": True
-    }
-    db.commit()
-
-    return {"message": "TrackSentinel environment restored to operational baseline."}
+        return {
+            "message": "Operational baseline restored",
+            "alerts_cleared": True,
+            "incidents_cleared": True,
+        }
+    except Exception:
+        db.rollback()
+        raise

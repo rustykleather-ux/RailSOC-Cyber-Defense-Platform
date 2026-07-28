@@ -2,6 +2,7 @@ import datetime
 from datetime import datetime
 from database import Base, engine, SessionLocal
 from models import OTDevice, Alert, Vulnerability,Train
+from seed_track_blocks import seed_track_blocks
 
 
 
@@ -362,7 +363,7 @@ from sqlalchemy.orm import Session
 import models
 
 
-def seed_track_blocks(db: Session) -> None:
+def seed_legacy_track_blocks(db: Session) -> None:
     """
     Create baseline railroad track blocks if none exist.
     """
@@ -458,6 +459,8 @@ def seed_track_blocks(db: Session) -> None:
 
 db.add_all(vulnerabilities)
 db.commit()
+
+seed_track_blocks(db)
 
 db.close()
 

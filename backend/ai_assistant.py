@@ -417,8 +417,8 @@ def analyze_single_incident(incident, device_context=None):
     message = incident.get("message") or "No incident description provided."
     severity = (incident.get("severity") or "Unknown").title()
     status = incident.get("status") or "Open"
-    acknowledged = bool(incident.get("acknowledged"))
-    assigned_to = incident.get("assigned_to")
+    acknowledged = bool(incident.get("acknowledged", False))
+    assigned_to = incident.get("assigned_to") or "Unassigned"
     mitre_technique = incident.get("mitre_technique") or "Not mapped"
 
     assigned = bool(
@@ -604,15 +604,15 @@ def analyze_single_incident(incident, device_context=None):
 
     recommended_actions = []
 
-    if not acknowledged:
-        recommended_actions.append(
-            "Acknowledge the incident and begin analyst triage."
-        )
+    if acknowledged:
+        executive_summary += " The incident has been acknowledged."
+    else:
+        executive_summary += " The incident has not yet been acknowledged."
 
-    if not assigned:
-        recommended_actions.append(
-            "Assign the incident to an OT cybersecurity analyst."
-        )
+    if assigned:
+        executive_summary += f" It is currently assigned to {assigned_to}."
+    else:
+        executive_summary += " No analyst is currently assigned."
 
     if device_status.lower() != "online":
         recommended_actions.append(

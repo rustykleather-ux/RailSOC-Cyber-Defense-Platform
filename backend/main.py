@@ -153,40 +153,6 @@ def create_training_scenario(request: ScenarioCreateRequest):
 # AI Incidence Analysis
 # =========================================================
 
-    @app.get("/incidents/{incident_id}/analysis")
-    def get_incident_analysis(
-    incident_id: int,
-    db: Session = Depends(get_db)
-    ):
-        incident = db.query(Incident).filter(
-        Incident.id == incident_id
-    ).first()
-
-    if not incident:
-        raise HTTPException(
-            status_code=404,
-            detail="Incident not found"
-        )
-
-    incident_data = {
-        "id": incident.id,
-        "severity": incident.severity,
-        "device": incident.device,
-        "alert_type": incident.alert_type,
-        "message": incident.message,
-        "status": incident.status,
-        "acknowledged": incident.acknowledged,
-        "assigned_to": incident.assigned_to,
-        "investigation_notes": incident.investigation_notes,
-        "mitre_technique": incident.mitre_technique,
-        "closed_by": incident.closed_by,
-        "closed_at": incident.closed_at.isoformat()
-        if incident.closed_at
-        else None,
-    }
-
-    return analyze_single_incident(incident_data)
-
 @app.get("/incidents/{incident_id}/analysis")
 def get_incident_analysis(
     incident_id: int,
@@ -273,6 +239,9 @@ def get_incident_analysis(
         "open_vulnerabilities": open_vulnerabilities,
         "previous_incidents": previous_incidents
     }
+    import json
+
+    print(json.dumps(incident_data, indent=2, default=str))                        
 
     return analyze_single_incident(
         incident=incident_data,
@@ -1066,26 +1035,34 @@ def get_incidents(db: Session = Depends(get_db)):
     return incidents
 
 @app.post("/incidents/{incident_id}/acknowledge")
-def acknowledge_incident(incident_id: int, db: Session = Depends(get_db)):
-    alert = db.query(Alert).filter(Alert.id == incident_id).first()
+def acknowledge_incident(
+    incident_id: int,
+    db: Session = Depends(get_db)
+):
+    incident = (
+        db.query(Incident)
+        .filter(Incident.id == incident_id)
+        .first()
+    )
 
-    if not alert:
-        return {"error": "Incident not found"}
+    if not incident:
+        raise HTTPException(
+            status_code=404,
+            detail="Incident not found"
+        )
 
-    alert.acknowledged = True
-    alert.status = "Acknowledged"
+    incident.acknowledged = True
+    incident.status = "Acknowledged"
 
-    db.add(alert)
     db.commit()
-    db.refresh(alert)
+    db.refresh(incident)
 
     return {
         "message": "Incident acknowledged",
-        "incident_id": alert.id,
-        "status": alert.status,
-        "acknowledged": alert.acknowledged
+        "incident_id": incident.id,
+        "status": incident.status,
+        "acknowledged": incident.acknowledged
     }
-
 def get_mitre_mapping(alert_type):
     mappings = {
         "Communication Loss": "T0881 - Service Stop",
@@ -1136,20 +1113,27 @@ def assign_incident(
     request: AssignIncidentRequest,
     db: Session = Depends(get_db)
 ):
-    alert = db.query(Alert).filter(Alert.id == incident_id).first()
+    incident = (
+        db.query(Incident)
+        .filter(Incident.id == incident_id)
+        .first()
+    )
 
-    if not alert:
-        return {"error": "Incident not found"}
+    if not incident:
+        raise HTTPException(
+            status_code=404,
+            detail="Incident not found"
+        )
 
-    alert.assigned_to = request.assigned_to
-    db.add(alert)
+    incident.assigned_to = request.assigned_to
+
     db.commit()
-    db.refresh(alert)
+    db.refresh(incident)
 
     return {
         "message": "Incident assigned",
-        "incident_id": alert.id,
-        "assigned_to": alert.assigned_to
+        "incident_id": incident.id,
+        "assigned_to": incident.assigned_to
     }
 
 @app.post("/reset-demo")

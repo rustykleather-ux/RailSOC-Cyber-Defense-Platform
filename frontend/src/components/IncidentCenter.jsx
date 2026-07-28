@@ -14,6 +14,7 @@ function IncidentCenter({
   const [incidentAnalysis, setIncidentAnalysis] = useState(null);
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [analysisError, setAnalysisError] = useState("");
+  const [analysisRefreshKey, setAnalysisRefreshKey] = useState(0);
   
   const getAnalysisLevelClass = (level = "") => {
   switch (level.toLowerCase()) {
@@ -95,7 +96,7 @@ function IncidentCenter({
   return () => {
     controller.abort();
   };
-}, [selectedIncident?.id]);
+}, [selectedIncident?.id, analysisRefreshKey]);
 
 
 
@@ -137,28 +138,41 @@ function IncidentCenter({
     setNotes(incident.investigation_notes || "");
   };
 
-  const handleAcknowledge = async () => {
-    if (!selectedIncident) return;
+ const handleAcknowledge = async () => {
+  if (!selectedIncident) return;
 
+  try {
     await acknowledgeIncident(selectedIncident.id);
 
-    setSelectedIncident({
-      ...selectedIncident,
+    setSelectedIncident((currentIncident) => ({
+      ...currentIncident,
       acknowledged: true,
       status: "Acknowledged",
-    });
-  };
+    }));
+
+    // Refresh the AI analysis
+    setAnalysisRefreshKey((currentKey) => currentKey + 1);
+  } catch (error) {
+    console.error("Unable to acknowledge incident:", error);
+  }
+};
 
   const handleSaveAssignment = async () => {
-    if (!selectedIncident) return;
+  if (!selectedIncident) return;
 
+  try {
     await assignIncident(selectedIncident.id, assignedTo);
 
-    setSelectedIncident({
-      ...selectedIncident,
+    setSelectedIncident((currentIncident) => ({
+      ...currentIncident,
       assigned_to: assignedTo,
-    });
-  };
+    }));
+
+    setAnalysisRefreshKey((currentKey) => currentKey + 1);
+  } catch (error) {
+    console.error("Unable to assign incident:", error);
+  }
+};
 
   const handleSaveNotes = async () => {
     if (!selectedIncident) return;

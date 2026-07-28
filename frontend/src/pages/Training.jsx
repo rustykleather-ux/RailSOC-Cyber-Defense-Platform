@@ -66,6 +66,17 @@ function Training({ simulateAttack, resetDemo }) {
         "Simulates loss of communications between Positive Train Control components.",
     },
     {
+      id: "switch",
+      title: "Unauthorized Switch Logic Modification",
+      icon: Cpu,
+      asset: "Switch Machine Controller",
+      severity: "Critical",
+      mitre: "T0859 - Modify Controller Tasking",
+      difficulty: "Advanced",
+      description:
+        "Simulates a locked and misaligned switch that prevents train movement.",
+    },
+    {
       id: "malware",
       title: "Malware on Engineering Station",
       icon: Bug,

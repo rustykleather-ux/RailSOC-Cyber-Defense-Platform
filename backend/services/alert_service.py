@@ -36,6 +36,7 @@ def create_alert(
 
     db.add(incident)
     db.flush()
+    alert.created_incident_id = incident.id
 
     print("Created Alert ID:", alert.id)
     print("Created Incident ID:", incident.id)

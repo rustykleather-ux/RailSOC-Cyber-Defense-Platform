@@ -1,5 +1,5 @@
 import random
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, Any, Dict, List
 from urllib import request
 
@@ -15,7 +15,7 @@ from scenario_manager import scenario_manager
 from simulation_engine import apply_attack
 from attack_catalog import Attack_Catalog   
 from attack_manager import launch_attack, get_active_attacks 
-from database import Base, engine, SessionLocal
+from database import Base, engine, SessionLocal, ensure_sqlite_schema
 import models
 from models import (
     OTDevice,
@@ -24,15 +24,31 @@ from models import (
     Train,
     TrainHistory,
     Incident,
-    TrackBlock
+    TrackBlock,
+    TrackSwitch,
+    GradeCrossing,
+    DispatchCommand,
     
 )
 from services.risk_engine import calculate_device_risk
 from services.digital_twin_service import (
     DigitalTwinConflictError,
+    apply_digital_twin_effect,
     apply_signal_controller_effect,
 )
+from services.operational_impact import (
+    build_operational_summary,
+    get_operational_impact,
+)
+from services.timeline_service import get_timeline, record_event
 from seed_track_blocks import assign_signal_controller_track_blocks
+from seed_operational_assets import seed_operational_assets
+from services.dispatch_service import (
+    get_dispatch_device,
+    process_dispatch_commands,
+    queue_dispatch_command,
+    serialize_command,
+)
 from train_simulation import train_simulation
 
 
@@ -55,6 +71,15 @@ class ScenarioTimelineEventRequest(BaseModel):
     severity: str = "Info"
     progress: Optional[int] = Field(default=None, ge=0, le=100)
     metadata: Optional[Dict[str, Any]] = None
+
+
+class DispatchCommandRequest(BaseModel):
+    command_type: str
+    payload: Optional[Dict[str, Any]] = None
+
+
+class DispatchStatusRequest(BaseModel):
+    status: str
 
 # =========================================================
 # FastAPI application
@@ -82,6 +107,7 @@ app.add_middleware(
 # =========================================================
 
 Base.metadata.create_all(bind=engine)
+ensure_sqlite_schema()
 
 
 def get_db():
@@ -99,6 +125,7 @@ def initialize_track_block_controller_assignments():
 
     try:
         assign_signal_controller_track_blocks(db)
+        seed_operational_assets(db)
         db.commit()
     except Exception:
         db.rollback()
@@ -131,10 +158,8 @@ def get_ai_operations_brief(
         .all()
     )
 
-    # The Incident model will be added later.
-    incidents = []
-
-    return build_operations_brief(
+    incidents = db.query(models.Incident).all()
+    result = build_operations_brief(
         devices=devices,
         alerts=alerts,
         vulnerabilities=vulnerabilities,
@@ -143,6 +168,10 @@ def get_ai_operations_brief(
         activity_logs=activity_logs,
         incidents=incidents,
     )
+    impact = get_operational_impact(db)
+    result["operational_impact"] = impact
+    result["operational_summary"] = build_operational_summary(impact)
+    return result
 # =========================================================
 # Scenario endpoint
 # =========================================================
@@ -263,10 +292,17 @@ def get_incident_analysis(
 
     print(json.dumps(incident_data, indent=2, default=str))                        
 
-    return analyze_single_incident(
+    result = analyze_single_incident(
         incident=incident_data,
         device_context=device_context
     )
+    impact = get_operational_impact(db)
+    summary = build_operational_summary(impact)
+    result.setdefault("operational_impact", {})
+    result["operational_impact"]["description"] = summary
+    result["operational_impact"]["metrics"] = impact
+    result["operational_summary"] = summary
+    return result
 # =========================================================
 # Track Blocks API endpoint
 # =========================================================
@@ -316,6 +352,129 @@ def get_track_blocks(
         }
         for block in blocks
     ]
+
+
+@app.get("/operations/impact")
+def get_operations_impact(db: Session = Depends(get_db)):
+    impact = get_operational_impact(db)
+    return {
+        **impact,
+        "summary": build_operational_summary(impact),
+    }
+
+
+@app.get("/operations/timeline")
+def get_operations_timeline(
+    limit: int = 100,
+    db: Session = Depends(get_db),
+):
+    return {"events": get_timeline(db, limit=limit)}
+
+
+@app.get("/track-switches")
+def get_track_switches(db: Session = Depends(get_db)):
+    switches = db.query(TrackSwitch).order_by(TrackSwitch.milepost).all()
+    return [
+        {
+            "id": track_switch.id,
+            "name": track_switch.name,
+            "subdivision": track_switch.subdivision,
+            "track": track_switch.track,
+            "milepost": track_switch.milepost,
+            "track_block_id": track_switch.track_block_id,
+            "controlling_device_id": track_switch.controlling_device_id,
+            "controlling_device": track_switch.controlling_device.name,
+            "position": track_switch.position,
+            "commanded_position": track_switch.commanded_position,
+            "locked": track_switch.locked,
+            "communications_status": track_switch.communications_status,
+            "security_status": track_switch.security_status,
+            "last_updated": track_switch.last_updated,
+        }
+        for track_switch in switches
+    ]
+
+
+@app.get("/grade-crossings")
+def get_grade_crossings(db: Session = Depends(get_db)):
+    crossings = db.query(GradeCrossing).order_by(GradeCrossing.milepost).all()
+    return [
+        {
+            "id": crossing.id,
+            "name": crossing.name,
+            "subdivision": crossing.subdivision,
+            "milepost": crossing.milepost,
+            "controlling_device_id": crossing.controlling_device_id,
+            "controlling_device": crossing.controlling_device.name,
+            "gate_state": crossing.gate_state,
+            "lights_active": crossing.lights_active,
+            "warning_time_seconds": crossing.warning_time_seconds,
+            "communications_status": crossing.communications_status,
+            "security_status": crossing.security_status,
+            "last_updated": crossing.last_updated,
+        }
+        for crossing in crossings
+    ]
+
+
+@app.get("/dispatch/commands")
+def get_dispatch_commands(db: Session = Depends(get_db)):
+    return {
+        "commands": [
+            serialize_command(command)
+            for command in db.query(DispatchCommand)
+            .order_by(DispatchCommand.requested_at.desc())
+            .all()
+        ]
+    }
+
+
+@app.post("/dispatch/commands")
+def create_dispatch_command(
+    request: DispatchCommandRequest,
+    db: Session = Depends(get_db),
+):
+    try:
+        command = queue_dispatch_command(
+            db, request.command_type, request.payload
+        )
+        db.commit()
+        db.refresh(command)
+        return serialize_command(command)
+    except Exception:
+        db.rollback()
+        raise
+
+
+@app.post("/dispatch/status")
+def set_dispatch_status(
+    request: DispatchStatusRequest,
+    db: Session = Depends(get_db),
+):
+    normalized = request.status.strip().title()
+    if normalized not in {"Online", "Degraded", "Severe", "Offline"}:
+        raise HTTPException(
+            status_code=400,
+            detail="Status must be Online, Degraded, Severe, or Offline.",
+        )
+    device = get_dispatch_device(db)
+    if device is None:
+        raise HTTPException(status_code=404, detail="Dispatch SCADA not found.")
+    device.status = normalized
+    if normalized == "Online":
+        process_dispatch_commands(db, restore=True)
+    record_event(
+        db,
+        event_type="dispatch_status_changed",
+        title=f"Dispatch SCADA {normalized.lower()}",
+        message=f"Dispatch SCADA status changed to {normalized}.",
+        severity="Info" if normalized == "Online" else "High",
+        device_id=device.id,
+        asset_name=device.name,
+        metadata={"status": normalized},
+    )
+    db.commit()
+    return {"device": device.name, "status": device.status}
 
 # =========================================================
 # Custom Scenario Base models
@@ -621,6 +780,18 @@ def close_incident(
     incident.status = "Closed"
     incident.closed_by = request.closed_by
     incident.closed_at = datetime.utcnow()
+    record_event(
+        db,
+        event_type="incident_closed",
+        title=f"Incident {incident.id} closed",
+        message=(
+            f"{request.closed_by} closed {incident.alert_type} "
+            f"for {incident.device}."
+        ),
+        asset_name=incident.device or "",
+        device_id=incident.device_id,
+        incident_id=incident.id,
+    )
 
     db.commit()
     db.refresh(incident)
@@ -712,8 +883,9 @@ def simulate_attack(attack_type: str, db: Session = Depends(get_db)):
 
     scenarios = {
         "firmware": {
+            "attack_id": "firmware_tampering",
             "device": "Grade Crossing Controller MP 82.4",
-            "status": "Online",
+            "status": "Degraded",
             "risk": "Critical",
             "severity": "Critical",
             "alert_type": "Unauthorized Logic Modification",
@@ -721,6 +893,7 @@ def simulate_attack(attack_type: str, db: Session = Depends(get_db)):
             "firmware": "UNKNOWN",
         },
         "recon": {
+            "attack_id": "network_recon",
             "device": "Dispatch SCADA Server",
             "status": "Online",
             "risk": "High",
@@ -729,6 +902,7 @@ def simulate_attack(attack_type: str, db: Session = Depends(get_db)):
             "message": "Simulated rail OT event: Network reconnaissance detected against the dispatch SCADA environment.",
         },
         "dos": {
+            "attack_id": "denial_of_service",
             "device": "Dispatch SCADA Server",
             "status": "Degraded",
             "risk": "Critical",
@@ -737,6 +911,7 @@ def simulate_attack(attack_type: str, db: Session = Depends(get_db)):
             "message": "Simulated rail OT event: Denial of service condition causing degraded dispatch SCADA communications.",
         },
         "auth": {
+            "attack_id": "credential_abuse",
             "device": "Rail Engineering Workstation",
             "status": "Online",
             "risk": "High",
@@ -745,6 +920,7 @@ def simulate_attack(attack_type: str, db: Session = Depends(get_db)):
             "message": "Simulated rail OT event: Repeated authentication attempts detected against rail engineering workstation.",
         },
         "ptc": {
+            "attack_id": "communication_failure",
             "device": "PTC Radio Gateway",
             "status": "Offline",
             "risk": "High",
@@ -753,6 +929,7 @@ def simulate_attack(attack_type: str, db: Session = Depends(get_db)):
             "message": "Simulated rail OT event: PTC radio gateway communication loss detected from the wayside communications hut.",
         },
         "malware": {
+            "attack_id": "malware_injection",
             "device": "Rail Engineering Workstation",
             "status": "Degraded",
             "risk": "Critical",
@@ -761,6 +938,7 @@ def simulate_attack(attack_type: str, db: Session = Depends(get_db)):
             "message": "Simulated rail OT event: Malware-like behavior detected on rail engineering workstation.",
         },
         "signal": {
+            "attack_id": "logic_modification",
             "device": "Signal Controller 14A",
             "status": "Degraded",
             "risk": "Critical",
@@ -777,6 +955,19 @@ def simulate_attack(attack_type: str, db: Session = Depends(get_db)):
             "mitre_technique": (
                 "T0859 - Modify Controller Tasking"
             ),
+        },
+        "switch": {
+            "attack_id": "logic_modification",
+            "device": "Switch Machine Controller",
+            "status": "Degraded",
+            "risk": "Critical",
+            "severity": "Critical",
+            "alert_type": "Unauthorized Switch Logic Modification",
+            "message": (
+                "Simulated rail OT event: Unauthorized switch logic "
+                "left the controlled switch locked and misaligned."
+            ),
+            "mitre_technique": "T0859 - Modify Controller Tasking",
         },
     }
 
@@ -798,20 +989,42 @@ def simulate_attack(attack_type: str, db: Session = Depends(get_db)):
     try:
         device.status = scenario["status"]
         device.risk_level = scenario["risk"]
-        device.last_seen = datetime.utcnow()
+        device.last_seen = datetime.now(timezone.utc)
 
         if "firmware" in scenario:
             device.firmware_version = scenario["firmware"]
 
         affected_blocks = []
+        operational_effects = {
+            "effect_type": None,
+            "affected_track_blocks": [],
+        }
 
         if attack_type == "signal":
             affected_blocks = apply_signal_controller_effect(
                 db=db,
                 device=device,
             )
+            operational_effects = {
+                "effect_type": "signal_controller_compromise",
+                "affected_track_blocks": affected_blocks,
+            }
+        else:
+            operational_effects = apply_digital_twin_effect(
+                db=db,
+                attack={
+                    "attack_id": scenario["attack_id"],
+                    "digital_twin_effect": Attack_Catalog.get(
+                        scenario["attack_id"], {}
+                    ).get("digital_twin_effect"),
+                },
+                target=device,
+            )
+            affected_blocks = operational_effects.get(
+                "affected_track_blocks", []
+            )
 
-        create_alert(
+        alert = create_alert(
             db=db,
             device=device,
             attack={
@@ -824,6 +1037,18 @@ def simulate_attack(attack_type: str, db: Session = Depends(get_db)):
                 ),
             },
         )
+        record_event(
+            db,
+            event_type="attack_launched",
+            title=scenario["alert_type"],
+            message=scenario["message"],
+            severity=scenario["severity"],
+            source="Direct Simulation",
+            asset_name=device.name,
+            device_id=device.id,
+            incident_id=getattr(alert, "created_incident_id", None),
+            metadata={"attack_type": attack_type},
+        )
 
         db.commit()
 
@@ -834,6 +1059,7 @@ def simulate_attack(attack_type: str, db: Session = Depends(get_db)):
             "device": device.name,
             "severity": scenario["severity"],
             "affected_track_blocks": affected_blocks,
+            "operational_effects": operational_effects,
         }
     except DigitalTwinConflictError as exc:
         db.rollback()
@@ -1148,6 +1374,16 @@ def acknowledge_incident(
 
     incident.acknowledged = True
     incident.status = "Acknowledged"
+    record_event(
+        db,
+        event_type="incident_acknowledged",
+        title=f"Incident {incident.id} acknowledged",
+        message=f"{incident.alert_type} for {incident.device} was acknowledged.",
+        severity=incident.severity or "Info",
+        asset_name=incident.device or "",
+        device_id=incident.device_id,
+        incident_id=incident.id,
+    )
 
     db.commit()
     db.refresh(incident)
@@ -1232,7 +1468,7 @@ def assign_incident(
 @app.post("/reset-demo")
 def reset_demo(db: Session = Depends(get_db)):
     try:
-        timestamp = datetime.utcnow()
+        timestamp = datetime.now(timezone.utc)
         devices = db.query(OTDevice).all()
 
         for device in devices:
@@ -1247,12 +1483,120 @@ def reset_demo(db: Session = Depends(get_db)):
             elif device.name == "Rail Engineering Workstation":
                 device.firmware_version = "Windows 11 24H2"
 
+        restored_blocks = []
         for block in db.query(TrackBlock).all():
+            was_affected = (
+                block.signal_aspect != "Clear"
+                or block.communications_status != "Online"
+                or block.security_status != "Healthy"
+            )
             block.signal_aspect = "Clear"
             block.communications_status = "Online"
             block.security_status = "Healthy"
             block.last_updated = timestamp
+            if was_affected:
+                restored_blocks.append(block.name)
+                record_event(
+                    db,
+                    event_type="signal_restored",
+                    title=f"{block.name} restored",
+                    message=(
+                        f"{block.name} signal, communications, and "
+                        "security state returned to baseline."
+                    ),
+                    asset_name=block.name,
+                    track_block_id=block.id,
+                    device_id=block.controlling_device_id,
+                )
 
+        restored_switches = []
+        for track_switch in db.query(TrackSwitch).all():
+            was_affected = (
+                track_switch.locked
+                or track_switch.position != "Normal"
+                or track_switch.commanded_position != "Normal"
+                or track_switch.communications_status != "Online"
+                or track_switch.security_status != "Healthy"
+            )
+            track_switch.position = "Normal"
+            track_switch.commanded_position = "Normal"
+            track_switch.locked = False
+            track_switch.communications_status = "Online"
+            track_switch.security_status = "Healthy"
+            track_switch.last_updated = timestamp
+            if was_affected:
+                restored_switches.append(track_switch.name)
+                record_event(
+                    db,
+                    event_type="switch_restored",
+                    title=f"{track_switch.name} restored",
+                    message=(
+                        f"{track_switch.name} returned to its normal, "
+                        "unlocked operational state."
+                    ),
+                    asset_name=track_switch.name,
+                    device_id=track_switch.controlling_device_id,
+                    track_block_id=track_switch.track_block_id,
+                )
+
+        restored_crossings = []
+        for crossing in db.query(GradeCrossing).all():
+            was_affected = (
+                crossing.gate_state == "Unavailable"
+                or crossing.communications_status != "Online"
+                or crossing.security_status != "Healthy"
+            )
+            crossing.gate_state = "Raised"
+            crossing.lights_active = False
+            crossing.warning_time_seconds = 30
+            crossing.communications_status = "Online"
+            crossing.security_status = "Healthy"
+            crossing.last_updated = timestamp
+            if was_affected:
+                restored_crossings.append(crossing.name)
+                record_event(
+                    db,
+                    event_type="crossing_restored",
+                    title=f"{crossing.name} restored",
+                    message=(
+                        f"{crossing.name} warning-system availability "
+                        "returned to baseline."
+                    ),
+                    asset_name=crossing.name,
+                    device_id=crossing.controlling_device_id,
+                )
+
+        resumed_trains = []
+        for train in db.query(Train).all():
+            if train.status not in {
+                "Stopped at Signal",
+                "Stopped at Unsafe Switch",
+                "Restricted - PTC Communications",
+            }:
+                continue
+            was_stopped = train.speed == 0
+            train.status = "Moving"
+            train.current_signal = "Clear"
+            if was_stopped:
+                train.speed = 0
+            train.last_updated = timestamp
+            resumed_trains.append(train.symbol)
+            record_event(
+                db,
+                event_type="train_resumed",
+                title=f"{train.symbol} authorized to resume",
+                message=(
+                    f"{train.symbol} was released from its signal stop "
+                    "or operating restriction."
+                ),
+                asset_name=train.symbol,
+                train_id=train.id,
+                metadata={"milepost": train.milepost, "reset_demo": True},
+            )
+
+        applied_dispatch_commands = process_dispatch_commands(
+            db, restore=True
+        )
         db.query(Incident).delete(synchronize_session=False)
         db.query(Alert).delete(synchronize_session=False)
         db.commit()
@@ -1261,6 +1605,11 @@ def reset_demo(db: Session = Depends(get_db)):
             "message": "Operational baseline restored",
             "alerts_cleared": True,
             "incidents_cleared": True,
+            "restored_track_blocks": restored_blocks,
+            "restored_switches": restored_switches,
+            "restored_crossings": restored_crossings,
+            "resumed_trains": resumed_trains,
+            "applied_dispatch_commands": len(applied_dispatch_commands),
         }
     except Exception:
         db.rollback()

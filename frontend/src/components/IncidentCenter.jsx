@@ -447,6 +447,27 @@ function IncidentCenter({
         <p>
           {incidentAnalysis.operational_impact.description}
         </p>
+
+        {incidentAnalysis.operational_impact.metrics && (
+          <div className="timeline-details">
+            <span>
+              <strong>Affected blocks:</strong>{" "}
+              {incidentAnalysis.operational_impact.metrics.affected_blocks}
+            </span>
+            <span>
+              <strong>Stopped trains:</strong>{" "}
+              {incidentAnalysis.operational_impact.metrics.stopped_trains}
+            </span>
+            <span>
+              <strong>Delay:</strong>{" "}
+              {incidentAnalysis.operational_impact.metrics.cumulative_delay_minutes} min
+            </span>
+            <span>
+              <strong>Blocked track:</strong>{" "}
+              {incidentAnalysis.operational_impact.metrics.blocked_track_miles} mi
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="drawer-section">

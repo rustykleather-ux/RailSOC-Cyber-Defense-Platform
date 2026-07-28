@@ -1,4 +1,13 @@
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, Float
+from sqlalchemy import (
+    Boolean,
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+)
 from sqlalchemy.orm import relationship
 from datetime import datetime
 
@@ -235,6 +244,12 @@ class ActivityLog(Base):
     source = Column(String, default="TrackSentinel")
     asset_name = Column(String, default="")
     status = Column(String, default="Completed")
+    device_id = Column(Integer, nullable=True, index=True)
+    train_id = Column(Integer, nullable=True, index=True)
+    track_block_id = Column(Integer, nullable=True, index=True)
+    incident_id = Column(Integer, nullable=True, index=True)
+    scenario_id = Column(String, nullable=True, index=True)
+    metadata_json = Column(Text, default="{}")
 
 
 class TrackBlock(Base):
@@ -318,3 +333,81 @@ class TrackBlock(Base):
         "OTDevice",
         foreign_keys=[controlling_device_id]
     )
+
+
+class TrackSwitch(Base):
+    __tablename__ = "track_switches"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False, unique=True)
+    subdivision = Column(String, nullable=False)
+    track = Column(String, default="Main")
+    milepost = Column(Float, nullable=False)
+    track_block_id = Column(
+        Integer,
+        ForeignKey("track_blocks.id"),
+        nullable=True,
+    )
+    controlling_device_id = Column(
+        Integer,
+        ForeignKey("ot_devices.id"),
+        nullable=False,
+    )
+    position = Column(String, default="Normal")
+    commanded_position = Column(String, default="Normal")
+    locked = Column(Boolean, default=False)
+    communications_status = Column(String, default="Online")
+    security_status = Column(String, default="Healthy")
+    last_updated = Column(
+        DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+    )
+
+    track_block = relationship("TrackBlock")
+    controlling_device = relationship("OTDevice")
+
+
+class GradeCrossing(Base):
+    __tablename__ = "grade_crossings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False, unique=True)
+    subdivision = Column(String, nullable=False)
+    milepost = Column(Float, nullable=False)
+    controlling_device_id = Column(
+        Integer,
+        ForeignKey("ot_devices.id"),
+        nullable=False,
+    )
+    gate_state = Column(String, default="Raised")
+    lights_active = Column(Boolean, default=False)
+    warning_time_seconds = Column(Integer, default=30)
+    communications_status = Column(String, default="Online")
+    security_status = Column(String, default="Healthy")
+    last_updated = Column(
+        DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+    )
+
+    controlling_device = relationship("OTDevice")
+
+
+class DispatchCommand(Base):
+    __tablename__ = "dispatch_commands"
+
+    id = Column(Integer, primary_key=True, index=True)
+    device_id = Column(
+        Integer,
+        ForeignKey("ot_devices.id"),
+        nullable=False,
+    )
+    command_type = Column(String, nullable=False)
+    payload_json = Column(Text, default="{}")
+    status = Column(String, default="Queued")
+    requested_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    apply_after = Column(DateTime, nullable=True)
+    applied_at = Column(DateTime, nullable=True)
+
+    device = relationship("OTDevice")

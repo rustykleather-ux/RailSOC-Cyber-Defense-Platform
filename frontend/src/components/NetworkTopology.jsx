@@ -1,4 +1,4 @@
-function NetworkTopology({ devices }) {
+function NetworkTopology({ devices, trackBlocks = [] }) {
   const getDevice = (name) => {
     return (devices || []).find((device) => device.name === name);
   };
@@ -84,6 +84,10 @@ function NetworkTopology({ devices }) {
               <div className="topology-zone-grid">
                 {group.nodes.map((name) => {
                   const device = getDevice(name);
+                  const controlledBlocks = trackBlocks.filter(
+                    (block) =>
+                      block.controlling_device_id === device?.id,
+                  );
 
                   return (
                     <div
@@ -93,6 +97,14 @@ function NetworkTopology({ devices }) {
                       {name}
                       <span>{device?.device_type || "Unknown Type"}</span>
                       <span>{device?.ip_address || "Unknown IP"}</span>
+                      {controlledBlocks.length > 0 && (
+                        <span>
+                          Controls:{" "}
+                          {controlledBlocks
+                            .map((block) => block.name)
+                            .join(", ")}
+                        </span>
+                      )}
                     </div>
                   );
                 })}

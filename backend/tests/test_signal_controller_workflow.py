@@ -20,13 +20,14 @@ from main import (
     reset_demo,
     simulate_attack,
 )
-from models import Alert, Incident, OTDevice, TrackBlock, Train
+from models import ActivityLog, Alert, Incident, OTDevice, TrackBlock, Train
 from seed_track_blocks import (
     SIGNAL_CONTROLLER_BLOCK_NAMES,
     seed_track_blocks,
 )
 from train_simulation import TrainSimulationEngine
 from services.digital_twin_service import apply_signal_controller_effect
+from services.operational_impact import get_operational_impact
 
 
 class SignalControllerWorkflowTests(unittest.TestCase):
@@ -307,7 +308,11 @@ class SignalControllerWorkflowTests(unittest.TestCase):
 
         self.assertEqual(train.current_signal, "Clear")
         self.assertEqual(train.status, "Moving")
-        self.assertEqual(train.speed, simulation.NORMAL_SPEED_MPH)
+        self.assertEqual(
+            train.speed,
+            simulation.NORMAL_ACCELERATION_MPH_PER_SECOND
+            * simulation.interval_seconds,
+        )
         self.assertGreater(train.milepost, previous_milepost)
         self.assertLessEqual(
             train.milepost - previous_milepost,
@@ -316,6 +321,143 @@ class SignalControllerWorkflowTests(unittest.TestCase):
             )
             + 0.001,
         )
+
+    def test_train_slows_gradually_for_approach(self):
+        block = self.db.query(TrackBlock).filter(
+            TrackBlock.name == "Block E82"
+        ).one()
+        block.signal_aspect = "Approach"
+        train = Train(
+            symbol="TEST-APPROACH",
+            subdivision="East Subdivision",
+            track="Main",
+            direction="Eastbound",
+            milepost=81.5,
+            speed=40,
+            status="Moving",
+        )
+        self.db.add(train)
+        self.db.commit()
+
+        simulation = TrainSimulationEngine(interval_seconds=3)
+        simulation._update_train(train, self.db)
+
+        self.assertEqual(train.current_signal, "Approach")
+        self.assertEqual(train.status, "Restricted")
+        self.assertGreater(train.speed, simulation.APPROACH_SPEED_MPH)
+        self.assertLess(train.speed, 40)
+
+    def test_train_never_enters_stop_block_over_multiple_ticks(self):
+        block = self.db.query(TrackBlock).filter(
+            TrackBlock.name == "Block E82"
+        ).one()
+        block.signal_aspect = "Stop"
+        block.security_status = "Compromised"
+        train = Train(
+            symbol="TEST-BRAKE",
+            subdivision="East Subdivision",
+            track="Main",
+            direction="Eastbound",
+            milepost=81.7,
+            speed=40,
+            status="Moving",
+        )
+        self.db.add(train)
+        self.db.commit()
+        simulation = TrainSimulationEngine(interval_seconds=3)
+
+        for _ in range(30):
+            simulation._update_train(train, self.db)
+            if train.status == "Stopped at Signal":
+                break
+
+        self.assertEqual(train.status, "Stopped at Signal")
+        self.assertLess(train.milepost, block.start_milepost)
+        self.assertGreaterEqual(
+            block.start_milepost - train.milepost,
+            simulation.SIGNAL_STOP_MARGIN_MILES - 0.001,
+        )
+
+    def test_occupied_next_block_forces_signal_stop(self):
+        block = self.db.query(TrackBlock).filter(
+            TrackBlock.name == "Block E82"
+        ).one()
+        leading = Train(
+            symbol="LEAD",
+            subdivision="East Subdivision",
+            track="Main",
+            direction="Eastbound",
+            milepost=82.5,
+            speed=0,
+            status="Stopped",
+        )
+        following = Train(
+            symbol="FOLLOW",
+            subdivision="East Subdivision",
+            track="Main",
+            direction="Eastbound",
+            milepost=81.99,
+            speed=20,
+            status="Moving",
+        )
+        self.db.add_all([leading, following])
+        self.db.commit()
+        block.occupied = True
+        block.occupied_train_id = leading.id
+        simulation = TrainSimulationEngine(interval_seconds=3)
+
+        simulation._update_train(following, self.db)
+
+        self.assertEqual(following.status, "Stopped at Signal")
+        self.assertLess(following.milepost, block.start_milepost)
+
+    def test_operational_impact_and_timeline_follow_signal_workflow(self):
+        simulate_attack("signal", self.db)
+        block = self.db.query(TrackBlock).filter(
+            TrackBlock.name == "Block E82"
+        ).one()
+        train = Train(
+            symbol="TEST-IMPACT",
+            subdivision="East Subdivision",
+            track="Main",
+            direction="Eastbound",
+            milepost=81.99,
+            speed=20,
+            status="Moving",
+        )
+        self.db.add(train)
+        self.db.flush()
+        simulation = TrainSimulationEngine(interval_seconds=3)
+        simulation._update_train(train, self.db)
+        self.db.commit()
+
+        impact = get_operational_impact(self.db)
+        event_types = {
+            event.event_type
+            for event in self.db.query(ActivityLog).all()
+        }
+        self.assertEqual(impact["affected_blocks"], 2)
+        self.assertEqual(impact["stopped_trains"], 1)
+        self.assertIn(block.name, impact["affected_block_names"])
+        self.assertTrue(
+            {
+                "attack_launched",
+                "controller_compromised",
+                "signal_forced_stop",
+                "train_began_braking",
+                "train_stopped_signal",
+            }.issubset(event_types)
+        )
+
+        reset_demo(self.db)
+        self.assertIn(
+            "signal_restored",
+            {
+                event.event_type
+                for event in self.db.query(ActivityLog).all()
+            },
+        )
+        self.assertEqual(get_operational_impact(self.db)["affected_blocks"], 0)
 
 
 if __name__ == "__main__":

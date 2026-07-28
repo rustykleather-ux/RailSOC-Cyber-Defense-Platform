@@ -16,6 +16,13 @@ function getBlockState(block) {
   const signal = normalize(block.signal_aspect);
 
   if (
+    security &&
+    !["healthy", "normal", "low"].includes(security)
+  ) {
+    return "security";
+  }
+
+  if (
     communications &&
     !["online", "normal", "healthy"].includes(communications)
   ) {
@@ -24,13 +31,6 @@ function getBlockState(block) {
 
   if (block.maintenance) {
     return "maintenance";
-  }
-
-  if (
-    security &&
-    !["healthy", "normal", "low"].includes(security)
-  ) {
-    return "security";
   }
 
   if (block.occupied) {
@@ -454,6 +454,9 @@ function BlockCard({ block, isSelected, onSelect }) {
         <span>{block.speed_limit || "—"} MPH</span>
         <span>{block.communications_status || "Unknown"}</span>
       </div>
+      <div className="track-block__controller">
+        {block.controlling_device || "No controller assigned"}
+      </div>
     </button>
   );
 }
@@ -473,7 +476,11 @@ function TrainMarker({
   return (
     <button
       type="button"
-      className="train-marker"
+      className={`train-marker ${
+        normalize(train.status).startsWith("stopped at")
+          ? "train-marker--stopped"
+          : ""
+      }`}
       style={{ left: `${left}%` }}
       onClick={() => onSelect(train)}
       title={`${train.symbol || "Train"} at MP ${
@@ -507,6 +514,10 @@ export default function RailroadMap({
 }) {
   const [trackBlocks, setTrackBlocks] = useState([]);
   const [trains, setTrains] = useState([]);
+  const [impact, setImpact] = useState(null);
+  const [timeline, setTimeline] = useState([]);
+  const [trackSwitches, setTrackSwitches] = useState([]);
+  const [gradeCrossings, setGradeCrossings] = useState([]);
   const [selectedDevice, setSelectedDevice] = useState(null);
   const [simulationRunning, setSimulationRunning] =
     useState(false);
@@ -539,9 +550,21 @@ export default function RailroadMap({
 
   const loadMapData = useCallback(async () => {
     try {
-      const [blockData, trainData] = await Promise.all([
+      const [
+        blockData,
+        trainData,
+        impactData,
+        timelineData,
+        switchData,
+        crossingData,
+      ] =
+        await Promise.all([
         fetchJson("/track-blocks"),
         fetchJson("/trains"),
+        fetchJson("/operations/impact"),
+        fetchJson("/operations/timeline?limit=8"),
+        fetchJson("/track-switches"),
+        fetchJson("/grade-crossings"),
       ]);
 
       setTrackBlocks(
@@ -554,6 +577,18 @@ export default function RailroadMap({
       );
 
       setTrains(Array.isArray(trainData) ? trainData : []);
+      setImpact(impactData || null);
+      setTimeline(
+        Array.isArray(timelineData?.events)
+          ? [...timelineData.events].reverse()
+          : [],
+      );
+      setTrackSwitches(
+        Array.isArray(switchData) ? switchData : [],
+      );
+      setGradeCrossings(
+        Array.isArray(crossingData) ? crossingData : [],
+      );
       setError("");
     } catch (loadError) {
       console.error("Map data load failed:", loadError);
@@ -805,11 +840,116 @@ export default function RailroadMap({
         />
       </div>
 
+      <div className="operational-consequence-grid">
+        <section className="operational-impact-card">
+          <h3>Operational Impact</h3>
+          <div className="operational-impact-card__metrics">
+            <MetricCard label="Affected Blocks" value={impact?.affected_blocks ?? 0} />
+            <MetricCard label="Stopped Trains" value={impact?.stopped_trains ?? 0} />
+            <MetricCard label="Delayed Trains" value={impact?.delayed_trains ?? 0} />
+            <MetricCard
+              label="Delay"
+              value={`${impact?.cumulative_delay_minutes ?? 0} min`}
+            />
+            <MetricCard
+              label="Track Available"
+              value={`${impact?.track_availability_percent ?? 100}%`}
+            />
+            <MetricCard
+              label="Unsafe Switches"
+              value={impact?.unsafe_switches ?? 0}
+            />
+            <MetricCard
+              label="Affected Crossings"
+              value={impact?.affected_crossings ?? 0}
+            />
+            <MetricCard
+              label="PTC Restricted"
+              value={impact?.ptc_restricted_trains ?? 0}
+            />
+            <MetricCard
+              label="Dispatch Available"
+              value={`${impact?.dispatch_availability_percent ?? 100}%`}
+            />
+            <MetricCard
+              label="Queued Commands"
+              value={impact?.queued_commands ?? 0}
+            />
+          </div>
+          <p>{impact?.summary || "Operational baseline available."}</p>
+        </section>
+
+        <section className="map-timeline-card">
+          <h3>Cyber-to-Operations Timeline</h3>
+          {timeline.length === 0 ? (
+            <p>No operational events recorded.</p>
+          ) : (
+            <ol>
+              {timeline.map((event) => (
+                <li
+                  key={event.id}
+                  className={`map-event map-event--${String(
+                    event.event_type || "event",
+                  ).split("_")[0]}`}
+                >
+                  <time>{formatTimestamp(event.timestamp)}</time>
+                  <strong>{event.title}</strong>
+                  <span>{event.message}</span>
+                </li>
+              ))}
+            </ol>
+          )}
+        </section>
+      </div>
+
+      <div className="wayside-status-grid">
+        {trackSwitches.map((trackSwitch) => (
+          <article
+            key={`switch-${trackSwitch.id}`}
+            className={`wayside-status-card ${
+              trackSwitch.locked ||
+              trackSwitch.position !== trackSwitch.commanded_position
+                ? "wayside-status-card--critical"
+                : ""
+            }`}
+          >
+            <span>TRACK SWITCH · MP {trackSwitch.milepost}</span>
+            <strong>{trackSwitch.name}</strong>
+            <small>
+              {trackSwitch.position} / commanded{" "}
+              {trackSwitch.commanded_position} ·{" "}
+              {trackSwitch.locked ? "Locked" : "Unlocked"}
+            </small>
+            <small>
+              Controller: {trackSwitch.controlling_device}
+            </small>
+          </article>
+        ))}
+        {gradeCrossings.map((crossing) => (
+          <article
+            key={`crossing-${crossing.id}`}
+            className={`wayside-status-card ${
+              crossing.gate_state === "Unavailable"
+                ? "wayside-status-card--critical"
+                : ""
+            }`}
+          >
+            <span>GRADE CROSSING · MP {crossing.milepost}</span>
+            <strong>{crossing.name}</strong>
+            <small>
+              Warning: {crossing.gate_state} · Communications:{" "}
+              {crossing.communications_status}
+            </small>
+            <small>Controller: {crossing.controlling_device}</small>
+          </article>
+        ))}
+      </div>
+
       <div className="territory-panel">
         <div className="territory-panel__title-row">
           <div>
             <span className="territory-panel__label">
-              PRAIRIE SUBDIVISION
+              {trackBlocks[0]?.subdivision || "RAILROAD SUBDIVISION"}
             </span>
 
             <strong>
@@ -1047,6 +1187,14 @@ export default function RailroadMap({
                     <dt>Speed limit</dt>
                     <dd>
                       {selectedBlock.speed_limit || "—"} MPH
+                    </dd>
+                  </div>
+
+                  <div>
+                    <dt>Controlling device</dt>
+                    <dd>
+                      {selectedBlock.controlling_device ||
+                        "Not assigned"}
                     </dd>
                   </div>
 

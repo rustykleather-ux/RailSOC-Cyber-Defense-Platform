@@ -26,6 +26,7 @@ import CreateScenario from "./pages/CreateScenario";
 
 import { getTrains } from "./services/trainService";
 import { getTrackBlocks } from "./services/blockService";
+import { getOperationsTimeline } from "./services/operationsService";
 
 import {
   getIncidents,
@@ -72,6 +73,15 @@ function App() {
   const [incidents, setIncidents] = useState([]);
   const [trains, setTrains] = useState([]);
   const [trackBlocks, setTrackBlocks] = useState([]);
+  const [operationsTimeline, setOperationsTimeline] = useState([]);
+
+  const loadOperationsTimeline = async () => {
+    try {
+      setOperationsTimeline(await getOperationsTimeline());
+    } catch (err) {
+      console.error("TrackSentinel Timeline Error:", err);
+    }
+  };
 
   const loadPlantStatus = async () => {
     try {
@@ -135,6 +145,7 @@ function App() {
         trainsRes,
         trackBlocksRes,
         plantStatusRes,
+        operationsTimelineRes,
       ] = await Promise.all([
         getDevices(),
         getVulnerabilities(),
@@ -144,6 +155,7 @@ function App() {
         getTrains(),
         getTrackBlocks(),
         getPlantStatus(),
+        getOperationsTimeline(),
       ]);
 
       setDevices(
@@ -191,6 +203,11 @@ function App() {
           ? plantStatusRes.data
           : []
       );
+      setOperationsTimeline(
+        Array.isArray(operationsTimelineRes)
+          ? operationsTimelineRes
+          : []
+      );
     } catch (err) {
       console.error(
         "TrackSentinel Load Data Error:",
@@ -206,6 +223,7 @@ function App() {
       loadPlantStatus();
       loadTrains();
       loadTrackBlocks();
+      loadOperationsTimeline();
     }, 3000);
 
     return () => {
@@ -467,6 +485,7 @@ function App() {
                 element={
                   <IncidentTimeline
                     incidents={incidents}
+                    events={operationsTimeline}
                   />
                 }
               />
@@ -520,6 +539,7 @@ function App() {
                 element={
                   <Topology
                     devices={devices}
+                    trackBlocks={trackBlocks}
                   />
                 }
               />

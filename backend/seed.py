@@ -3,6 +3,7 @@ from datetime import datetime
 from database import Base, engine, SessionLocal
 from models import OTDevice, Alert, Vulnerability,Train
 from seed_track_blocks import seed_track_blocks
+from seed_operational_assets import seed_operational_assets
 
 
 
@@ -22,7 +23,7 @@ db.commit()
 
 train_218 = Train(
     symbol="TS-218",
-    subdivision="Prairie Subdivision",
+    subdivision="East Subdivision",
     train_type="Intermodal",
     direction="Eastbound",
     destination="Kansas City Terminal",
@@ -461,6 +462,8 @@ db.add_all(vulnerabilities)
 db.commit()
 
 seed_track_blocks(db)
+seed_operational_assets(db)
+db.commit()
 
 db.close()
 

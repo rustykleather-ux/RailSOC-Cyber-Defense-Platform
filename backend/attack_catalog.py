@@ -10,7 +10,7 @@ Attack_Catalog = {
                              "PLC", 
                              "Switch Controller"],
         "condition": "Configuration Drift",
-        "digital_twin_effect": "signal_controller_compromise",
+        "digital_twin_effect": "controller_logic_compromise",
         "simulation_effect": {
             "status": "Compromised",
         },
@@ -50,8 +50,15 @@ Attack_Catalog = {
         "severity": "Critical",
         "mitre_id": "T1609",
         "mitre_name": "Firmware Modification",
-        "compatible_types": ["PLC", "Switch Controller", "IoT Device", "Dispatch SCADA"],
+        "compatible_types": [
+            "PLC",
+            "Switch Controller",
+            "IoT Device",
+            "Dispatch SCADA",
+            "Grade Crossing Controller",
+        ],
         "condition": "Unexpected Firmware Changes",
+        "digital_twin_effect": "crossing_system_compromise",
         "simulation_effect": {
         "status": "Maintenance"
         },
@@ -64,8 +71,9 @@ Attack_Catalog = {
         "severity": "High",
         "mitre_id": "T1499",
         "mitre_name": "Endpoint Denial of Service",
-        "compatible_types": ["Server", "Network Device"],
+        "compatible_types": ["Server", "Network Device", "Dispatch SCADA"],
         "condition": "Service Unavailability",
+        "digital_twin_effect": "dispatch_scada_degradation",
         "simulation_effect": {
         "status": "Degraded"
         },
@@ -78,8 +86,16 @@ Attack_Catalog = {
         "severity": "Medium",
         "mitre_id": "T1601",
         "mitre_name": "Communication Disruption",
-        "compatible_types": ["PLC", "Switch Controller", "IoT Device", "Signal Controller"],
+        "compatible_types": [
+            "PLC",
+            "Switch Controller",
+            "IoT Device",
+            "Signal Controller",
+            "Grade Crossing Controller",
+            "PTC Communications Gateway",
+        ],
         "condition": "Unexpected Communication Loss",
+        "digital_twin_effect": "communications_degradation",
         "simulation_effect": {
         "status": "Offline"
         },

@@ -1,7 +1,16 @@
-function IncidentTimeline({ incidents }) {
-  const timelineItems = (incidents || [])
+function IncidentTimeline({ incidents, events = [] }) {
+  const operationalItems = (events || []).map((event) => ({
+    ...event,
+    time: event.timestamp,
+    alert_type: event.title,
+    device: event.asset_name,
+    status: event.event_type,
+  }));
+  const timelineItems = (
+    operationalItems.length > 0 ? operationalItems : incidents || []
+  )
     .slice()
-    .sort((a, b) => new Date(b.time) - new Date(a.time));
+    .sort((a, b) => new Date(a.time) - new Date(b.time));
 
   return (
     <section className="timeline-page">
@@ -17,7 +26,12 @@ function IncidentTimeline({ incidents }) {
           <div className="timeline-empty">No incident activity recorded.</div>
         ) : (
           timelineItems.map((incident) => (
-            <div className="timeline-item" key={incident.id}>
+            <div
+              className={`timeline-item timeline-item--${
+                String(incident.event_type || "incident").split("_")[0]
+              }`}
+              key={`${incident.event_type || "incident"}-${incident.id}`}
+            >
               <div className={`timeline-dot ${(incident.severity || "low").toLowerCase()}`}></div>
 
               <div className="timeline-content">
@@ -33,15 +47,22 @@ function IncidentTimeline({ incidents }) {
                   </small>
                 </div>
 
-                <h3>{incident.alert_type || "Rail OT Incident"}</h3>
+                <h3>{incident.title || incident.alert_type || "Rail OT Incident"}</h3>
 
-                <p>{incident.message || "No incident summary available."}</p>
+                <p>{incident.message || incident.description || "No incident summary available."}</p>
 
                 <div className="timeline-details">
                   <span><strong>Asset:</strong> {incident.device || "Unknown"}</span>
                   <span><strong>Status:</strong> {incident.status || "Unknown"}</span>
-                  <span><strong>Assigned:</strong> {incident.assigned_to || "Unassigned"}</span>
-                  <span><strong>MITRE:</strong> {incident.mitre_technique || "Unmapped"}</span>
+                  {incident.incident_id && (
+                    <span><strong>Incident:</strong> {incident.incident_id}</span>
+                  )}
+                  {incident.train_id && (
+                    <span><strong>Train ID:</strong> {incident.train_id}</span>
+                  )}
+                  {incident.track_block_id && (
+                    <span><strong>Block ID:</strong> {incident.track_block_id}</span>
+                  )}
                 </div>
               </div>
             </div>

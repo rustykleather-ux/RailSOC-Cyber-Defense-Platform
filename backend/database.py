@@ -47,6 +47,24 @@ OT_DEVICE_FRAMEWORK_COLUMNS = {
     "metadata_json": "TEXT DEFAULT '{}'",
 }
 
+DISPATCH_COMMAND_COLUMNS = {
+    "target_type": "VARCHAR DEFAULT 'OT_DEVICE'",
+    "target_id": "INTEGER",
+    "requested_state": "VARCHAR DEFAULT ''",
+    "requested_by": "VARCHAR DEFAULT 'Dispatcher'",
+    "metadata_json": "TEXT DEFAULT '{}'",
+    "priority": "VARCHAR DEFAULT 'Normal'",
+    "queued_at": "DATETIME",
+    "executed_at": "DATETIME",
+    "failed_at": "DATETIME",
+    "cancelled_at": "DATETIME",
+    "delay_seconds": "INTEGER DEFAULT 0",
+    "failure_reason": "TEXT DEFAULT ''",
+    "incident_id": "INTEGER",
+    "scenario_id": "VARCHAR",
+    "retry_of_id": "INTEGER",
+}
+
 
 def ensure_sqlite_schema():
     """Apply the small additive SQLite changes used by the demo app."""
@@ -57,6 +75,7 @@ def ensure_sqlite_schema():
         additive_tables = {
             "activity_log": ACTIVITY_LOG_COLUMNS,
             "ot_devices": OT_DEVICE_FRAMEWORK_COLUMNS,
+            "dispatch_commands": DISPATCH_COMMAND_COLUMNS,
         }
         for table_name, columns in additive_tables.items():
             existing_columns = {

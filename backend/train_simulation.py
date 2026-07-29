@@ -5,9 +5,16 @@ from math import sqrt
 from typing import Any, Dict, List, Optional
 
 from database import SessionLocal
-from models import OTDevice, TrackBlock, TrackSwitch, Train, TrainHistory
+from models import (
+    OTDevice,
+    OperationalRestriction,
+    TrackBlock,
+    TrackSwitch,
+    Train,
+    TrainHistory,
+)
 from services.timeline_service import record_event
-from services.dispatch_service import process_dispatch_commands
+from services.dispatch_service import process_dispatch_commands, release_cleared_routes
 
 
 class TrainSimulationEngine:
@@ -227,6 +234,7 @@ class TrainSimulationEngine:
             self.update_block_occupancy(db)
             self.update_signal_states(db)
             process_dispatch_commands(db)
+            release_cleared_routes(db)
 
             db.commit()
 
@@ -256,6 +264,17 @@ class TrainSimulationEngine:
         Update one train for a simulation tick.
         """
         status = (train.status or "").strip()
+        restrictions = db.query(OperationalRestriction).filter(
+            OperationalRestriction.active.is_(True),
+            OperationalRestriction.target_type == "TRAIN",
+            OperationalRestriction.target_id == train.id,
+        ).all()
+        if any(item.restriction_type == "HOLD_TRAIN" for item in restrictions):
+            train.status = "Held by Dispatcher"
+            train.speed = 0
+            train.last_updated = datetime.now(timezone.utc)
+            self._record_history(train, db)
+            return
         observed_block = self._get_observed_block(train, db)
         unsafe_switch = self._get_unsafe_switch_ahead(train, db)
         observed_target = observed_block
@@ -332,6 +351,20 @@ class TrainSimulationEngine:
             if observed_block and observed_block.speed_limit
             else self.NORMAL_SPEED_MPH
         )
+        for restriction in restrictions:
+            if restriction.restriction_type != "SPEED_RESTRICTION":
+                continue
+            try:
+                import json
+                restricted_speed = int(
+                    json.loads(restriction.metadata_json or "{}").get(
+                        "speed_mph", self.RESTRICTED_SPEED_MPH
+                    )
+                )
+                target_speed = min(target_speed, restricted_speed)
+                train.status = "Restricted"
+            except (TypeError, ValueError, json.JSONDecodeError):
+                target_speed = min(target_speed, self.RESTRICTED_SPEED_MPH)
 
         if observed_aspect == "Stop" and observed_target:
             distance_to_stop = self._distance_to_stop_point(

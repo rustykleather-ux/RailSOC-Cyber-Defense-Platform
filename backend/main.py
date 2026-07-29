@@ -28,6 +28,8 @@ from models import (
     TrackSwitch,
     GradeCrossing,
     DispatchCommand,
+    DispatchRoute,
+    OperationalRestriction,
     DeviceRelationship,
     OTDeviceType,
     
@@ -57,13 +59,25 @@ from services.operational_impact import (
     get_operational_impact,
 )
 from services.timeline_service import get_timeline, record_event
+from services.map_service import get_map_snapshot
 from seed_track_blocks import assign_signal_controller_track_blocks
 from seed_operational_assets import seed_operational_assets
 from services.dispatch_service import (
+    DispatchValidationError,
+    cancel_command,
+    clear_restriction,
+    create_dispatch_command as create_dispatch_command_service,
+    create_restriction,
+    create_route,
+    get_dispatch_status as build_dispatch_status,
     get_dispatch_device,
+    perform_recovery_action,
     process_dispatch_commands,
     queue_dispatch_command,
+    retry_command,
     serialize_command,
+    serialize_restriction,
+    serialize_route,
 )
 from train_simulation import train_simulation
 
@@ -91,11 +105,50 @@ class ScenarioTimelineEventRequest(BaseModel):
 
 class DispatchCommandRequest(BaseModel):
     command_type: str
+    target_type: Optional[str] = None
+    target_id: Optional[int] = None
+    requested_state: Optional[str] = None
+    requested_by: str = "Dispatcher"
+    priority: str = "Normal"
     payload: Optional[Dict[str, Any]] = None
+    metadata: Optional[Dict[str, Any]] = None
+    incident_id: Optional[int] = None
+    scenario_id: Optional[str] = None
 
 
 class DispatchStatusRequest(BaseModel):
     status: str
+
+
+class DispatchRouteRequest(BaseModel):
+    train_id: int
+    start_block_id: int
+    destination_block_id: int
+    requested_path: Optional[List[int]] = None
+    requested_by: str = "Dispatcher"
+
+
+class DispatchRestrictionRequest(BaseModel):
+    restriction_type: str
+    target_type: str
+    target_id: int
+    reason: str = Field(min_length=1)
+    severity: str = "Medium"
+    created_by: str = "Dispatcher"
+    incident_id: Optional[int] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+
+class DispatchActorRequest(BaseModel):
+    requested_by: str = "Dispatcher"
+
+
+class RecoveryActionRequest(BaseModel):
+    action_type: str
+    target_id: int
+    requested_by: str = "Dispatcher"
+    incident_id: Optional[int] = None
+    metadata: Optional[Dict[str, Any]] = None
 
 
 class DeviceTypeRequest(BaseModel):
@@ -236,6 +289,20 @@ def get_ai_operations_brief(
     impact = get_operational_impact(db)
     result["operational_impact"] = impact
     result["operational_summary"] = build_operational_summary(impact)
+    dispatch_status = build_dispatch_status(db)
+    result["dispatch"] = dispatch_status
+    result["dispatch_brief"] = (
+        f"Dispatch SCADA is {dispatch_status['scada_state']}. "
+        f"{dispatch_status['queued_commands']} command(s) are queued and "
+        f"{dispatch_status['blocked_commands']} are blocked. "
+        f"{dispatch_status['active_restrictions']} restriction(s) are active; "
+        f"{dispatch_status['delayed_trains']} train(s) are delayed. "
+        + (
+            "Defensive priority: restore trusted dispatch communications or transfer to backup."
+            if dispatch_status["dispatch_availability_percent"] < 100
+            else "Defensive priority: continue monitoring command integrity."
+        )
+    )
     result["asset_capability_summaries"] = [
         serialize_device(db, device)["dynamic_summary"]
         for device in devices
@@ -440,6 +507,11 @@ def get_operations_timeline(
     return {"events": get_timeline(db, limit=limit)}
 
 
+@app.get("/digital-twin/map")
+def get_digital_twin_map(db: Session = Depends(get_db)):
+    return get_map_snapshot(db)
+
+
 @app.get("/track-switches")
 def get_track_switches(db: Session = Depends(get_db)):
     switches = db.query(TrackSwitch).order_by(TrackSwitch.milepost).all()
@@ -498,21 +570,156 @@ def get_dispatch_commands(db: Session = Depends(get_db)):
     }
 
 
+@app.get("/dispatch/status")
+def get_dispatch_status_endpoint(db: Session = Depends(get_db)):
+    return build_dispatch_status(db)
+
+
+@app.get("/dispatch/commands/{command_id}")
+def get_dispatch_command(command_id: int, db: Session = Depends(get_db)):
+    command = db.query(DispatchCommand).filter(
+        DispatchCommand.id == command_id
+    ).first()
+    if not command:
+        raise HTTPException(status_code=404, detail="Dispatch command not found.")
+    return serialize_command(command)
+
+
 @app.post("/dispatch/commands")
 def create_dispatch_command(
     request: DispatchCommandRequest,
     db: Session = Depends(get_db),
 ):
     try:
-        command = queue_dispatch_command(
-            db, request.command_type, request.payload
-        )
+        if request.target_type is None or request.target_id is None:
+            command = queue_dispatch_command(
+                db, request.command_type, request.payload
+            )
+        else:
+            command = create_dispatch_command_service(
+                db, request.model_dump()
+            )
         db.commit()
         db.refresh(command)
         return serialize_command(command)
+    except DispatchValidationError as exc:
+        db.rollback()
+        raise HTTPException(status_code=exc.status_code, detail=str(exc))
     except Exception:
         db.rollback()
         raise
+
+
+@app.post("/dispatch/commands/{command_id}/cancel")
+def cancel_dispatch_command(
+    command_id: int,
+    request: DispatchActorRequest,
+    db: Session = Depends(get_db),
+):
+    try:
+        command = cancel_command(db, command_id, request.requested_by)
+        db.commit()
+        return serialize_command(command)
+    except DispatchValidationError as exc:
+        db.rollback()
+        raise HTTPException(status_code=exc.status_code, detail=str(exc))
+
+
+@app.post("/dispatch/commands/{command_id}/retry")
+def retry_dispatch_command(
+    command_id: int,
+    request: DispatchActorRequest,
+    db: Session = Depends(get_db),
+):
+    try:
+        command = retry_command(db, command_id, request.requested_by)
+        db.commit()
+        return serialize_command(command)
+    except DispatchValidationError as exc:
+        db.rollback()
+        raise HTTPException(status_code=exc.status_code, detail=str(exc))
+
+
+@app.get("/dispatch/routes")
+def get_dispatch_routes(db: Session = Depends(get_db)):
+    return {"routes": [
+        serialize_route(route)
+        for route in db.query(DispatchRoute)
+        .order_by(DispatchRoute.requested_at.desc()).all()
+    ]}
+
+
+@app.post("/dispatch/routes")
+def request_dispatch_route(
+    request: DispatchRouteRequest,
+    db: Session = Depends(get_db),
+):
+    try:
+        route = create_route(db, request.model_dump())
+        db.commit()
+        return serialize_route(route)
+    except DispatchValidationError as exc:
+        db.rollback()
+        raise HTTPException(status_code=exc.status_code, detail=str(exc))
+
+
+@app.get("/dispatch/restrictions")
+def get_dispatch_restrictions(
+    active: Optional[bool] = None,
+    db: Session = Depends(get_db),
+):
+    query = db.query(OperationalRestriction)
+    if active is not None:
+        query = query.filter(OperationalRestriction.active == active)
+    return {"restrictions": [
+        serialize_restriction(item)
+        for item in query.order_by(
+            OperationalRestriction.created_at.desc()
+        ).all()
+    ]}
+
+
+@app.post("/dispatch/restrictions")
+def add_dispatch_restriction(
+    request: DispatchRestrictionRequest,
+    db: Session = Depends(get_db),
+):
+    try:
+        item = create_restriction(db, request.model_dump())
+        db.commit()
+        return serialize_restriction(item)
+    except DispatchValidationError as exc:
+        db.rollback()
+        raise HTTPException(status_code=exc.status_code, detail=str(exc))
+
+
+@app.post("/dispatch/restrictions/{restriction_id}/clear")
+def clear_dispatch_restriction(
+    restriction_id: int,
+    request: DispatchActorRequest,
+    db: Session = Depends(get_db),
+):
+    try:
+        item = clear_restriction(db, restriction_id, request.requested_by)
+        db.commit()
+        return serialize_restriction(item)
+    except DispatchValidationError as exc:
+        db.rollback()
+        raise HTTPException(status_code=exc.status_code, detail=str(exc))
+
+
+@app.post("/dispatch/recovery-actions")
+def dispatch_recovery_action(
+    request: RecoveryActionRequest,
+    db: Session = Depends(get_db),
+):
+    try:
+        result = perform_recovery_action(db, request.model_dump())
+        db.commit()
+        return result
+    except DispatchValidationError as exc:
+        db.rollback()
+        raise HTTPException(status_code=exc.status_code, detail=str(exc))
 
 
 @app.post("/dispatch/status")

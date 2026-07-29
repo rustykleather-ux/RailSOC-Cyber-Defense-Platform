@@ -464,13 +464,75 @@ class DispatchCommand(Base):
     device_id = Column(
         Integer,
         ForeignKey("ot_devices.id"),
-        nullable=False,
+        nullable=True,
     )
     command_type = Column(String, nullable=False)
+    target_type = Column(String, default="OT_DEVICE", nullable=False, index=True)
+    target_id = Column(Integer, nullable=True, index=True)
+    requested_state = Column(String, default="")
+    requested_by = Column(String, default="Dispatcher")
     payload_json = Column(Text, default="{}")
+    metadata_json = Column(Text, default="{}")
     status = Column(String, default="Queued")
+    priority = Column(String, default="Normal")
     requested_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    queued_at = Column(DateTime, nullable=True)
+    executed_at = Column(DateTime, nullable=True)
+    failed_at = Column(DateTime, nullable=True)
+    cancelled_at = Column(DateTime, nullable=True)
     apply_after = Column(DateTime, nullable=True)
     applied_at = Column(DateTime, nullable=True)
+    delay_seconds = Column(Integer, default=0)
+    failure_reason = Column(Text, default="")
+    incident_id = Column(Integer, ForeignKey("incidents.id"), nullable=True)
+    scenario_id = Column(String, nullable=True)
+    retry_of_id = Column(Integer, ForeignKey("dispatch_commands.id"), nullable=True)
 
     device = relationship("OTDevice")
+
+
+class DispatchRoute(Base):
+    __tablename__ = "dispatch_routes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    train_id = Column(Integer, ForeignKey("trains.id"), nullable=False, index=True)
+    start_block_id = Column(
+        Integer, ForeignKey("track_blocks.id"), nullable=False, index=True
+    )
+    destination_block_id = Column(
+        Integer, ForeignKey("track_blocks.id"), nullable=False, index=True
+    )
+    requested_path_json = Column(Text, default="[]")
+    required_signal_states_json = Column(Text, default="{}")
+    required_switch_positions_json = Column(Text, default="{}")
+    status = Column(String, default="Requested", nullable=False, index=True)
+    blocking_reason = Column(Text, default="")
+    requested_by = Column(String, default="Dispatcher")
+    requested_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    established_at = Column(DateTime, nullable=True)
+    released_at = Column(DateTime, nullable=True)
+    metadata_json = Column(Text, default="{}")
+
+    train = relationship("Train")
+    start_block = relationship("TrackBlock", foreign_keys=[start_block_id])
+    destination_block = relationship(
+        "TrackBlock", foreign_keys=[destination_block_id]
+    )
+
+
+class OperationalRestriction(Base):
+    __tablename__ = "operational_restrictions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    restriction_type = Column(String, nullable=False, index=True)
+    target_type = Column(String, nullable=False, index=True)
+    target_id = Column(Integer, nullable=False, index=True)
+    reason = Column(Text, nullable=False)
+    severity = Column(String, default="Medium")
+    active = Column(Boolean, default=True, nullable=False, index=True)
+    created_by = Column(String, default="Dispatcher")
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    cleared_by = Column(String, nullable=True)
+    cleared_at = Column(DateTime, nullable=True)
+    incident_id = Column(Integer, ForeignKey("incidents.id"), nullable=True)
+    metadata_json = Column(Text, default="{}")

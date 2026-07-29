@@ -23,6 +23,7 @@ import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import Vulnerabilities from "./pages/Vulnerabilities";
 import CreateScenario from "./pages/CreateScenario";
+import DispatcherOperations from "./pages/DispatcherOperations";
 
 import { getTrains } from "./services/trainService";
 import { getTrackBlocks } from "./services/blockService";
@@ -51,6 +52,7 @@ import {
   ChartNoAxesCombined,
   FileChartColumn,
   Settings as SettingsIcon,
+  TrainFront,
 } from "lucide-react";
 
 import { getDevices } from "./services/deviceService";
@@ -389,6 +391,11 @@ function App() {
               <span>Railroad Topology</span>
             </NavLink>
 
+            <NavLink to="/dispatcher">
+              <TrainFront size={18} />
+              <span>Dispatcher Operations</span>
+            </NavLink>
+
             <NavLink to="/telemetry">
               <RadioTower size={18} />
               <span>Live Telemetry</span>
@@ -542,6 +549,11 @@ function App() {
                     trackBlocks={trackBlocks}
                   />
                 }
+              />
+
+              <Route
+                path="/dispatcher"
+                element={<DispatcherOperations />}
               />
 
               <Route

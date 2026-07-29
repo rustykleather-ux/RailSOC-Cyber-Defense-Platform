@@ -1,727 +1,240 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import API from "../api";
+import { getDigitalTwinMap } from "../services/mapService";
+import AssetDetailPanel from "./railroad-map/AssetDetailPanel";
+import DigitalTwinSvg from "./railroad-map/DigitalTwinSvg";
+import MapControls from "./railroad-map/MapControls";
+import MapImpactPanel from "./railroad-map/MapImpactPanel";
+import {
+  mapDimensions,
+  matchesFilters,
+  snapshotSignatures,
+} from "./railroad-map/mapLayout";
 import "./RailroadMap.css";
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
-
 const REFRESH_INTERVAL_MS = 3000;
+const emptySnapshot = {
+  generated_at: null,
+  subdivisions: [],
+  blocks: [],
+  signals: [],
+  trains: [],
+  switches: [],
+  crossings: [],
+  devices: [],
+  operational_impact: {},
+  timeline: [],
+  alerts: [],
+  incidents: [],
+  dispatch_commands: [],
+  dispatch_routes: [],
+  operational_restrictions: [],
+};
+const initialFilters = {
+  subdivision: "all",
+  track: "all",
+  assetType: "all",
+  operational: "all",
+  security: "all",
+  communications: "all",
+};
+const initialLayers = {
+  blocks: true,
+  trains: true,
+  signals: true,
+  switches: true,
+  crossings: true,
+  devices: true,
+  relationships: true,
+  mileposts: true,
+  impact: true,
+};
+const collectionByKind = {
+  block: "blocks",
+  signal: "signals",
+  train: "trains",
+  switch: "switches",
+  crossing: "crossings",
+  device: "devices",
+};
 
-function normalize(value) {
-  return String(value || "").trim().toLowerCase();
-}
-
-function getBlockState(block) {
-  const communications = normalize(block.communications_status);
-  const security = normalize(block.security_status);
-  const signal = normalize(block.signal_aspect);
-
-  if (
-    security &&
-    !["healthy", "normal", "low"].includes(security)
-  ) {
-    return "security";
-  }
-
-  if (
-    communications &&
-    !["online", "normal", "healthy"].includes(communications)
-  ) {
-    return "communications";
-  }
-
-  if (block.maintenance) {
-    return "maintenance";
-  }
-
-  if (block.occupied) {
-    return "occupied";
-  }
-
-  if (signal === "stop" || signal === "dark") {
-    return "stop";
-  }
-
-  if (
-    signal === "approach" ||
-    signal === "restricting" ||
-    signal === "restricted"
-  ) {
-    return "approach";
-  }
-
-  return "clear";
-}
-
-function getSignalSymbol(signalAspect) {
-  const signal = normalize(signalAspect);
-
-  if (signal === "stop") {
-    return "●";
-  }
-
-  if (
-    signal === "approach" ||
-    signal === "restricting" ||
-    signal === "restricted"
-  ) {
-    return "●";
-  }
-
-  if (signal === "dark") {
-    return "○";
-  }
-
-  return "●";
-}
-
-function formatMilepost(value) {
-  const number = Number(value);
-
-  if (!Number.isFinite(number)) {
-    return "—";
-  }
-
-  return number.toFixed(1);
-}
-
-function formatTimestamp(value) {
-  if (!value) {
-    return "Not available";
-  }
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return String(value);
-  }
-
-  return date.toLocaleString();
-}
-
-function getTrainPosition(train, minimumMilepost, maximumMilepost) {
-  const milepost = Number(train.milepost);
-
-  if (
-    !Number.isFinite(milepost) ||
-    maximumMilepost <= minimumMilepost
-  ) {
-    return 0;
-  }
-
-  const percentage =
-    ((milepost - minimumMilepost) /
-      (maximumMilepost - minimumMilepost)) *
-    100;
-
-  return Math.min(100, Math.max(0, percentage));
-}
-
-function getDirectionArrow(direction) {
-  return normalize(direction) === "westbound" ? "←" : "→";
-}
-function getAssetIcon(device) {
-  const name = normalize(device.name);
-  const type = normalize(device.device_type);
-
-  if (name.includes("scada") || type.includes("scada")) {
-    return "🖥️";
-  }
-
-  if (
-    name.includes("bridge") ||
-    type.includes("infrastructure")
-  ) {
-    return "🌉";
-  }
-
-  if (
-    name.includes("crossing") ||
-    type.includes("crossing")
-  ) {
-    return "🚧";
-  }
-
-  if (
-    name.includes("signal") ||
-    type.includes("signal")
-  ) {
-    return "🚦";
-  }
-
-  if (
-    name.includes("ptc") ||
-    name.includes("radio") ||
-    type.includes("communications")
-  ) {
-    return "📡";
-  }
-
-  if (
-    name.includes("hot box") ||
-    name.includes("bearing")
-  ) {
-    return "🔥";
-  }
-
-  if (
-    name.includes("aei") ||
-    name.includes("reader")
-  ) {
-    return "📷";
-  }
-
-  if (
-    name.includes("weather") ||
-    type.includes("environmental")
-  ) {
-    return "🌦️";
-  }
-
-  if (
-    name.includes("power") ||
-    name.includes("ups") ||
-    type.includes("power")
-  ) {
-    return "⚡";
-  }
-
-  if (
-    name.includes("engineering") ||
-    type.includes("workstation")
-  ) {
-    return "💻";
-  }
-
-  if (
-    name.includes("historian") ||
-    type.includes("historian")
-  ) {
-    return "📊";
-  }
-
-  if (
-    name.includes("firewall") ||
-    name.includes("security")
-  ) {
-    return "🛡️";
-  }
-
-  if (
-    name.includes("camera") ||
-    type.includes("physical security")
-  ) {
-    return "📹";
-  }
-
-  if (
-    name.includes("fire") ||
-    type.includes("safety")
-  ) {
-    return "🚨";
-  }
-
-  return "⚙️";
-}
-
-function getAssetState(device) {
-  const status = normalize(device.status);
-  const risk = normalize(
-    device.calculated_risk ||
-      device.risk_level,
+function latestConsequence(snapshot) {
+  const impactful = (snapshot.timeline ?? []).find((event) =>
+    ["critical", "high"].includes(String(event.severity).toLowerCase()),
   );
-
-  if (
-    status === "offline" ||
-    risk === "critical"
-  ) {
-    return "critical";
-  }
-
-  if (
-    status === "degraded" ||
-    risk === "high"
-  ) {
-    return "warning";
-  }
-
-  if (
-    status === "online" &&
-    ["low", "normal", "healthy", ""].includes(risk)
-  ) {
-    return "healthy";
-  }
-
-  return "unknown";
+  if (impactful) return impactful;
+  return snapshot.timeline?.[0] ?? null;
 }
 
-function extractDeviceMilepost(device) {
-  const searchableText = [
-    device.name,
-    device.location,
-  ]
-    .filter(Boolean)
-    .join(" ");
-
-  const match = searchableText.match(
-    /\bMP\s*([0-9]+(?:\.[0-9]+)?)/i,
-  );
-
-  if (!match) {
-    return null;
-  }
-
-  const milepost = Number(match[1]);
-
-  return Number.isFinite(milepost)
-    ? milepost
-    : null;
-}
-
-function getKnownDeviceMilepost(device) {
-  const name = normalize(device.name);
-
-  const knownLocations = {
-    "signal controller 14a": 80.5,
-    "grade crossing controller mp 82.4": 82.4,
-    "ptc radio gateway": 94.5,
-    "dispatch scada server": 80.2,
-    "rail engineering workstation": 98.0,
-  };
-
-  return knownLocations[name] ?? null;
-}
-
-function getDevicePosition(
-  device,
-  index,
-  deviceCount,
-  minimumMilepost,
-  maximumMilepost,
-) {
-  const explicitMilepost =
-    extractDeviceMilepost(device);
-
-  const knownMilepost =
-    getKnownDeviceMilepost(device);
-
-  const milepost =
-    explicitMilepost ?? knownMilepost;
-
-  if (
-    milepost !== null &&
-    maximumMilepost > minimumMilepost
-  ) {
-    const percentage =
-      ((milepost - minimumMilepost) /
-        (maximumMilepost - minimumMilepost)) *
-      100;
-
-    return Math.min(
-      97,
-      Math.max(3, percentage),
-    );
-  }
-
-  const name = normalize(device.name);
-  const type = normalize(device.device_type);
-
-  if (
-    name.includes("dispatch") ||
-    type.includes("scada") ||
-    type.includes("historian") ||
-    type.includes("jump server")
-  ) {
-    return 6 + index * 3;
-  }
-
-  if (
-    name.includes("engineering") ||
-    name.includes("maintenance")
-  ) {
-    return 88 + (index % 3) * 3;
-  }
-
-  if (deviceCount <= 1) {
-    return 50;
-  }
-
-  return (
-    8 +
-    (index / (deviceCount - 1)) * 84
-  );
-}
-
-function RailAssetMarker({
-  device,
-  index,
-  deviceCount,
-  minimumMilepost,
-  maximumMilepost,
-  onSelect,
-}) {
-  const left = getDevicePosition(
-    device,
-    index,
-    deviceCount,
-    minimumMilepost,
-    maximumMilepost,
-  );
-
-  const state = getAssetState(device);
-
-  const placement = index % 2 === 0 ? "above" : "below";
-
-  return (
-    <button
-      type="button"
-      className={`rail-asset-marker rail-asset-marker--${state} rail-asset-marker--${placement}`}
-      style={{
-        left: `${left}%`,
-      }}
-      onClick={() => onSelect(device)}
-      title={`${device.name} — ${
-        device.status || "Unknown"
-      }`}
-    >
-      <span className="rail-asset-marker__stem" />
-
-      <span className="rail-asset-marker__body">
-        <span className="rail-asset-marker__icon">
-          {getAssetIcon(device)}
-        </span>
-
-        <span className="rail-asset-marker__label">
-          <strong>{device.name}</strong>
-
-          <small>
-            {device.status || "Unknown"}
-          </small>
-        </span>
-      </span>
-    </button>
-  );
-}
-function BlockCard({ block, isSelected, onSelect }) {
-  const state = getBlockState(block);
-
-  return (
-    <button
-      type="button"
-      className={`track-block track-block--${state} ${
-        isSelected ? "track-block--selected" : ""
-      }`}
-      onClick={() => onSelect(block)}
-      aria-label={`Open details for ${block.name}`}
-    >
-      <div className="track-block__top">
-        <div>
-          <span className="track-block__name">
-            {block.name}
-          </span>
-
-          <span className="track-block__range">
-            MP {formatMilepost(block.start_mp)}–
-            {formatMilepost(block.end_mp)}
-          </span>
-        </div>
-
-        <span
-          className={`signal-indicator signal-indicator--${state}`}
-          title={block.signal_aspect || "Unknown"}
-        >
-          {getSignalSymbol(block.signal_aspect)}
-        </span>
-      </div>
-
-      <div className="track-block__rail">
-        <span className="track-block__tie" />
-        <span className="track-block__tie" />
-        <span className="track-block__tie" />
-        <span className="track-block__tie" />
-      </div>
-
-      <div className="track-block__status-row">
-        <span>{block.signal_aspect || "Unknown"}</span>
-
-        <span>
-          {block.occupied
-            ? block.occupied_by || "Occupied"
-            : "Unoccupied"}
-        </span>
-      </div>
-
-      <div className="track-block__footer">
-        <span>{block.speed_limit || "—"} MPH</span>
-        <span>{block.communications_status || "Unknown"}</span>
-      </div>
-      <div className="track-block__controller">
-        {block.controlling_device || "No controller assigned"}
-      </div>
-    </button>
-  );
-}
-
-function TrainMarker({
-  train,
-  minimumMilepost,
-  maximumMilepost,
-  onSelect,
-}) {
-  const left = getTrainPosition(
-    train,
-    minimumMilepost,
-    maximumMilepost,
-  );
-
-  return (
-    <button
-      type="button"
-      className={`train-marker ${
-        normalize(train.status).startsWith("stopped at")
-          ? "train-marker--stopped"
-          : ""
-      }`}
-      style={{ left: `${left}%` }}
-      onClick={() => onSelect(train)}
-      title={`${train.symbol || "Train"} at MP ${
-        train.milepost ?? "Unknown"
-      }`}
-    >
-      <span className="train-marker__icon">🚆</span>
-
-      <span className="train-marker__label">
-        <strong>{train.symbol || `Train ${train.id}`}</strong>
-        <small>
-          {getDirectionArrow(train.direction)} MP{" "}
-          {formatMilepost(train.milepost)}
-        </small>
-      </span>
-    </button>
-  );
-}
-
-function MetricCard({ label, value, tone = "neutral" }) {
-  return (
-    <div className={`map-metric map-metric--${tone}`}>
-      <span className="map-metric__label">{label}</span>
-      <strong className="map-metric__value">{value}</strong>
-    </div>
-  );
-}
-
-export default function RailroadMap({
-  devices = [],
-}) {
-  const [trackBlocks, setTrackBlocks] = useState([]);
-  const [trains, setTrains] = useState([]);
-  const [impact, setImpact] = useState(null);
-  const [timeline, setTimeline] = useState([]);
-  const [trackSwitches, setTrackSwitches] = useState([]);
-  const [gradeCrossings, setGradeCrossings] = useState([]);
-  const [selectedDevice, setSelectedDevice] = useState(null);
-  const [simulationRunning, setSimulationRunning] =
-    useState(false);
-  const [selectedBlock, setSelectedBlock] = useState(null);
-  const [selectedTrain, setSelectedTrain] = useState(null);
+export default function RailroadMap() {
+  const [snapshot, setSnapshot] = useState(emptySnapshot);
+  const [filters, setFilters] = useState(initialFilters);
+  const [layers, setLayers] = useState(initialLayers);
+  const [zoom, setZoom] = useState(1);
+  const [selected, setSelected] = useState(null);
+  const [highlightedKeys, setHighlightedKeys] = useState(new Set());
+  const [changedKeys, setChangedKeys] = useState(new Set());
+  const [simulationRunning, setSimulationRunning] = useState(false);
   const [loading, setLoading] = useState(true);
   const [commandPending, setCommandPending] = useState(false);
   const [error, setError] = useState("");
+  const signaturesRef = useRef(null);
+  const changeTimerRef = useRef(null);
 
-  const fetchJson = useCallback(async (path, options = {}) => {
-    const response = await fetch(`${API_BASE_URL}${path}`, {
-      headers: {
-        "Content-Type": "application/json",
-        ...options.headers,
-      },
-      ...options,
-    });
-
-    if (!response.ok) {
-      const body = await response.text();
-
-      throw new Error(
-        body ||
-          `${response.status} ${response.statusText}`,
-      );
-    }
-
-    return response.json();
-  }, []);
-
-  const loadMapData = useCallback(async () => {
+  const loadMap = useCallback(async () => {
     try {
-      const [
-        blockData,
-        trainData,
-        impactData,
-        timelineData,
-        switchData,
-        crossingData,
-      ] =
-        await Promise.all([
-        fetchJson("/track-blocks"),
-        fetchJson("/trains"),
-        fetchJson("/operations/impact"),
-        fetchJson("/operations/timeline?limit=8"),
-        fetchJson("/track-switches"),
-        fetchJson("/grade-crossings"),
-      ]);
-
-      setTrackBlocks(
-        Array.isArray(blockData)
-          ? [...blockData].sort(
-              (a, b) =>
-                Number(a.start_mp) - Number(b.start_mp),
-            )
-          : [],
-      );
-
-      setTrains(Array.isArray(trainData) ? trainData : []);
-      setImpact(impactData || null);
-      setTimeline(
-        Array.isArray(timelineData?.events)
-          ? [...timelineData.events].reverse()
-          : [],
-      );
-      setTrackSwitches(
-        Array.isArray(switchData) ? switchData : [],
-      );
-      setGradeCrossings(
-        Array.isArray(crossingData) ? crossingData : [],
-      );
+      const next = await getDigitalTwinMap();
+      const signatures = snapshotSignatures(next);
+      if (signaturesRef.current) {
+        const changes = new Set(
+          Object.entries(signatures)
+            .filter(([key, value]) => signaturesRef.current[key] !== value)
+            .map(([key]) => key),
+        );
+        setChangedKeys(changes);
+        window.clearTimeout(changeTimerRef.current);
+        changeTimerRef.current = window.setTimeout(
+          () => setChangedKeys(new Set()),
+          2400,
+        );
+      }
+      signaturesRef.current = signatures;
+      setSnapshot(next);
+      setSelected((current) => {
+        if (!current) return null;
+        const collection = next[collectionByKind[current.kind]] ?? [];
+        const updated = collection.find(
+          (item) => String(item.id) === String(current.data.id),
+        );
+        return updated ? { ...current, data: updated } : null;
+      });
       setError("");
     } catch (loadError) {
-      console.error("Map data load failed:", loadError);
       setError(
-        loadError.message ||
-          "Unable to load railroad map data.",
+        loadError.response?.data?.detail ||
+          loadError.message ||
+          "Unable to load the digital twin map.",
       );
     } finally {
       setLoading(false);
     }
-  }, [fetchJson]);
+  }, []);
 
   const loadSimulationStatus = useCallback(async () => {
     try {
-      const status = await fetchJson(
-        "/train-simulation/status",
-      );
-
-      setSimulationRunning(
-        Boolean(
-          status.running ??
-            status.is_running ??
-            status.active,
-        ),
-      );
-    } catch (statusError) {
-      console.warn(
-        "Simulation status endpoint unavailable:",
-        statusError,
-      );
+      const response = await API.get("/train-simulation/status");
+      setSimulationRunning(Boolean(response.data?.running));
+    } catch {
+      setSimulationRunning(false);
     }
-  }, [fetchJson]);
+  }, []);
 
   useEffect(() => {
-    loadMapData();
+    loadMap();
     loadSimulationStatus();
-
-    const refreshTimer = window.setInterval(() => {
-      loadMapData();
+    const timer = window.setInterval(() => {
+      loadMap();
       loadSimulationStatus();
     }, REFRESH_INTERVAL_MS);
+    return () => {
+      window.clearInterval(timer);
+      window.clearTimeout(changeTimerRef.current);
+    };
+  }, [loadMap, loadSimulationStatus]);
 
-    return () => window.clearInterval(refreshTimer);
-  }, [loadMapData, loadSimulationStatus]);
+  const visibleSubdivisions = useMemo(
+    () =>
+      filters.subdivision === "all"
+        ? snapshot.subdivisions
+        : snapshot.subdivisions.filter(
+            (item) => item.name === filters.subdivision,
+          ),
+    [filters.subdivision, snapshot.subdivisions],
+  );
+  const dimensions = useMemo(
+    () => mapDimensions(visibleSubdivisions, zoom),
+    [visibleSubdivisions, zoom],
+  );
+  const unlocatedDevices = snapshot.devices.filter(
+    (device) =>
+      device.milepost == null &&
+      ["all", "device"].includes(filters.assetType) &&
+      matchesFilters(device, filters),
+  );
+  const consequence = latestConsequence(snapshot);
 
-  const runSimulationCommand = async (command) => {
+  async function simulationCommand(command) {
     setCommandPending(true);
-
     try {
-      await fetchJson(`/train-simulation/${command}`, {
-        method: "POST",
-      });
-
-      await Promise.all([
-        loadMapData(),
-        loadSimulationStatus(),
-      ]);
-
-      setError("");
-    } catch (commandError) {
-      console.error(
-        `Simulation ${command} failed:`,
-        commandError,
+      await API.post(
+        command === "reset" ? "/reset-demo" : `/train-simulation/${command}`,
       );
-
+      await Promise.all([loadMap(), loadSimulationStatus()]);
+    } catch (commandError) {
       setError(
-        commandError.message ||
-          `Unable to ${command} the simulation.`,
+        commandError.response?.data?.detail ||
+          `Unable to ${command} the train simulation.`,
       );
     } finally {
       setCommandPending(false);
     }
-  };
+  }
 
-  const territory = useMemo(() => {
-    if (trackBlocks.length === 0) {
-      return {
-        minimum: 0,
-        maximum: 1,
-      };
+  function resetView() {
+    setFilters(initialFilters);
+    setLayers(initialLayers);
+    setZoom(1);
+    setHighlightedKeys(new Set());
+    setSelected(null);
+  }
+
+  function highlightMetric(metric) {
+    const impact = snapshot.operational_impact;
+    const keys = new Set();
+    if (
+      [
+        "affected_blocks",
+        "blocked_track_miles",
+        "track_availability_percent",
+      ].includes(metric)
+    ) {
+      snapshot.blocks
+        .filter((block) =>
+          impact.affected_block_names?.includes(block.name),
+        )
+        .forEach((block) => keys.add(`TRACK_BLOCK:${block.id}`));
     }
-
-    return {
-      minimum: Math.min(
-        ...trackBlocks.map((block) =>
-          Number(block.start_mp),
-        ),
-      ),
-      maximum: Math.max(
-        ...trackBlocks.map((block) =>
-          Number(block.end_mp),
-        ),
-      ),
-    };
-  }, [trackBlocks]);
-
-  const metrics = useMemo(() => {
-    const occupied = trackBlocks.filter(
-      (block) => block.occupied,
-    ).length;
-
-    const restrictive = trackBlocks.filter((block) =>
-      ["stop", "approach", "restricting", "restricted", "dark"].includes(
-        normalize(block.signal_aspect),
-      ),
-    ).length;
-
-    const communicationsIssues = trackBlocks.filter(
-      (block) =>
-        !["online", "normal", "healthy"].includes(
-          normalize(block.communications_status),
-        ),
-    ).length;
-
-    const movingTrains = trains.filter((train) =>
-      ["moving", "restricted"].includes(
-        normalize(train.status),
-      ),
-    ).length;
-
-    return {
-      occupied,
-      restrictive,
-      communicationsIssues,
-      movingTrains,
-    };
-  }, [trackBlocks, trains]);
-
-  const closeDrawer = () => {
-    setSelectedBlock(null);
-    setSelectedTrain(null);
-    setSelectedDevice(null);
-  };
+    if (
+      [
+        "stopped_trains",
+        "slowed_trains",
+        "delayed_trains",
+        "cumulative_delay_minutes",
+        "ptc_restricted_trains",
+      ].includes(metric)
+    ) {
+      const symbols = new Set([
+        ...(impact.stopped_train_symbols ?? []),
+        ...(impact.slowed_train_symbols ?? []),
+      ]);
+      snapshot.trains
+        .filter(
+          (train) =>
+            symbols.has(train.symbol) ||
+            (metric === "ptc_restricted_trains" &&
+              String(train.status).includes("PTC")),
+        )
+        .forEach((train) => keys.add(`TRAIN:${train.id}`));
+    }
+    if (metric === "dispatch_availability_percent") {
+      snapshot.devices
+        .filter((device) =>
+          device.capabilities?.includes("controls_dispatch"),
+        )
+        .forEach((device) => keys.add(`OT_DEVICE:${device.id}`));
+    }
+    setHighlightedKeys(keys);
+  }
 
   return (
     <section className="operations-map">
@@ -730,16 +243,12 @@ export default function RailroadMap({
           <p className="operations-map__eyebrow">
             TRACKSENTINEL DIGITAL TERRITORY
           </p>
-
-          <h2>Interactive Railroad Operations Map</h2>
-
+          <h2>Interactive Railroad Digital Twin</h2>
           <p>
-            Live train movement, block occupancy, signal
-            indications, communications health, and operational
-            risk.
+            Live schematic territory driven by authoritative block, train,
+            wayside, device, cyber, and operational state.
           </p>
         </div>
-
         <div
           className={`simulation-badge ${
             simulationRunning
@@ -757,651 +266,144 @@ export default function RailroadMap({
           type="button"
           className="map-button map-button--primary"
           disabled={simulationRunning || commandPending}
-          onClick={() => runSimulationCommand("start")}
+          onClick={() => simulationCommand("start")}
         >
           ▶ Start
         </button>
-
         <button
           type="button"
           className="map-button"
           disabled={!simulationRunning || commandPending}
-          onClick={() => runSimulationCommand("stop")}
+          onClick={() => simulationCommand("stop")}
         >
           ■ Stop
         </button>
-
         <button
           type="button"
           className="map-button"
           disabled={commandPending}
-          onClick={() => runSimulationCommand("restart")}
+          onClick={() => simulationCommand("restart")}
         >
           ↻ Restart
         </button>
-
         <button
           type="button"
           className="map-button"
           disabled={commandPending}
-          onClick={() => runSimulationCommand("reset")}
+          onClick={() => simulationCommand("reset")}
         >
-          ⟲ Reset
+          ⟲ Reset operations
         </button>
-
-        <button
-          type="button"
-          className="map-button map-button--refresh"
-          disabled={loading}
-          onClick={loadMapData}
-        >
-          Refresh Data
+        <button type="button" className="map-button" onClick={loadMap}>
+          Refresh snapshot
         </button>
       </div>
 
       {error && (
-        <div className="operations-map__error">
-          <strong>Map data error:</strong> {error}
+        <div className="operations-map__error" role="alert">
+          <strong>Map data error:</strong> {String(error)}
         </div>
       )}
 
-      <div className="operations-map__metrics">
-        <MetricCard
-          label="Active Trains"
-          value={trains.length}
-        />
+      {consequence && (
+        <div
+          className={`dt-event-banner dt-event-banner--${String(
+            consequence.severity || "info",
+          ).toLowerCase()}`}
+          aria-live="polite"
+        >
+          <span>{consequence.title}</span>
+          <strong>{consequence.message}</strong>
+        </div>
+      )}
 
-        <MetricCard
-          label="Moving"
-          value={metrics.movingTrains}
-          tone="good"
-        />
+      <MapControls
+        snapshot={snapshot}
+        filters={filters}
+        onFilters={setFilters}
+        layers={layers}
+        onLayers={setLayers}
+        zoom={zoom}
+        onZoom={setZoom}
+        onReset={resetView}
+      />
 
-        <MetricCard
-          label="Occupied Blocks"
-          value={metrics.occupied}
-          tone={metrics.occupied > 0 ? "warning" : "good"}
-        />
-
-        <MetricCard
-          label="Restrictive Signals"
-          value={metrics.restrictive}
-          tone={metrics.restrictive > 0 ? "warning" : "good"}
-        />
-
-        <MetricCard
-          label="Communication Issues"
-          value={metrics.communicationsIssues}
-          tone={
-            metrics.communicationsIssues > 0
-              ? "critical"
-              : "good"
-          }
-        />
-      </div>
-
-      <div className="operational-consequence-grid">
-        <section className="operational-impact-card">
-          <h3>Operational Impact</h3>
-          <div className="operational-impact-card__metrics">
-            <MetricCard label="Affected Blocks" value={impact?.affected_blocks ?? 0} />
-            <MetricCard label="Stopped Trains" value={impact?.stopped_trains ?? 0} />
-            <MetricCard label="Delayed Trains" value={impact?.delayed_trains ?? 0} />
-            <MetricCard
-              label="Delay"
-              value={`${impact?.cumulative_delay_minutes ?? 0} min`}
-            />
-            <MetricCard
-              label="Track Available"
-              value={`${impact?.track_availability_percent ?? 100}%`}
-            />
-            <MetricCard
-              label="Unsafe Switches"
-              value={impact?.unsafe_switches ?? 0}
-            />
-            <MetricCard
-              label="Affected Crossings"
-              value={impact?.affected_crossings ?? 0}
-            />
-            <MetricCard
-              label="PTC Restricted"
-              value={impact?.ptc_restricted_trains ?? 0}
-            />
-            <MetricCard
-              label="Dispatch Available"
-              value={`${impact?.dispatch_availability_percent ?? 100}%`}
-            />
-            <MetricCard
-              label="Queued Commands"
-              value={impact?.queued_commands ?? 0}
-            />
-          </div>
-          <p>{impact?.summary || "Operational baseline available."}</p>
-        </section>
-
-        <section className="map-timeline-card">
-          <h3>Cyber-to-Operations Timeline</h3>
-          {timeline.length === 0 ? (
-            <p>No operational events recorded.</p>
-          ) : (
-            <ol>
-              {timeline.map((event) => (
-                <li
-                  key={event.id}
-                  className={`map-event map-event--${String(
-                    event.event_type || "event",
-                  ).split("_")[0]}`}
-                >
-                  <time>{formatTimestamp(event.timestamp)}</time>
-                  <strong>{event.title}</strong>
-                  <span>{event.message}</span>
-                </li>
-              ))}
-            </ol>
+      <div className="dt-map-layout">
+        <div className="dt-map-column">
+          {unlocatedDevices.length > 0 && layers.devices && (
+            <section className="dt-control-assets">
+              <span>Control center and network assets</span>
+              <div>
+                {unlocatedDevices.map((device) => (
+                  <button
+                    type="button"
+                    key={device.id}
+                    className={
+                      changedKeys.has(`OT_DEVICE:${device.id}`)
+                        ? "is-changed"
+                        : ""
+                    }
+                    onClick={() =>
+                      setSelected({ kind: "device", data: device })
+                    }
+                  >
+                    <strong>{device.name}</strong>
+                    <span>
+                      {device.status} · {device.risk}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </section>
           )}
-        </section>
-      </div>
 
-      <div className="wayside-status-grid">
-        {trackSwitches.map((trackSwitch) => (
-          <article
-            key={`switch-${trackSwitch.id}`}
-            className={`wayside-status-card ${
-              trackSwitch.locked ||
-              trackSwitch.position !== trackSwitch.commanded_position
-                ? "wayside-status-card--critical"
-                : ""
-            }`}
-          >
-            <span>TRACK SWITCH · MP {trackSwitch.milepost}</span>
-            <strong>{trackSwitch.name}</strong>
-            <small>
-              {trackSwitch.position} / commanded{" "}
-              {trackSwitch.commanded_position} ·{" "}
-              {trackSwitch.locked ? "Locked" : "Unlocked"}
-            </small>
-            <small>
-              Controller: {trackSwitch.controlling_device}
-            </small>
-          </article>
-        ))}
-        {gradeCrossings.map((crossing) => (
-          <article
-            key={`crossing-${crossing.id}`}
-            className={`wayside-status-card ${
-              crossing.gate_state === "Unavailable"
-                ? "wayside-status-card--critical"
-                : ""
-            }`}
-          >
-            <span>GRADE CROSSING · MP {crossing.milepost}</span>
-            <strong>{crossing.name}</strong>
-            <small>
-              Warning: {crossing.gate_state} · Communications:{" "}
-              {crossing.communications_status}
-            </small>
-            <small>Controller: {crossing.controlling_device}</small>
-          </article>
-        ))}
-      </div>
-
-      <div className="territory-panel">
-        <div className="territory-panel__title-row">
-          <div>
-            <span className="territory-panel__label">
-              {trackBlocks[0]?.subdivision || "RAILROAD SUBDIVISION"}
-            </span>
-
-            <strong>
-              MP {formatMilepost(territory.minimum)}–MP{" "}
-              {formatMilepost(territory.maximum)}
-            </strong>
+          <div className="dt-map-scroll" aria-busy={loading}>
+            {loading && snapshot.blocks.length === 0 ? (
+              <div className="operations-map__empty">
+                Loading digital-twin territory…
+              </div>
+            ) : visibleSubdivisions.length === 0 ? (
+              <div className="operations-map__empty">
+                No subdivisions match the current filters.
+              </div>
+            ) : (
+              <DigitalTwinSvg
+                snapshot={snapshot}
+                dimensions={dimensions}
+                filters={filters}
+                layers={layers}
+                selected={selected}
+                onSelect={(kind, data) => setSelected({ kind, data })}
+                changedKeys={changedKeys}
+                highlightedKeys={highlightedKeys}
+              />
+            )}
           </div>
 
-          <div className="map-legend">
-            <span>
-              <i className="legend-dot legend-dot--clear" />
-              Clear
-            </span>
-
-            <span>
-              <i className="legend-dot legend-dot--approach" />
-              Approach
-            </span>
-
-            <span>
-              <i className="legend-dot legend-dot--occupied" />
-              Occupied
-            </span>
-
-            <span>
-              <i className="legend-dot legend-dot--issue" />
-              Issue
-            </span>
+          <div className="dt-legend" aria-label="Map state legend">
+            <span><i className="normal" /> OK / normal</span>
+            <span><i className="occupied" /> OCC / occupied</span>
+            <span><i className="approach" /> APP / restricted</span>
+            <span><i className="stop" /> STOP / unavailable</span>
+            <span><i className="maintenance" /> MNT / maintenance</span>
+            <span><i className="communications" /> COMMS / degraded</span>
+            <span><i className="security" /> SEC / compromised</span>
           </div>
         </div>
 
-        {loading ? (
-          <div className="operations-map__empty">
-            Loading railroad territory…
-          </div>
-        ) : trackBlocks.length === 0 ? (
-          <div className="operations-map__empty">
-            No track blocks were returned by the API.
-          </div>
-        ) : (
-          <div className="territory-scroll">
-            <div
-              className="territory-canvas"
-              style={{
-                minWidth: `${Math.max(
-                  trackBlocks.length * 190,
-                  1000,
-                )}px`,
-              }}
-            >
-              <div className="railroad-territory-lane">
-  <div className="railroad-territory-lane__label">
-    Main Line and Wayside OT Assets
-  </div>
-
-  <div className="railroad-territory-lane__track">
-    <div className="railroad-territory-lane__rail railroad-territory-lane__rail--top" />
-    <div className="railroad-territory-lane__rail railroad-territory-lane__rail--bottom" />
-
-    <div className="railroad-territory-lane__ties">
-      {Array.from({ length: 50 }).map((_, index) => (
-        <span key={`tie-${index}`} />
-      ))}
-    </div>
-  </div>
-
-  {devices.map((device, index) => (
-    <RailAssetMarker
-      key={device.id}
-      device={device}
-      index={index}
-      deviceCount={devices.length}
-      minimumMilepost={territory.minimum}
-      maximumMilepost={territory.maximum}
-      onSelect={(selected) => {
-        setSelectedDevice(selected);
-        setSelectedTrain(null);
-        setSelectedBlock(null);
-      }}
-    />
-  ))}
-
-  {trains.map((train) => (
-    <TrainMarker
-      key={train.id}
-      train={train}
-      minimumMilepost={territory.minimum}
-      maximumMilepost={territory.maximum}
-      onSelect={(selected) => {
-        setSelectedTrain(selected);
-        setSelectedBlock(null);
-        setSelectedDevice(null);
-      }}
-    />
-  ))}
-</div>
-
-              <div
-                className="track-block-grid"
-                style={{
-                  gridTemplateColumns: `repeat(${trackBlocks.length}, minmax(170px, 1fr))`,
-                }}
-              >
-                {trackBlocks.map((block) => (
-                  <BlockCard
-                    key={block.id}
-                    block={block}
-                    isSelected={
-                      selectedBlock?.id === block.id
-                    }
-                    onSelect={(selected) => {
-                      setSelectedBlock(selected);
-                      setSelectedTrain(null);
-                    }}
-                  />
-                ))}
-              </div>
-
-              <div className="milepost-scale">
-                {trackBlocks.map((block) => (
-                  <div
-                    className="milepost-scale__mark"
-                    key={`mp-${block.id}`}
-                  >
-                    <span />
-                    <strong>
-                      MP {formatMilepost(block.start_mp)}
-                    </strong>
-                  </div>
-                ))}
-
-                <div className="milepost-scale__mark">
-                  <span />
-                  <strong>
-                    MP {formatMilepost(territory.maximum)}
-                  </strong>
-                </div>
-              </div>
-            </div>
-          </div>
+        {layers.impact && (
+          <MapImpactPanel
+            impact={snapshot.operational_impact}
+            onMetric={highlightMetric}
+          />
         )}
       </div>
 
-      {(selectedBlock ||
-        selectedTrain ||
-        selectedDevice) && (
-        <>
-          <button
-            type="button"
-            className="map-drawer-backdrop"
-            aria-label="Close details"
-            onClick={closeDrawer}
-          />
-
-          <aside className="map-drawer">
-            <div className="map-drawer__header">
-              <div>
-                <span className="map-drawer__eyebrow">
-                  {selectedBlock
-                    ? "TRACK BLOCK"
-                    : selectedTrain
-                      ? "TRAIN TELEMETRY"
-                      : "RAIL OT ASSET"}
-                </span>
-
-                <h3>
-                  {selectedBlock
-                    ? selectedBlock.name
-                    : selectedTrain
-                      ? selectedTrain.symbol ||
-                      `Train ${selectedTrain.id}`
-                      : selectedDevice?.name}
-                </h3>
-              </div>
-
-              <button
-                type="button"
-                className="map-drawer__close"
-                onClick={closeDrawer}
-              >
-                ×
-              </button>
-            </div>
-
-            {selectedBlock && (
-              <div className="map-drawer__content">
-                <div className="drawer-status">
-                  <span
-                    className={`drawer-status__indicator drawer-status__indicator--${getBlockState(
-                      selectedBlock,
-                    )}`}
-                  />
-
-                  <div>
-                    <strong>
-                      {selectedBlock.signal_aspect ||
-                        "Unknown signal"}
-                    </strong>
-
-                    <span>
-                      {selectedBlock.occupied
-                        ? "Block occupied"
-                        : "Block available"}
-                    </span>
-                  </div>
-                </div>
-
-                <dl className="detail-list">
-                  <div>
-                    <dt>Milepost limits</dt>
-                    <dd>
-                      {formatMilepost(
-                        selectedBlock.start_mp,
-                      )}{" "}
-                      –{" "}
-                      {formatMilepost(selectedBlock.end_mp)}
-                    </dd>
-                  </div>
-
-                  <div>
-                    <dt>Occupied by</dt>
-                    <dd>
-                      {selectedBlock.occupied_by || "None"}
-                    </dd>
-                  </div>
-
-                  <div>
-                    <dt>Authority</dt>
-                    <dd>
-                      {selectedBlock.authority || "Unknown"}
-                    </dd>
-                  </div>
-
-                  <div>
-                    <dt>Speed limit</dt>
-                    <dd>
-                      {selectedBlock.speed_limit || "—"} MPH
-                    </dd>
-                  </div>
-
-                  <div>
-                    <dt>Controlling device</dt>
-                    <dd>
-                      {selectedBlock.controlling_device ||
-                        "Not assigned"}
-                    </dd>
-                  </div>
-
-                  <div>
-                    <dt>Communications</dt>
-                    <dd>
-                      {selectedBlock.communications_status ||
-                        "Unknown"}
-                    </dd>
-                  </div>
-
-                  <div>
-                    <dt>Security</dt>
-                    <dd>
-                      {selectedBlock.security_status ||
-                        "Unknown"}
-                    </dd>
-                  </div>
-
-                  <div>
-                    <dt>Maintenance</dt>
-                    <dd>
-                      {selectedBlock.maintenance
-                        ? "Active"
-                        : "None"}
-                    </dd>
-                  </div>
-
-                  <div>
-                    <dt>Last update</dt>
-                    <dd>
-                      {formatTimestamp(
-                        selectedBlock.last_updated,
-                      )}
-                    </dd>
-                  </div>
-                </dl>
-              </div>
-            )}
-
-            {selectedTrain && (
-              <div className="map-drawer__content">
-                <div className="drawer-status">
-                  <span className="drawer-status__train">
-                    🚆
-                  </span>
-
-                  <div>
-                    <strong>
-                      {selectedTrain.status || "Unknown"}
-                    </strong>
-
-                    <span>
-                      {selectedTrain.direction || "Unknown direction"}
-                    </span>
-                  </div>
-                </div>
-
-                <dl className="detail-list">
-                  <div>
-                    <dt>Milepost</dt>
-                    <dd>
-                      MP{" "}
-                      {formatMilepost(
-                        selectedTrain.milepost,
-                      )}
-                    </dd>
-                  </div>
-
-                  <div>
-                    <dt>Speed</dt>
-                    <dd>{selectedTrain.speed || 0} MPH</dd>
-                  </div>
-
-                  <div>
-                    <dt>Signal</dt>
-                    <dd>
-                      {selectedTrain.current_signal ||
-                        "Unknown"}
-                    </dd>
-                  </div>
-
-                  <div>
-                    <dt>Authority</dt>
-                    <dd>
-                      {selectedTrain.authority || "Unknown"}
-                    </dd>
-                  </div>
-
-                  <div>
-                    <dt>PTC</dt>
-                    <dd>
-                      {selectedTrain.ptc_enabled
-                        ? "Enabled"
-                        : "Disabled"}
-                    </dd>
-                  </div>
-
-                  <div>
-                    <dt>Last update</dt>
-                    <dd>
-                      {formatTimestamp(
-                        selectedTrain.last_updated,
-                      )}
-                    </dd>
-                  </div>
-                </dl>
-              </div>
-            )}
-            {selectedDevice && (
-  <div className="map-drawer__content">
-    <div className="drawer-status">
-      <span className="drawer-status__asset">
-        {getAssetIcon(selectedDevice)}
-      </span>
-
-      <div>
-        <strong>
-          {selectedDevice.status || "Unknown"}
-        </strong>
-
-        <span>
-          {selectedDevice.device_type ||
-            "Rail OT Asset"}
-        </span>
-      </div>
-    </div>
-
-    <dl className="detail-list">
-      <div>
-        <dt>Asset type</dt>
-        <dd>
-          {selectedDevice.device_type ||
-            "Unknown"}
-        </dd>
-      </div>
-
-      <div>
-        <dt>Location</dt>
-        <dd>
-          {selectedDevice.location ||
-            "Not assigned"}
-        </dd>
-      </div>
-
-      <div>
-        <dt>IP address</dt>
-        <dd>
-          {selectedDevice.ip_address ||
-            "Not available"}
-        </dd>
-      </div>
-
-      <div>
-        <dt>Vendor</dt>
-        <dd>
-          {selectedDevice.vendor ||
-            "Unknown"}
-        </dd>
-      </div>
-
-      <div>
-        <dt>Firmware</dt>
-        <dd>
-          {selectedDevice.firmware_version ||
-            "Unknown"}
-        </dd>
-      </div>
-
-      <div>
-        <dt>Operational status</dt>
-        <dd>
-          {selectedDevice.status ||
-            "Unknown"}
-        </dd>
-      </div>
-
-      <div>
-        <dt>Risk level</dt>
-        <dd>
-          {selectedDevice.calculated_risk ||
-            selectedDevice.risk_level ||
-            "Unknown"}
-        </dd>
-      </div>
-
-      <div>
-        <dt>Risk score</dt>
-        <dd>
-          {selectedDevice.risk_score ?? "—"}
-        </dd>
-      </div>
-
-      <div>
-        <dt>Last seen</dt>
-        <dd>
-          {formatTimestamp(
-            selectedDevice.last_seen,
-          )}
-        </dd>
-      </div>
-    </dl>
-  </div>
-)}
-          </aside>
-        </>
-      )}
+      <AssetDetailPanel
+        selected={selected}
+        snapshot={snapshot}
+        onClose={() => setSelected(null)}
+      />
     </section>
   );
 }

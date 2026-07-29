@@ -1,6 +1,11 @@
 from datetime import datetime, timezone
 
 from models import GradeCrossing, TrackBlock, TrackSwitch, Train
+from services.device_framework import (
+    capabilities_for_device,
+    relationship_targets,
+    supported_effects_for_device,
+)
 from services.timeline_service import record_event
 
 
@@ -29,11 +34,11 @@ def is_signal_logic_modification(attack, target):
 
 
 def apply_signal_controller_effect(db, device):
-    affected_blocks = (
-        db.query(TrackBlock)
-        .filter(TrackBlock.controlling_device_id == device.id)
-        .order_by(TrackBlock.start_milepost)
-        .all()
+    affected_blocks = sorted(
+        relationship_targets(
+            db, device, "TRACK_BLOCK", TrackBlock
+        ),
+        key=lambda block: block.start_milepost,
     )
 
     if not affected_blocks:
@@ -95,9 +100,12 @@ def apply_signal_controller_effect(db, device):
 
 
 def apply_switch_controller_effect(db, device):
-    switches = db.query(TrackSwitch).filter(
-        TrackSwitch.controlling_device_id == device.id
-    ).order_by(TrackSwitch.milepost).all()
+    switches = sorted(
+        relationship_targets(
+            db, device, "TRACK_SWITCH", TrackSwitch
+        ),
+        key=lambda track_switch: track_switch.milepost,
+    )
     if not switches:
         raise DigitalTwinConflictError(
             f"{device.name} has no assigned track switches."
@@ -136,9 +144,12 @@ def apply_switch_controller_effect(db, device):
 
 
 def apply_grade_crossing_effect(db, device):
-    crossings = db.query(GradeCrossing).filter(
-        GradeCrossing.controlling_device_id == device.id
-    ).order_by(GradeCrossing.milepost).all()
+    crossings = sorted(
+        relationship_targets(
+            db, device, "GRADE_CROSSING", GradeCrossing
+        ),
+        key=lambda crossing: crossing.milepost,
+    )
     if not crossings:
         raise DigitalTwinConflictError(
             f"{device.name} has no assigned grade crossings."
@@ -258,42 +269,200 @@ def _serialize_crossing(crossing):
     }
 
 
-def apply_digital_twin_effect(db, attack, target):
-    if is_signal_logic_modification(attack, target):
-        blocks = apply_signal_controller_effect(db, target)
+def _apply_signal_effect(db, device, effect_id):
+    if effect_id == "force_stop_signal":
+        affected_blocks = apply_signal_controller_effect(db, device)
         return {
-            "effect_type": "signal_controller_compromise",
-            "affected_track_blocks": blocks,
+            "effect_type": effect_id,
+            "affected_track_blocks": affected_blocks,
         }
+    else:
+        blocks = relationship_targets(
+            db, device, "TRACK_BLOCK", TrackBlock
+        )
+        if not blocks:
+            raise DigitalTwinConflictError(
+                f"{device.name} has no assigned track blocks."
+            )
+        aspect = {
+            "force_approach_signal": "Approach",
+            "disable_signal": "Dark",
+        }.get(effect_id, "Stop")
+        for block in blocks:
+            block.signal_aspect = aspect
+            block.communications_status = "Degraded"
+            block.security_status = "Compromised"
+    return {
+        "effect_type": effect_id,
+        "affected_track_blocks": [
+            {
+                "id": block.id,
+                "name": block.name,
+                "signal_aspect": block.signal_aspect,
+                "communications_status": block.communications_status,
+                "security_status": block.security_status,
+            }
+            for block in blocks
+        ],
+    }
 
-    target_type = (target.device_type or "").strip().lower()
+
+def _apply_switch_effect(db, device, effect_id):
+    return {
+        "effect_type": effect_id,
+        "affected_switches": apply_switch_controller_effect(db, device),
+    }
+
+
+def _apply_crossing_effect(db, device, effect_id):
+    return {
+        "effect_type": effect_id,
+        "affected_crossings": apply_grade_crossing_effect(db, device),
+    }
+
+
+def _apply_ptc_effect(db, device, effect_id):
+    return {
+        "effect_type": effect_id,
+        "affected_trains": apply_ptc_communications_effect(db, device),
+    }
+
+
+def _apply_dispatch_effect(db, device, effect_id):
+    if effect_id == "dispatch_offline":
+        device.status = "Offline"
+    elif effect_id in {"dispatch_delay", "queue_dispatch_commands"}:
+        device.status = "Degraded"
+    return {
+        "effect_type": effect_id,
+        "dispatch": apply_dispatch_scada_effect(db, device),
+    }
+
+
+def _apply_device_state_effect(db, device, effect_id):
+    if effect_id in {"communications_loss", "sensor_offline", "remote_lockout"}:
+        device.status = "Offline"
+    else:
+        device.status = "Compromised"
+    device.risk_level = "Critical"
+    result = {
+        "effect_type": effect_id,
+        "device": {
+            "id": device.id,
+            "name": device.name,
+            "status": device.status,
+            "risk_level": device.risk_level,
+        },
+    }
+    record_event(
+        db,
+        event_type="effect_applied",
+        title=f"{effect_id.replace('_', ' ').title()} applied",
+        message=f"{effect_id.replace('_', ' ').title()} affected {device.name}.",
+        severity="High",
+        asset_name=device.name,
+        device_id=device.id,
+        metadata=result,
+    )
+    return result
+
+
+EFFECT_HANDLERS = {
+    "force_stop_signal": _apply_signal_effect,
+    "force_approach_signal": _apply_signal_effect,
+    "disable_signal": _apply_signal_effect,
+    "lock_switch": _apply_switch_effect,
+    "misalign_switch": _apply_switch_effect,
+    "disable_crossing": _apply_crossing_effect,
+    "disable_warning_lights": _apply_crossing_effect,
+    "ptc_degraded": _apply_ptc_effect,
+    "restricted_speed": _apply_ptc_effect,
+    "dispatch_delay": _apply_dispatch_effect,
+    "dispatch_offline": _apply_dispatch_effect,
+    "queue_dispatch_commands": _apply_dispatch_effect,
+    "communications_loss": _apply_device_state_effect,
+    "sensor_offline": _apply_device_state_effect,
+    "false_sensor_reading": _apply_device_state_effect,
+    "power_loss": _apply_device_state_effect,
+    "firmware_corruption": _apply_device_state_effect,
+    "logic_modification": _apply_device_state_effect,
+    "remote_lockout": _apply_device_state_effect,
+}
+
+
+ATTACK_EFFECT_BY_CAPABILITY = {
+    "logic_modification": {
+        "controls_track_blocks": "force_stop_signal",
+        "controls_switches": "misalign_switch",
+        "supports_remote_management": "logic_modification",
+    },
+    "firmware_tampering": {
+        "controls_crossings": "disable_crossing",
+        "supports_remote_management": "firmware_corruption",
+    },
+    "communication_failure": {
+        "controls_crossings": "disable_crossing",
+        "controls_ptc": "ptc_degraded",
+        "controls_communications": "communications_loss",
+    },
+    "denial_of_service": {
+        "controls_dispatch": "dispatch_delay",
+        "controls_communications": "communications_loss",
+    },
+}
+
+
+def resolve_attack_effect(attack, target):
+    configured = attack.get("effect_id") or attack.get("digital_twin_effect")
+    if configured in EFFECT_HANDLERS:
+        return configured
     attack_id = (attack.get("attack_id") or "").strip().lower()
+    mapping = ATTACK_EFFECT_BY_CAPABILITY.get(attack_id, {})
+    capabilities = capabilities_for_device(target)
+    for capability in capabilities:
+        if capability in mapping:
+            return mapping[capability]
+    return None
 
-    if target_type == "switch controller" and attack_id == "logic_modification":
-        return {
-            "effect_type": "switch_controller_compromise",
-            "affected_switches": apply_switch_controller_effect(db, target),
-        }
-    if (
-        target_type == "grade crossing controller"
-        and attack_id in {"firmware_tampering", "communication_failure"}
-    ):
-        return {
-            "effect_type": "grade_crossing_compromise",
-            "affected_crossings": apply_grade_crossing_effect(db, target),
-        }
-    if (
-        target_type == "ptc communications gateway"
-        and attack_id == "communication_failure"
-    ):
-        return {
-            "effect_type": "ptc_communications_failure",
-            "affected_trains": apply_ptc_communications_effect(db, target),
-        }
-    if target_type == "dispatch scada" and attack_id == "denial_of_service":
-        return {
-            "effect_type": "dispatch_scada_degradation",
-            "dispatch": apply_dispatch_scada_effect(db, target),
-        }
 
-    return {"effect_type": None, "affected_track_blocks": []}
+def apply_effect(db, device, effect_id):
+    if effect_id not in supported_effects_for_device(device):
+        raise DigitalTwinConflictError(
+            f"{device.name} does not support effect '{effect_id}'."
+        )
+    handler = EFFECT_HANDLERS.get(effect_id)
+    if not handler:
+        raise DigitalTwinConflictError(
+            f"No handler is registered for effect '{effect_id}'."
+        )
+    result = handler(db, device, effect_id)
+    record_event(
+        db,
+        event_type="effect_applied",
+        title=f"{effect_id.replace('_', ' ').title()} applied",
+        message=f"The configured effect was applied to {device.name}.",
+        severity="High",
+        asset_name=device.name,
+        device_id=device.id,
+        metadata={"effect_id": effect_id},
+    )
+    return result
+
+
+def apply_digital_twin_effect(db, attack, target):
+    effect_id = resolve_attack_effect(attack, target)
+    if not effect_id:
+        return {"effect_type": None, "affected_track_blocks": []}
+    result = apply_effect(db, target, effect_id)
+
+    # Preserve the established response names consumed by the demo UI/tests.
+    legacy_names = {
+        "force_stop_signal": "signal_controller_compromise",
+        "misalign_switch": "switch_controller_compromise",
+        "disable_crossing": "grade_crossing_compromise",
+        "ptc_degraded": "ptc_communications_failure",
+        "dispatch_delay": "dispatch_scada_degradation",
+    }
+    result["configured_effect"] = effect_id
+    result["effect_type"] = legacy_names.get(effect_id, effect_id)
+    return result

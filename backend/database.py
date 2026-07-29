@@ -33,6 +33,20 @@ ACTIVITY_LOG_COLUMNS = {
     "metadata_json": "TEXT DEFAULT '{}'",
 }
 
+OT_DEVICE_FRAMEWORK_COLUMNS = {
+    "device_type_id": "INTEGER",
+    "model": "VARCHAR DEFAULT ''",
+    "subdivision": "VARCHAR DEFAULT ''",
+    "track": "VARCHAR DEFAULT ''",
+    "latitude": "FLOAT",
+    "longitude": "FLOAT",
+    "criticality": "VARCHAR DEFAULT 'Medium'",
+    "description": "TEXT DEFAULT ''",
+    "capabilities_json": "TEXT DEFAULT '[]'",
+    "supported_effects_json": "TEXT DEFAULT '[]'",
+    "metadata_json": "TEXT DEFAULT '{}'",
+}
+
 
 def ensure_sqlite_schema():
     """Apply the small additive SQLite changes used by the demo app."""
@@ -40,20 +54,23 @@ def ensure_sqlite_schema():
         return
 
     with engine.begin() as connection:
-        existing_columns = {
-            row[1]
-            for row in connection.execute(
-                text("PRAGMA table_info(activity_log)")
-            )
+        additive_tables = {
+            "activity_log": ACTIVITY_LOG_COLUMNS,
+            "ot_devices": OT_DEVICE_FRAMEWORK_COLUMNS,
         }
-
-        for column_name, column_type in ACTIVITY_LOG_COLUMNS.items():
-            if column_name in existing_columns:
-                continue
-
-            connection.execute(
-                text(
-                    f"ALTER TABLE activity_log "
-                    f"ADD COLUMN {column_name} {column_type}"
+        for table_name, columns in additive_tables.items():
+            existing_columns = {
+                row[1]
+                for row in connection.execute(
+                    text(f"PRAGMA table_info({table_name})")
                 )
-            )
+            }
+            for column_name, column_type in columns.items():
+                if column_name in existing_columns:
+                    continue
+                connection.execute(
+                    text(
+                        f"ALTER TABLE {table_name} "
+                        f"ADD COLUMN {column_name} {column_type}"
+                    )
+                )

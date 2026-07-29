@@ -7,12 +7,32 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    UniqueConstraint,
 )
 from sqlalchemy.orm import relationship
 from datetime import datetime
 
 
 from database import Base
+
+
+class OTDeviceType(Base):
+    __tablename__ = "ot_device_types"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False, unique=True, index=True)
+    description = Column(Text, default="")
+    category = Column(String, default="Custom")
+    icon = Column(String, default="cpu")
+    color = Column(String, default="#38bdf8")
+    vendor = Column(String, default="")
+    model = Column(String, default="")
+    firmware_supported = Column(String, default="")
+    default_capabilities_json = Column(Text, default="[]")
+    default_effects_json = Column(Text, default="[]")
+    default_metadata_json = Column(Text, default="{}")
+
+    devices = relationship("OTDevice", back_populates="type_definition")
 
 
 class OTDevice(Base):
@@ -22,14 +42,57 @@ class OTDevice(Base):
     name = Column(String, nullable=False)
     ip_address = Column(String, nullable=False, unique=True, index=True)
     device_type = Column(String, nullable=False)
+    device_type_id = Column(
+        Integer, ForeignKey("ot_device_types.id"), nullable=True, index=True
+    )
     vendor = Column(String, nullable=False)
+    model = Column(String, default="")
     status = Column(String, default="Unknown")
     risk_level = Column(String, default="Low")
     firmware_version = Column(String, default="Unknown")
     location = Column(String, default="Unknown")
+    subdivision = Column(String, default="")
+    track = Column(String, default="")
+    latitude = Column(Float, nullable=True)
+    longitude = Column(Float, nullable=True)
+    criticality = Column(String, default="Medium")
+    description = Column(Text, default="")
+    capabilities_json = Column(Text, default="[]")
+    supported_effects_json = Column(Text, default="[]")
+    metadata_json = Column(Text, default="{}")
     last_seen = Column(DateTime, default=datetime.utcnow)
 
     alerts = relationship("Alert", back_populates="device")
+    type_definition = relationship("OTDeviceType", back_populates="devices")
+    relationships = relationship(
+        "DeviceRelationship",
+        back_populates="source_device",
+        cascade="all, delete-orphan",
+    )
+
+
+class DeviceRelationship(Base):
+    __tablename__ = "device_relationships"
+    __table_args__ = (
+        UniqueConstraint(
+            "source_device_id",
+            "target_type",
+            "target_id",
+            "relationship_type",
+            name="uq_device_relationship",
+        ),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    source_device_id = Column(
+        Integer, ForeignKey("ot_devices.id"), nullable=False, index=True
+    )
+    target_type = Column(String, nullable=False, index=True)
+    target_id = Column(Integer, nullable=False, index=True)
+    relationship_type = Column(String, nullable=False, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    source_device = relationship("OTDevice", back_populates="relationships")
 
 
 class Alert(Base):

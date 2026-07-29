@@ -7,6 +7,7 @@ function CreateScenario() {
   const [devices, setDevices] = useState([]);
   const [selectedAttack, setSelectedAttack] = useState("");
   const [selectedTargets, setSelectedTargets] = useState([]);
+  const [selectedEffect, setSelectedEffect] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [notes, setNotes] = useState("");
   const [result, setResult] = useState(null);
@@ -100,7 +101,8 @@ function CreateScenario() {
 
       const isCompatible =
         compatibleTypes.length === 0 ||
-        compatibleTypes.includes(deviceType);
+        compatibleTypes.includes(deviceType) ||
+        (device.supported_effects?.length ?? 0) > 0;
 
       const searchableText = [
         device.name,
@@ -130,6 +132,14 @@ function CreateScenario() {
     );
   }, [devices, selectedTargets]);
 
+  const commonSupportedEffects = useMemo(() => {
+    if (selectedDeviceDetails.length === 0) return [];
+    const [first, ...rest] = selectedDeviceDetails;
+    return (first.supported_effects ?? []).filter((effect) =>
+      rest.every((device) => (device.supported_effects ?? []).includes(effect)),
+    );
+  }, [selectedDeviceDetails]);
+
   function toggleTarget(deviceId) {
     setSelectedTargets((currentTargets) => {
       const isSelected = currentTargets.some(
@@ -147,6 +157,7 @@ function CreateScenario() {
 
     setResult(null);
     setError("");
+    setSelectedEffect("");
   }
 
   function handleAttackChange(event) {
@@ -154,6 +165,7 @@ function CreateScenario() {
 
     setSelectedAttack(attackId);
     setSelectedTargets([]);
+    setSelectedEffect("");
     setSearchTerm("");
     setResult(null);
     setError("");
@@ -328,6 +340,7 @@ function CreateScenario() {
             attack_id: selectedAttack,
             target_ids: selectedTargets,
             notes: notes.trim() || null,
+            effect_id: selectedEffect || null,
           }),
         }
       );
@@ -790,6 +803,31 @@ function CreateScenario() {
                 })}
               </div>
             </section>
+          )}
+
+          {selectedTargets.length > 0 && (
+            <div className="scenario-form-section">
+              <label htmlFor="effect">Capability-based Effect</label>
+              <select
+                id="effect"
+                value={selectedEffect}
+                onChange={(event) => setSelectedEffect(event.target.value)}
+                disabled={loading}
+              >
+                <option value="">Use attack catalog default</option>
+                {commonSupportedEffects.map((effect) => (
+                  <option key={effect} value={effect}>
+                    {effect.replaceAll("_", " ").replace(/\b\w/g, (char) =>
+                      char.toUpperCase(),
+                    )}
+                  </option>
+                ))}
+              </select>
+              <small>
+                Effects are derived from the capabilities shared by all selected
+                devices.
+              </small>
+            </div>
           )}
 
           <div className="scenario-form-section">

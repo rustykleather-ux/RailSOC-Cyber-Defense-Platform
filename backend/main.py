@@ -28,13 +28,29 @@ from models import (
     TrackSwitch,
     GradeCrossing,
     DispatchCommand,
+    DeviceRelationship,
+    OTDeviceType,
     
 )
 from services.risk_engine import calculate_device_risk
 from services.digital_twin_service import (
     DigitalTwinConflictError,
+    apply_effect,
     apply_digital_twin_effect,
     apply_signal_controller_effect,
+)
+from services.device_framework import (
+    CAPABILITY_EFFECTS,
+    EFFECT_LABELS,
+    create_device,
+    dumps_json,
+    initialize_device_framework,
+    loads_json,
+    relationship_target_exists,
+    serialize_device,
+    serialize_device_type,
+    serialize_relationship,
+    supported_effects_for_device,
 )
 from services.operational_impact import (
     build_operational_summary,
@@ -81,6 +97,54 @@ class DispatchCommandRequest(BaseModel):
 class DispatchStatusRequest(BaseModel):
     status: str
 
+
+class DeviceTypeRequest(BaseModel):
+    name: str
+    description: str = ""
+    category: str = "Custom"
+    icon: str = "cpu"
+    color: str = "#38bdf8"
+    vendor: str = ""
+    model: str = ""
+    firmware_supported: str = ""
+    default_capabilities: List[str] = []
+    default_effects: List[str] = []
+    default_metadata: Dict[str, Any] = {}
+
+
+class DeviceCreateRequest(BaseModel):
+    name: str
+    device_type_id: int
+    vendor: str
+    model: str
+    firmware: str
+    location: str
+    subdivision: str
+    track: str
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    criticality: str
+    description: str
+    ip_address: Optional[str] = None
+    capabilities: Optional[List[str]] = None
+    supported_effects: Optional[List[str]] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+
+class DeviceRelationshipRequest(BaseModel):
+    target_type: str
+    target_id: int
+    relationship_type: str
+
+
+class DeviceCapabilitiesRequest(BaseModel):
+    capabilities: List[str]
+    supported_effects: Optional[List[str]] = None
+
+
+class DeviceEffectRequest(BaseModel):
+    effect_id: str
+
 # =========================================================
 # FastAPI application
 # =========================================================
@@ -126,6 +190,7 @@ def initialize_track_block_controller_assignments():
     try:
         assign_signal_controller_track_blocks(db)
         seed_operational_assets(db)
+        initialize_device_framework(db)
         db.commit()
     except Exception:
         db.rollback()
@@ -171,6 +236,10 @@ def get_ai_operations_brief(
     impact = get_operational_impact(db)
     result["operational_impact"] = impact
     result["operational_summary"] = build_operational_summary(impact)
+    result["asset_capability_summaries"] = [
+        serialize_device(db, device)["dynamic_summary"]
+        for device in devices
+    ]
     return result
 # =========================================================
 # Scenario endpoint
@@ -484,6 +553,7 @@ class CustomScenario(BaseModel):
     attack_id: str
     target_ids: list[int]
     notes: Optional[str] = None
+    effect_id: Optional[str] = None
 
  
 
@@ -590,16 +660,19 @@ def launch_custom_scenario(
             detail="No matching targets were found",
         )
 
+    if request.effect_id:
+        attack = {**attack, "effect_id": request.effect_id}
+
     invalid_targets = []
 
     for target in targets:
-        print("===================================")
-        print("Target Name:", target.name)
-        print("Target Type:", target.device_type)
-        print("Compatible Types:", attack["compatible_types"])
-        print("Comparison Result:", target.device_type in attack["compatible_types"])
-        print("===================================")
-        if target.device_type not in attack["compatible_types"]:
+        if request.effect_id:
+            compatible = (
+                request.effect_id in supported_effects_for_device(target)
+            )
+        else:
+            compatible = target.device_type in attack["compatible_types"]
+        if not compatible:
             invalid_targets.append(target)
 
     if invalid_targets:
@@ -742,22 +815,251 @@ def get_devices(db: Session = Depends(get_db)):
 
         risk = calculate_device_risk(device, device_alerts, device_vulns)
 
-        results.append({
-            "id": device.id,
-            "name": device.name,
-            "ip_address": device.ip_address,
-            "device_type": device.device_type,
-            "vendor": device.vendor,
-            "status": device.status,
-            "risk_level": device.risk_level,
-            "firmware_version": device.firmware_version,
-            "location": device.location,
-            "last_seen": device.last_seen,
+        result = serialize_device(db, device)
+        result.update({
             "risk_score": risk["risk_score"],
             "calculated_risk": risk["calculated_risk"]
         })
+        results.append(result)
 
     return results
+
+
+@app.post("/devices", status_code=201)
+def add_device(
+    request: DeviceCreateRequest,
+    db: Session = Depends(get_db),
+):
+    try:
+        device = create_device(db, request)
+        db.commit()
+        db.refresh(device)
+        return serialize_device(db, device)
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.get("/device-types")
+def get_device_types(db: Session = Depends(get_db)):
+    return [
+        serialize_device_type(device_type)
+        for device_type in db.query(OTDeviceType)
+        .order_by(OTDeviceType.category, OTDeviceType.name)
+        .all()
+    ]
+
+
+@app.post("/device-types", status_code=201)
+def add_device_type(
+    request: DeviceTypeRequest,
+    db: Session = Depends(get_db),
+):
+    if db.query(OTDeviceType).filter_by(name=request.name).first():
+        raise HTTPException(
+            status_code=409, detail="A device type with this name exists."
+        )
+    device_type = OTDeviceType(
+        name=request.name,
+        description=request.description,
+        category=request.category,
+        icon=request.icon,
+        color=request.color,
+        vendor=request.vendor,
+        model=request.model,
+        firmware_supported=request.firmware_supported,
+        default_capabilities_json=dumps_json(
+            request.default_capabilities
+        ),
+        default_effects_json=dumps_json(request.default_effects),
+        default_metadata_json=dumps_json(request.default_metadata),
+    )
+    db.add(device_type)
+    db.commit()
+    db.refresh(device_type)
+    return serialize_device_type(device_type)
+
+
+@app.get("/capabilities")
+def get_capabilities():
+    return [
+        {
+            "id": capability,
+            "label": capability.replace("_", " ").title(),
+            "effects": [
+                {"id": effect, "label": EFFECT_LABELS[effect]}
+                for effect in effects
+            ],
+        }
+        for capability, effects in CAPABILITY_EFFECTS.items()
+    ]
+
+
+@app.put("/devices/{device_id}/capabilities")
+def update_device_capabilities(
+    device_id: int,
+    request: DeviceCapabilitiesRequest,
+    db: Session = Depends(get_db),
+):
+    device = db.get(OTDevice, device_id)
+    if not device:
+        raise HTTPException(status_code=404, detail="Device not found")
+    previous = loads_json(device.capabilities_json, [])
+    device.capabilities_json = dumps_json(request.capabilities)
+    if request.supported_effects is not None:
+        device.supported_effects_json = dumps_json(
+            request.supported_effects
+        )
+    record_event(
+        db,
+        event_type="capability_changed",
+        title=f"{device.name} capabilities changed",
+        message=(
+            f"Capabilities changed from {len(previous)} to "
+            f"{len(request.capabilities)}."
+        ),
+        asset_name=device.name,
+        device_id=device.id,
+        metadata={
+            "previous": previous,
+            "current": request.capabilities,
+        },
+    )
+    db.commit()
+    db.refresh(device)
+    return serialize_device(db, device)
+
+
+@app.get("/devices/{device_id}/supported-effects")
+def get_device_supported_effects(
+    device_id: int,
+    db: Session = Depends(get_db),
+):
+    device = db.get(OTDevice, device_id)
+    if not device:
+        raise HTTPException(status_code=404, detail="Device not found")
+    return [
+        {"id": effect, "label": EFFECT_LABELS.get(
+            effect, effect.replace("_", " ").title()
+        )}
+        for effect in supported_effects_for_device(device)
+    ]
+
+
+@app.post("/devices/{device_id}/effects")
+def run_device_effect(
+    device_id: int,
+    request: DeviceEffectRequest,
+    db: Session = Depends(get_db),
+):
+    device = db.get(OTDevice, device_id)
+    if not device:
+        raise HTTPException(status_code=404, detail="Device not found")
+    try:
+        result = apply_effect(db, device, request.effect_id)
+        record_event(
+            db,
+            event_type="custom_attack",
+            title=f"Custom attack on {device.name}",
+            message=(
+                f"A custom scenario applied {request.effect_id} to "
+                f"{device.name}."
+            ),
+            severity="High",
+            asset_name=device.name,
+            device_id=device.id,
+            metadata={"effect_id": request.effect_id},
+        )
+        db.commit()
+        return result
+    except DigitalTwinConflictError as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@app.get("/relationship-targets")
+def get_relationship_targets(db: Session = Depends(get_db)):
+    return {
+        "TRACK_BLOCK": [
+            {"id": item.id, "name": item.name}
+            for item in db.query(TrackBlock).order_by(TrackBlock.name)
+        ],
+        "TRACK_SWITCH": [
+            {"id": item.id, "name": item.name}
+            for item in db.query(TrackSwitch).order_by(TrackSwitch.name)
+        ],
+        "GRADE_CROSSING": [
+            {"id": item.id, "name": item.name}
+            for item in db.query(GradeCrossing).order_by(GradeCrossing.name)
+        ],
+        "OT_DEVICE": [
+            {"id": item.id, "name": item.name}
+            for item in db.query(OTDevice).order_by(OTDevice.name)
+        ],
+    }
+
+
+@app.post("/devices/{device_id}/relationships", status_code=201)
+def add_device_relationship(
+    device_id: int,
+    request: DeviceRelationshipRequest,
+    db: Session = Depends(get_db),
+):
+    device = db.get(OTDevice, device_id)
+    target_type = request.target_type.upper()
+    if not device:
+        raise HTTPException(status_code=404, detail="Device not found")
+    if not relationship_target_exists(db, target_type, request.target_id):
+        raise HTTPException(
+            status_code=404, detail="Relationship target not found"
+        )
+    existing = db.query(DeviceRelationship).filter_by(
+        source_device_id=device_id,
+        target_type=target_type,
+        target_id=request.target_id,
+        relationship_type=request.relationship_type.upper(),
+    ).first()
+    if existing:
+        return serialize_relationship(db, existing)
+    relationship = DeviceRelationship(
+        source_device_id=device_id,
+        target_type=target_type,
+        target_id=request.target_id,
+        relationship_type=request.relationship_type.upper(),
+    )
+    db.add(relationship)
+    db.flush()
+    serialized = serialize_relationship(db, relationship)
+    record_event(
+        db,
+        event_type="relationship_added",
+        title=f"Relationship added for {device.name}",
+        message=(
+            f"{device.name} now {request.relationship_type.lower().replace('_', ' ')} "
+            f"{serialized['target_name']}."
+        ),
+        asset_name=device.name,
+        device_id=device.id,
+        metadata=serialized,
+    )
+    db.commit()
+    return serialized
+
+
+@app.delete("/devices/{device_id}/relationships/{relationship_id}")
+def delete_device_relationship(
+    device_id: int,
+    relationship_id: int,
+    db: Session = Depends(get_db),
+):
+    relationship = db.query(DeviceRelationship).filter_by(
+        id=relationship_id, source_device_id=device_id
+    ).first()
+    if not relationship:
+        raise HTTPException(status_code=404, detail="Relationship not found")
+    db.delete(relationship)
+    db.commit()
+    return {"deleted": relationship_id}
 
 @app.post("/incidents/{incident_id}/close")
 def close_incident(

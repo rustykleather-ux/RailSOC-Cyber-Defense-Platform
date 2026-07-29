@@ -1,7 +1,4 @@
 function DeviceInventory({ devices }) {
-  console.log("DeviceInventory devices:", devices);
-console.log("Is array:", Array.isArray(devices));
-console.log("Type:", typeof devices);
   return (
     <>
       <h2>Railroad OT Asset Inventory</h2>
@@ -19,6 +16,8 @@ console.log("Type:", typeof devices);
             <th>Calculated Risk</th>
             <th>Firmware</th>
             <th>Location</th>
+            <th>Capabilities</th>
+            <th>Relationships</th>
             <th>Last Communication</th>
           </tr>
         </thead>
@@ -63,6 +62,16 @@ console.log("Type:", typeof devices);
               <td>{device.firmware_version}</td>
 
               <td>{device.location}</td>
+
+              <td>
+                <div className="asset-chip-list">
+                  {(device.capabilities ?? []).slice(0, 3).map((capability) => (
+                    <span key={capability}>{capability.replaceAll("_", " ")}</span>
+                  ))}
+                </div>
+              </td>
+
+              <td>{device.relationships?.length ?? 0}</td>
 
               <td>
                 {device.last_seen

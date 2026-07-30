@@ -231,6 +231,11 @@ export default function DispatcherOperations() {
 
         <section className="dispatch-panel">
           <h2><Route size={17} /> Route request</h2>
+          <p className="dispatch-preview">
+            {workspace?.map?.route_topology?.length || 0} explicit directed
+            topology segments loaded. Signal and switch requirements are
+            revalidated before reservation.
+          </p>
           <select value={routeForm.train_id} onChange={(e) => setRouteForm({...routeForm, train_id:e.target.value})}>
             <option value="">Train</option>{collections.TRAIN.map((t)=><option key={t.id} value={t.id}>{t.symbol}</option>)}
           </select>
@@ -247,7 +252,16 @@ export default function DispatcherOperations() {
               destination_block_id:Number(routeForm.destination_block_id),
               requested_by:"Dispatcher",
             }))}>Request route</button>
-          <ul>{(workspace?.routes || []).slice(0,5).map((r)=><li key={r.id}><strong>{r.train}</strong> · {r.status}<span>{r.blocking_reason}</span></li>)}</ul>
+          <ul>{(workspace?.routes || []).slice(0,5).map((r)=><li key={r.id}>
+            <strong>{r.train}</strong> · {r.status}
+            <span>{r.blocking_reason || `Blocks: ${r.requested_path.join(" → ")}`}</span>
+            {Object.keys(r.required_switch_positions || {}).length > 0 && (
+              <span>Switch requirements: {Object.entries(r.required_switch_positions).map(([id, state]) => `#${id} ${state}`).join(", ")}</span>
+            )}
+            {Object.keys(r.required_signal_states || {}).length > 0 && (
+              <span>Signal requirements: {Object.entries(r.required_signal_states).map(([id, state]) => `Block #${id} ${state}`).join(", ")}</span>
+            )}
+          </li>)}</ul>
         </section>
 
         <section className="dispatch-panel">

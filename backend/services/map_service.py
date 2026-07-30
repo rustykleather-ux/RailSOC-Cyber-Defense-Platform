@@ -9,6 +9,7 @@ from models import (
     Incident,
     OTDevice,
     OperationalRestriction,
+    RouteTopologySegment,
     TrackBlock,
     TrackSwitch,
     Train,
@@ -25,6 +26,7 @@ from services.dispatch_service import (
     serialize_command,
     serialize_restriction,
     serialize_route,
+    serialize_topology_segment,
 )
 
 
@@ -367,6 +369,9 @@ def get_map_snapshot(db):
     restrictions = db.query(OperationalRestriction).filter(
         OperationalRestriction.active.is_(True)
     ).all()
+    topology = db.query(RouteTopologySegment).filter(
+        RouteTopologySegment.enabled.is_(True)
+    ).all()
 
     return {
         "generated_at": datetime.now(timezone.utc),
@@ -409,5 +414,8 @@ def get_map_snapshot(db):
         "dispatch_routes": [serialize_route(item) for item in routes],
         "operational_restrictions": [
             serialize_restriction(item) for item in restrictions
+        ],
+        "route_topology": [
+            serialize_topology_segment(item) for item in topology
         ],
     }

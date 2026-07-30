@@ -29,6 +29,7 @@ const emptySnapshot = {
   dispatch_commands: [],
   dispatch_routes: [],
   operational_restrictions: [],
+  route_topology: [],
 };
 const initialFilters = {
   subdivision: "all",

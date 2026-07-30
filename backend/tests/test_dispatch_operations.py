@@ -11,9 +11,17 @@ BACKEND_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(BACKEND_DIR))
 
 from database import Base
-from models import ActivityLog, OTDevice, TrackBlock, TrackSwitch, Train
+from models import (
+    ActivityLog,
+    OTDevice,
+    RouteTopologySegment,
+    TrackBlock,
+    TrackSwitch,
+    Train,
+)
 from seed_operational_assets import seed_operational_assets
 from seed_track_blocks import seed_track_blocks
+from seed_route_topology import seed_route_topology
 from services.dispatch_service import (
     DispatchValidationError,
     create_dispatch_command,
@@ -178,6 +186,53 @@ class DispatcherOperationsTests(unittest.TestCase):
             ),
         })
         self.assertEqual(switch_route.status, "Blocked")
+
+    def test_explicit_topology_enforces_switch_and_signal_requirements(self):
+        start = self.switch.track_block
+        destination = next(
+            block for block in self.blocks
+            if block.start_milepost >= start.end_milepost
+        )
+        segment = RouteTopologySegment(
+            name="Test junction reverse route",
+            from_block_id=start.id,
+            to_block_id=destination.id,
+            signal_block_id=destination.id,
+            required_signal_aspect="Clear",
+            switch_id=self.switch.id,
+            required_switch_position="Reverse",
+            enabled=True,
+        )
+        self.db.add(segment)
+        self.db.flush()
+
+        blocked = create_route(self.db, {
+            "train_id": self.train.id,
+            "start_block_id": start.id,
+            "destination_block_id": destination.id,
+        })
+        self.assertEqual(blocked.status, "Blocked")
+        self.assertIn("Reverse", blocked.blocking_reason)
+
+        self.switch.position = self.switch.commanded_position = "Reverse"
+        established = create_route(self.db, {
+            "train_id": self.train.id,
+            "start_block_id": start.id,
+            "destination_block_id": destination.id,
+        })
+        self.assertEqual(established.status, "Established")
+        self.assertEqual(
+            established.required_switch_positions_json,
+            f'{{"{self.switch.id}": "Reverse"}}',
+        )
+        self.assertEqual(destination.signal_aspect, "Clear")
+
+    def test_seeded_topology_is_explicit_bidirectional_and_idempotent(self):
+        seed_route_topology(self.db)
+        seed_route_topology(self.db)
+        segments = self.db.query(RouteTopologySegment).all()
+        self.assertEqual(len(segments), (len(self.blocks) - 1) * 2)
+        self.assertTrue(any(item.switch_id == self.switch.id for item in segments))
 
     def test_restriction_affects_movement_and_map(self):
         restriction = create_restriction(self.db, {

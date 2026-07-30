@@ -520,6 +520,41 @@ class DispatchRoute(Base):
     )
 
 
+class RouteTopologySegment(Base):
+    __tablename__ = "route_topology_segments"
+    __table_args__ = (
+        UniqueConstraint(
+            "from_block_id",
+            "to_block_id",
+            name="uq_route_topology_direction",
+        ),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    from_block_id = Column(
+        Integer, ForeignKey("track_blocks.id"), nullable=False, index=True
+    )
+    to_block_id = Column(
+        Integer, ForeignKey("track_blocks.id"), nullable=False, index=True
+    )
+    signal_block_id = Column(
+        Integer, ForeignKey("track_blocks.id"), nullable=True
+    )
+    required_signal_aspect = Column(String, default="Clear")
+    switch_id = Column(
+        Integer, ForeignKey("track_switches.id"), nullable=True, index=True
+    )
+    required_switch_position = Column(String, nullable=True)
+    enabled = Column(Boolean, default=True, nullable=False, index=True)
+    metadata_json = Column(Text, default="{}")
+
+    from_block = relationship("TrackBlock", foreign_keys=[from_block_id])
+    to_block = relationship("TrackBlock", foreign_keys=[to_block_id])
+    signal_block = relationship("TrackBlock", foreign_keys=[signal_block_id])
+    track_switch = relationship("TrackSwitch", foreign_keys=[switch_id])
+
+
 class OperationalRestriction(Base):
     __tablename__ = "operational_restrictions"
 

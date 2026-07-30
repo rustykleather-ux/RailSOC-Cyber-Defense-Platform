@@ -30,6 +30,7 @@ from models import (
     DispatchCommand,
     DispatchRoute,
     OperationalRestriction,
+    RouteTopologySegment,
     DeviceRelationship,
     OTDeviceType,
     
@@ -62,6 +63,7 @@ from services.timeline_service import get_timeline, record_event
 from services.map_service import get_map_snapshot
 from seed_track_blocks import assign_signal_controller_track_blocks
 from seed_operational_assets import seed_operational_assets
+from seed_route_topology import seed_route_topology
 from services.dispatch_service import (
     DispatchValidationError,
     cancel_command,
@@ -78,6 +80,7 @@ from services.dispatch_service import (
     serialize_command,
     serialize_restriction,
     serialize_route,
+    serialize_topology_segment,
 )
 from train_simulation import train_simulation
 
@@ -243,6 +246,7 @@ def initialize_track_block_controller_assignments():
     try:
         assign_signal_controller_track_blocks(db)
         seed_operational_assets(db)
+        seed_route_topology(db)
         initialize_device_framework(db)
         db.commit()
     except Exception:
@@ -646,6 +650,15 @@ def get_dispatch_routes(db: Session = Depends(get_db)):
         serialize_route(route)
         for route in db.query(DispatchRoute)
         .order_by(DispatchRoute.requested_at.desc()).all()
+    ]}
+
+
+@app.get("/dispatch/topology")
+def get_dispatch_topology(db: Session = Depends(get_db)):
+    return {"segments": [
+        serialize_topology_segment(segment)
+        for segment in db.query(RouteTopologySegment)
+        .order_by(RouteTopologySegment.id).all()
     ]}
 
 

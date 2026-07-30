@@ -278,6 +278,16 @@
   filter: drop-shadow(0 0 7px #ef4444);
 }
 
+.digital-twin-svg .is-route-reserved rect {
+  stroke: #38bdf8;
+  stroke-width: 4;
+}
+
+.digital-twin-svg .has-operational-restriction rect {
+  stroke-dasharray: 4 3;
+  stroke: #fb923c;
+}
+
 .dt-corridor__title {
   fill: var(--text-h);
   font-size: 16px;

@@ -350,6 +350,25 @@ function DigitalTwinSvg({
     );
     return state ? `has-command-${state}` : "";
   };
+  const routeClass = (blockId) =>
+    (snapshot.dispatch_routes ?? []).some(
+      (route) =>
+        ["Established", "Occupied"].includes(route.status) &&
+        route.requested_path?.some(
+          (routeBlockId) => String(routeBlockId) === String(blockId),
+        ),
+    )
+      ? "is-route-reserved"
+      : "";
+  const restrictionClass = (targetType, targetId) =>
+    (snapshot.operational_restrictions ?? []).some(
+      (restriction) =>
+        restriction.active &&
+        restriction.target_type === targetType &&
+        String(restriction.target_id) === String(targetId),
+    )
+      ? "has-operational-restriction"
+      : "";
 
   const corridorByName = Object.fromEntries(
     dimensions.corridors.map((item) => [item.name, item]),
@@ -529,6 +548,9 @@ function DigitalTwinSvg({
                     className={`dt-block dt-block--${state} ${
                       changedKeys.has(key) ? "is-changed" : ""
                     } ${isHighlighted(key) ? "is-highlighted" : ""} ${commandClass(
+                      "TRACK_BLOCK",
+                      block.id,
+                    )} ${routeClass(block.id)} ${restrictionClass(
                       "TRACK_BLOCK",
                       block.id,
                     )}`}

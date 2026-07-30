@@ -9,6 +9,7 @@ from models import (
     Incident,
     OperationalRestriction,
     OTDevice,
+    RouteTopologySegment,
     TrackBlock,
     TrackSwitch,
     Train,
@@ -429,51 +430,141 @@ def create_route(db, data):
     )
     db.add(route)
     db.flush()
-    blocks = db.query(TrackBlock).filter(
-        TrackBlock.subdivision == start.subdivision,
-        TrackBlock.track == start.track,
-    ).order_by(TrackBlock.start_milepost).all()
-    ids = [b.id for b in blocks]
-    if start.id not in ids or destination.id not in ids:
-        reason = "Route blocks must be on the same subdivision and track."
-        path = []
-    else:
-        a, b = ids.index(start.id), ids.index(destination.id)
-        path = blocks[min(a, b):max(a, b) + 1]
-        reason = ""
-    requested_ids = data.get("requested_path") or [b.id for b in path]
-    if [b.id for b in path] != requested_ids:
-        reason = "Requested path must contain adjacent blocks in territory order."
+    path, segments, reason = resolve_route_path(
+        db, start, destination, data.get("requested_path")
+    )
     unsafe = next((b for b in path if b.occupied and b.occupied_train_id != train.id), None)
     unsafe = unsafe or next((b for b in path if b.maintenance), None)
     if unsafe:
         reason = f"{unsafe.name} is occupied or under maintenance."
-    for switch in db.query(TrackSwitch).filter(
-        TrackSwitch.track_block_id.in_([b.id for b in path] or [-1])
-    ):
-        if switch.locked or switch.position != switch.commanded_position:
-            reason = f"{switch.name} is locked or misaligned."
+    required_switches = {}
+    for segment in segments:
+        switch = segment.track_switch
+        if switch is None:
+            continue
+        required = segment.required_switch_position
+        required_switches[str(switch.id)] = required
+        if (
+            switch.locked
+            or _norm(switch.communications_status)
+            not in {"online", "normal", "healthy"}
+            or _norm(switch.security_status) == "compromised"
+            or (required and _norm(switch.position) != _norm(required))
+        ):
+            reason = (
+                f"{switch.name} must be safely available in "
+                f"{required or 'its commanded'} position."
+            )
             break
+    if not segments:
+        for switch in db.query(TrackSwitch).filter(
+            TrackSwitch.track_block_id.in_([b.id for b in path] or [-1])
+        ):
+            if switch.locked or switch.position != switch.commanded_position:
+                reason = f"{switch.name} is locked or misaligned."
+                break
     if any(r.restriction_type == "BLOCK_TRACK" for b in path for r in _active_restrictions(db, "TRACK_BLOCK", b.id)):
         reason = "The requested path contains a blocked-track restriction."
+    for active_route in db.query(DispatchRoute).filter(
+        DispatchRoute.status.in_(["Established", "Occupied"]),
+        DispatchRoute.train_id != train.id,
+    ):
+        if set(_loads(active_route.requested_path_json, [])) & {
+            block.id for block in path
+        }:
+            reason = f"Route conflicts with reserved route {active_route.id}."
+            break
     route.requested_path_json = json.dumps([b.id for b in path])
+    route.required_switch_positions_json = json.dumps(required_switches)
     if reason:
         route.status, route.blocking_reason = "Blocked", reason
         event_type = "dispatch_route_blocked"
     else:
         route.status, route.established_at = "Established", utc_now()
-        signal_blocks = path[1:] if len(path) > 1 else path
-        route.required_signal_states_json = json.dumps(
-            {str(b.id): "Clear" for b in signal_blocks}
-        )
-        for block in signal_blocks:
-            _validate_safety(db, "SET_SIGNAL", block, "Clear")
-            block.signal_aspect = "Clear"
+        signal_requirements = {
+            str(segment.signal_block_id): (
+                segment.required_signal_aspect or "Clear"
+            )
+            for segment in segments
+            if segment.signal_block_id
+        }
+        if not signal_requirements:
+            signal_blocks = path[1:] if len(path) > 1 else path
+            signal_requirements = {
+                str(block.id): "Clear" for block in signal_blocks
+            }
+        route.required_signal_states_json = json.dumps(signal_requirements)
+        for block_id, aspect in signal_requirements.items():
+            block = _target(db, "TRACK_BLOCK", int(block_id))
+            _validate_safety(db, "SET_SIGNAL", block, aspect)
+            block.signal_aspect = aspect
         event_type = "dispatch_route_established"
     record_event(db, event_type=event_type, title=f"Route {route.status.lower()}",
                  message=reason or f"Route established for {train.symbol}.",
                  train_id=train.id, metadata=serialize_route(route))
     return route
+
+
+def resolve_route_path(db, start, destination, requested_path=None):
+    segments = db.query(RouteTopologySegment).filter(
+        RouteTopologySegment.enabled.is_(True)
+    ).order_by(RouteTopologySegment.id).all()
+    segment_by_pair = {
+        (segment.from_block_id, segment.to_block_id): segment
+        for segment in segments
+    }
+    if segment_by_pair:
+        if requested_path:
+            ids = [int(value) for value in requested_path]
+            if not ids or ids[0] != start.id or ids[-1] != destination.id:
+                return [], [], "Requested path must begin and end at the selected blocks."
+            selected = []
+            for pair in zip(ids, ids[1:]):
+                segment = segment_by_pair.get(pair)
+                if segment is None:
+                    return [], [], (
+                        f"Blocks {pair[0]} and {pair[1]} are not explicitly connected."
+                    )
+                selected.append(segment)
+        else:
+            adjacency = {}
+            for segment in segments:
+                adjacency.setdefault(segment.from_block_id, []).append(segment)
+            queue = [(start.id, [])]
+            visited = {start.id}
+            selected = None
+            while queue:
+                block_id, path_segments = queue.pop(0)
+                if block_id == destination.id:
+                    selected = path_segments
+                    break
+                for segment in adjacency.get(block_id, []):
+                    if segment.to_block_id in visited:
+                        continue
+                    visited.add(segment.to_block_id)
+                    queue.append((
+                        segment.to_block_id,
+                        [*path_segments, segment],
+                    ))
+            if selected is None:
+                return [], [], "No enabled topology path connects the selected blocks."
+        ids = [start.id, *[segment.to_block_id for segment in selected]]
+        blocks = db.query(TrackBlock).filter(TrackBlock.id.in_(ids)).all()
+        by_id = {block.id: block for block in blocks}
+        return [by_id[item] for item in ids if item in by_id], selected, ""
+
+    blocks = db.query(TrackBlock).filter(
+        TrackBlock.subdivision == start.subdivision,
+        TrackBlock.track == start.track,
+    ).order_by(TrackBlock.start_milepost).all()
+    ids = [block.id for block in blocks]
+    if start.id not in ids or destination.id not in ids:
+        return [], [], "Route blocks must be on the same subdivision and track."
+    left, right = ids.index(start.id), ids.index(destination.id)
+    path = blocks[min(left, right):max(left, right) + 1]
+    if requested_path and [block.id for block in path] != requested_path:
+        return [], [], "Requested path must contain adjacent blocks in territory order."
+    return path, [], ""
 
 
 def release_cleared_routes(db):
@@ -699,4 +790,24 @@ def serialize_restriction(item):
         "cleared_by": item.cleared_by,
         "cleared_at": item.cleared_at.isoformat() if item.cleared_at else None,
         "incident_id": item.incident_id, "metadata": _loads(item.metadata_json, {}),
+    }
+
+
+def serialize_topology_segment(segment):
+    return {
+        "id": segment.id,
+        "name": segment.name,
+        "from_block_id": segment.from_block_id,
+        "from_block": segment.from_block.name if segment.from_block else None,
+        "to_block_id": segment.to_block_id,
+        "to_block": segment.to_block.name if segment.to_block else None,
+        "signal_block_id": segment.signal_block_id,
+        "required_signal_aspect": segment.required_signal_aspect,
+        "switch_id": segment.switch_id,
+        "switch": (
+            segment.track_switch.name if segment.track_switch else None
+        ),
+        "required_switch_position": segment.required_switch_position,
+        "enabled": segment.enabled,
+        "metadata": _loads(segment.metadata_json, {}),
     }

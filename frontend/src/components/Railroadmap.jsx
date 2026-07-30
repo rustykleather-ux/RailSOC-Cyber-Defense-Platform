@@ -8,6 +8,7 @@ import MapImpactPanel from "./railroad-map/MapImpactPanel";
 import {
   mapDimensions,
   matchesFilters,
+  activeMapConsequence,
   snapshotSignatures,
 } from "./railroad-map/mapLayout";
 import "./RailroadMap.css";
@@ -58,14 +59,6 @@ const collectionByKind = {
   crossing: "crossings",
   device: "devices",
 };
-
-function latestConsequence(snapshot) {
-  const impactful = (snapshot.timeline ?? []).find((event) =>
-    ["critical", "high"].includes(String(event.severity).toLowerCase()),
-  );
-  if (impactful) return impactful;
-  return snapshot.timeline?.[0] ?? null;
-}
 
 export default function RailroadMap() {
   const [snapshot, setSnapshot] = useState(emptySnapshot);
@@ -162,7 +155,7 @@ export default function RailroadMap() {
       ["all", "device"].includes(filters.assetType) &&
       matchesFilters(device, filters),
   );
-  const consequence = latestConsequence(snapshot);
+  const consequence = activeMapConsequence(snapshot);
 
   async function simulationCommand(command) {
     setCommandPending(true);

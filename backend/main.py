@@ -2121,6 +2121,17 @@ def reset_demo(db: Session = Depends(get_db)):
         )
         db.query(Incident).delete(synchronize_session=False)
         db.query(Alert).delete(synchronize_session=False)
+        record_event(
+            db,
+            event_type="demo_reset",
+            title="Operational baseline restored",
+            message=(
+                "Active alerts and incidents were cleared; historical "
+                "timeline events remain available for training review."
+            ),
+            severity="Info",
+            metadata={"reset_demo": True},
+        )
         db.commit()
 
         return {

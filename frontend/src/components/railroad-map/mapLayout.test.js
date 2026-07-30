@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   blockState,
+  activeMapConsequence,
   controlledAssetKeys,
   dispatchCommandState,
   mapDimensions,
@@ -9,6 +10,40 @@ import {
   milepostToX,
   trainState,
 } from "./mapLayout.js";
+
+test("map does not revive historical attack alerts after recovery", () => {
+  const snapshot = {
+    alerts: [],
+    incidents: [],
+    operational_impact: {
+      affected_blocks: 0,
+      delayed_trains: 0,
+      unsafe_switches: 0,
+      affected_crossings: 0,
+      queued_commands: 0,
+      dispatch_availability_percent: 100,
+    },
+    timeline: [
+      {
+        severity: "High",
+        title: "Unauthorized Logic Modification",
+        message: "Historical training event",
+      },
+    ],
+  };
+  assert.equal(activeMapConsequence(snapshot), null);
+
+  snapshot.incidents = [{
+    status: "Open",
+    severity: "Critical",
+    alert_type: "Unauthorized Logic Modification",
+    message: "Active incident",
+  }];
+  assert.equal(
+    activeMapConsequence(snapshot).title,
+    "Unauthorized Logic Modification",
+  );
+});
 
 test("map exposes pending, queued, completed, and blocked command state", () => {
   for (const status of ["Pending", "Queued", "Completed", "Blocked"]) {

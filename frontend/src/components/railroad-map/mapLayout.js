@@ -170,6 +170,52 @@ export function dispatchCommandState(commands, targetType, targetId) {
   return command ? String(command.status || "").toLowerCase() : "";
 }
 
+export function activeMapConsequence(snapshot) {
+  const isOpen = (item) =>
+    !["closed", "resolved", "cleared"].includes(
+      String(item?.status || "open").toLowerCase(),
+    );
+  const incident = (snapshot?.incidents ?? []).find(isOpen);
+  if (incident) {
+    return {
+      severity: incident.severity || "High",
+      title: incident.alert_type || "Active cyber incident",
+      message: incident.message || "An active incident affects the territory.",
+    };
+  }
+  const alert = (snapshot?.alerts ?? []).find(isOpen);
+  if (alert) {
+    return {
+      severity: alert.severity || "High",
+      title: alert.alert_type || "Active security alert",
+      message: alert.message || "An active alert affects the territory.",
+    };
+  }
+
+  const impact = snapshot?.operational_impact ?? {};
+  const hasActiveImpact =
+    Number(impact.affected_blocks || 0) > 0 ||
+    Number(impact.delayed_trains || 0) > 0 ||
+    Number(impact.unsafe_switches || 0) > 0 ||
+    Number(impact.affected_crossings || 0) > 0 ||
+    Number(impact.queued_commands || 0) > 0 ||
+    Number(impact.active_restrictions || 0) > 0 ||
+    Number(impact.dispatch_availability_percent ?? 100) < 100;
+  if (!hasActiveImpact) return null;
+
+  return (
+    (snapshot?.timeline ?? []).find((event) =>
+      ["critical", "high"].includes(String(event.severity).toLowerCase()),
+    ) ||
+    snapshot?.timeline?.[0] ||
+    {
+      severity: "Medium",
+      title: "Operational impact active",
+      message: impact.summary || "The territory is operating with restrictions.",
+    }
+  );
+}
+
 export function snapshotSignatures(snapshot) {
   const signature = {};
   const groups = [

@@ -3,7 +3,8 @@ from datetime import datetime, timezone
 from typing import Optional, Any, Dict, List
 from urllib import request
 
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, Query
+from fastapi.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
@@ -31,6 +32,9 @@ from models import (
     DispatchRoute,
     OperationalRestriction,
     RouteTopologySegment,
+    Exercise,
+    ExerciseRun,
+    ExerciseCheckpoint,
     DeviceRelationship,
     OTDeviceType,
     
@@ -64,6 +68,29 @@ from services.map_service import get_map_snapshot
 from seed_track_blocks import assign_signal_controller_track_blocks
 from seed_operational_assets import seed_operational_assets
 from seed_route_topology import seed_route_topology
+from seed_exercises import seed_exercises
+from services.exercise_service import (
+    ExerciseValidationError,
+    after_action_report,
+    cancel_run,
+    clone_exercise,
+    create_exercise,
+    create_run,
+    pause_run,
+    process_exercise_runs,
+    request_hint,
+    restart_run,
+    restore_checkpoint,
+    resume_run,
+    save_checkpoint,
+    serialize_checkpoint,
+    serialize_exercise,
+    serialize_run,
+    serialize_score,
+    simple_pdf,
+    start_run,
+    update_exercise,
+)
 from services.dispatch_service import (
     DispatchValidationError,
     cancel_command,
@@ -152,6 +179,37 @@ class RecoveryActionRequest(BaseModel):
     requested_by: str = "Dispatcher"
     incident_id: Optional[int] = None
     metadata: Optional[Dict[str, Any]] = None
+
+
+class ExerciseDefinitionRequest(BaseModel):
+    name: str = Field(min_length=1)
+    description: str = ""
+    category: str = "Custom"
+    difficulty: str = "Medium"
+    estimated_duration: int = Field(default=20, ge=1, le=480)
+    recommended_players: int = Field(default=1, ge=1, le=50)
+    enabled: bool = True
+    favorite: bool = False
+    known_intelligence: str = ""
+    success_criteria: str = ""
+    failure_conditions: str = ""
+    objectives: List[Dict[str, Any]] = []
+    script_events: List[Dict[str, Any]] = []
+    hints: List[Dict[str, Any]] = []
+    metadata: Dict[str, Any] = {}
+
+
+class ExerciseRunRequest(BaseModel):
+    exercise_id: int
+    metadata: Dict[str, Any] = {}
+
+
+class ExerciseCheckpointRequest(BaseModel):
+    name: str = "Checkpoint"
+
+
+class ExerciseCloneRequest(BaseModel):
+    name: Optional[str] = None
 
 
 class DeviceTypeRequest(BaseModel):
@@ -248,6 +306,7 @@ def initialize_track_block_controller_assignments():
         seed_operational_assets(db)
         seed_route_topology(db)
         initialize_device_framework(db)
+        seed_exercises(db)
         db.commit()
     except Exception:
         db.rollback()
@@ -338,6 +397,311 @@ def create_training_scenario(request: ScenarioCreateRequest):
         "message": "Scenario created successfully.",
         "scenario": scenario,
     }
+
+
+# =========================================================
+# Persisted Exercise Engine
+# =========================================================
+
+@app.get("/exercises")
+def list_exercises(
+    category: Optional[str] = None,
+    difficulty: Optional[str] = None,
+    enabled: Optional[bool] = None,
+    favorite: Optional[bool] = None,
+    completed: Optional[bool] = None,
+    db: Session = Depends(get_db),
+):
+    query = db.query(Exercise)
+    if category:
+        query = query.filter(Exercise.category == category)
+    if difficulty:
+        query = query.filter(Exercise.difficulty == difficulty)
+    if enabled is not None:
+        query = query.filter(Exercise.enabled == enabled)
+    if favorite is not None:
+        query = query.filter(Exercise.favorite == favorite)
+    exercises = query.order_by(Exercise.name).all()
+    if completed is not None:
+        completed_ids = {
+            row.exercise_id
+            for row in db.query(ExerciseRun).filter(
+                ExerciseRun.status == "Completed"
+            ).all()
+        }
+        exercises = [
+            item for item in exercises
+            if (item.id in completed_ids) == completed
+        ]
+    return {
+        "exercises": [
+            serialize_exercise(item, include_definition=True)
+            for item in exercises
+        ]
+    }
+
+
+@app.post("/exercises", status_code=201)
+def add_exercise(
+    request: ExerciseDefinitionRequest,
+    db: Session = Depends(get_db),
+):
+    try:
+        exercise = create_exercise(db, request.model_dump())
+        db.commit()
+        return serialize_exercise(exercise, include_definition=True)
+    except ExerciseValidationError as exc:
+        db.rollback()
+        raise HTTPException(status_code=exc.status_code, detail=str(exc))
+
+
+@app.put("/exercises/{exercise_id}")
+def edit_exercise(
+    exercise_id: int,
+    request: ExerciseDefinitionRequest,
+    db: Session = Depends(get_db),
+):
+    exercise = db.query(Exercise).filter(Exercise.id == exercise_id).first()
+    if not exercise:
+        raise HTTPException(status_code=404, detail="Exercise not found.")
+    if db.query(ExerciseRun).filter(
+        ExerciseRun.exercise_id == exercise.id
+    ).first():
+        raise HTTPException(
+            status_code=409,
+            detail="Exercise history exists; clone the exercise before editing its definition.",
+        )
+    try:
+        exercise = update_exercise(db, exercise, request.model_dump())
+        db.commit()
+        return serialize_exercise(exercise, include_definition=True)
+    except ExerciseValidationError as exc:
+        db.rollback()
+        raise HTTPException(status_code=exc.status_code, detail=str(exc))
+
+
+@app.delete("/exercises/{exercise_id}")
+def remove_exercise(exercise_id: int, db: Session = Depends(get_db)):
+    exercise = db.query(Exercise).filter(Exercise.id == exercise_id).first()
+    if not exercise:
+        raise HTTPException(status_code=404, detail="Exercise not found.")
+    if db.query(ExerciseRun).filter(
+        ExerciseRun.exercise_id == exercise.id
+    ).first():
+        raise HTTPException(
+            status_code=409,
+            detail="Exercise history exists; disable the exercise instead of deleting it.",
+        )
+    db.delete(exercise)
+    db.commit()
+    return {"deleted": True, "exercise_id": exercise_id}
+
+
+@app.post("/exercises/{exercise_id}/clone", status_code=201)
+def clone_exercise_endpoint(
+    exercise_id: int,
+    request: ExerciseCloneRequest,
+    db: Session = Depends(get_db),
+):
+    exercise = db.query(Exercise).filter(Exercise.id == exercise_id).first()
+    if not exercise:
+        raise HTTPException(status_code=404, detail="Exercise not found.")
+    try:
+        cloned = clone_exercise(db, exercise, request.name)
+        db.commit()
+        return serialize_exercise(cloned, include_definition=True)
+    except ExerciseValidationError as exc:
+        db.rollback()
+        raise HTTPException(status_code=exc.status_code, detail=str(exc))
+
+
+@app.get("/exercises/{exercise_id}/export")
+def export_exercise(exercise_id: int, db: Session = Depends(get_db)):
+    exercise = db.query(Exercise).filter(Exercise.id == exercise_id).first()
+    if not exercise:
+        raise HTTPException(status_code=404, detail="Exercise not found.")
+    return serialize_exercise(exercise, include_definition=True)
+
+
+@app.post("/exercises/import", status_code=201)
+def import_exercise(
+    request: ExerciseDefinitionRequest,
+    db: Session = Depends(get_db),
+):
+    return add_exercise(request, db)
+
+
+@app.get("/exercise-runs")
+def list_exercise_runs(
+    status: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
+    process_exercise_runs(db)
+    query = db.query(ExerciseRun)
+    if status:
+        query = query.filter(ExerciseRun.status == status)
+    runs = query.order_by(ExerciseRun.created_at.desc()).all()
+    db.commit()
+    return {"runs": [serialize_run(db, item, detail=False) for item in runs]}
+
+
+@app.post("/exercise-runs", status_code=201)
+def add_exercise_run(
+    request: ExerciseRunRequest,
+    db: Session = Depends(get_db),
+):
+    try:
+        run = create_run(db, request.exercise_id, request.metadata)
+        db.commit()
+        return serialize_run(db, run)
+    except ExerciseValidationError as exc:
+        db.rollback()
+        raise HTTPException(status_code=exc.status_code, detail=str(exc))
+
+
+@app.get("/exercise-runs/{run_id}")
+def get_exercise_run(run_id: int, db: Session = Depends(get_db)):
+    run = db.query(ExerciseRun).filter(ExerciseRun.id == run_id).first()
+    if not run:
+        raise HTTPException(status_code=404, detail="Exercise run not found.")
+    process_exercise_runs(db)
+    db.commit()
+    return serialize_run(db, run)
+
+
+def _exercise_run_action(db, action, run_id):
+    try:
+        run = action(db, run_id)
+        db.commit()
+        return serialize_run(db, run)
+    except ExerciseValidationError as exc:
+        db.rollback()
+        raise HTTPException(status_code=exc.status_code, detail=str(exc))
+
+
+@app.post("/exercise-runs/{run_id}/start")
+def start_exercise_run(run_id: int, db: Session = Depends(get_db)):
+    return _exercise_run_action(db, start_run, run_id)
+
+
+@app.post("/exercise-runs/{run_id}/pause")
+def pause_exercise_run(run_id: int, db: Session = Depends(get_db)):
+    return _exercise_run_action(db, pause_run, run_id)
+
+
+@app.post("/exercise-runs/{run_id}/resume")
+def resume_exercise_run(run_id: int, db: Session = Depends(get_db)):
+    return _exercise_run_action(db, resume_run, run_id)
+
+
+@app.post("/exercise-runs/{run_id}/cancel")
+def cancel_exercise_run(run_id: int, db: Session = Depends(get_db)):
+    return _exercise_run_action(db, cancel_run, run_id)
+
+
+@app.post("/exercise-runs/{run_id}/restart", status_code=201)
+def restart_exercise_run(run_id: int, db: Session = Depends(get_db)):
+    return _exercise_run_action(db, restart_run, run_id)
+
+
+@app.get("/exercise-runs/{run_id}/score")
+def get_exercise_score(run_id: int, db: Session = Depends(get_db)):
+    run = db.query(ExerciseRun).filter(ExerciseRun.id == run_id).first()
+    if not run:
+        raise HTTPException(status_code=404, detail="Exercise run not found.")
+    process_exercise_runs(db)
+    db.commit()
+    return serialize_score(run)
+
+
+@app.get("/exercise-runs/{run_id}/timeline")
+def get_exercise_timeline(run_id: int, db: Session = Depends(get_db)):
+    run = db.query(ExerciseRun).filter(ExerciseRun.id == run_id).first()
+    if not run:
+        raise HTTPException(status_code=404, detail="Exercise run not found.")
+    return {
+        "events": [
+            item for item in get_timeline(db, 500)
+            if item.get("scenario_id") == str(run.id)
+        ]
+    }
+
+
+@app.get("/exercise-runs/{run_id}/checkpoints")
+def get_exercise_checkpoints(run_id: int, db: Session = Depends(get_db)):
+    return {
+        "checkpoints": [
+            serialize_checkpoint(item)
+            for item in db.query(ExerciseCheckpoint).filter(
+                ExerciseCheckpoint.run_id == run_id
+            ).order_by(ExerciseCheckpoint.created_at.desc()).all()
+        ]
+    }
+
+
+@app.post("/exercise-runs/{run_id}/checkpoints", status_code=201)
+def create_exercise_checkpoint(
+    run_id: int,
+    request: ExerciseCheckpointRequest,
+    db: Session = Depends(get_db),
+):
+    try:
+        checkpoint = save_checkpoint(db, run_id, request.name)
+        db.commit()
+        return serialize_checkpoint(checkpoint)
+    except ExerciseValidationError as exc:
+        db.rollback()
+        raise HTTPException(status_code=exc.status_code, detail=str(exc))
+
+
+@app.post("/exercise-runs/{run_id}/checkpoints/{checkpoint_id}/restore")
+def restore_exercise_checkpoint(
+    run_id: int,
+    checkpoint_id: int,
+    db: Session = Depends(get_db),
+):
+    try:
+        run = restore_checkpoint(db, run_id, checkpoint_id)
+        db.commit()
+        return serialize_run(db, run)
+    except ExerciseValidationError as exc:
+        db.rollback()
+        raise HTTPException(status_code=exc.status_code, detail=str(exc))
+
+
+@app.post("/exercise-runs/{run_id}/hints")
+def request_exercise_hint(run_id: int, db: Session = Depends(get_db)):
+    try:
+        hint = request_hint(db, run_id)
+        db.commit()
+        return hint
+    except ExerciseValidationError as exc:
+        db.rollback()
+        raise HTTPException(status_code=exc.status_code, detail=str(exc))
+
+
+@app.get("/exercise-runs/{run_id}/after-action-report")
+def get_exercise_after_action_report(
+    run_id: int,
+    format: str = Query(default="json", pattern="^(json|markdown|pdf)$"),
+    db: Session = Depends(get_db),
+):
+    run = db.query(ExerciseRun).filter(ExerciseRun.id == run_id).first()
+    if not run:
+        raise HTTPException(status_code=404, detail="Exercise run not found.")
+    report = after_action_report(db, run)
+    db.commit()
+    if format == "markdown":
+        return Response(
+            report["markdown"], media_type="text/markdown",
+            headers={"Content-Disposition": f'attachment; filename="exercise-{run.id}-aar.md"'},
+        )
+    if format == "pdf":
+        return Response(
+            simple_pdf(report["markdown"]), media_type="application/pdf",
+            headers={"Content-Disposition": f'attachment; filename="exercise-{run.id}-aar.pdf"'},
+        )
+    return report
 # =========================================================
 # AI Incidence Analysis
 # =========================================================

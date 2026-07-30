@@ -15,6 +15,7 @@ from models import (
 )
 from services.timeline_service import record_event
 from services.dispatch_service import process_dispatch_commands, release_cleared_routes
+from services.exercise_service import process_exercise_runs
 
 
 class TrainSimulationEngine:
@@ -235,6 +236,7 @@ class TrainSimulationEngine:
             self.update_signal_states(db)
             process_dispatch_commands(db)
             release_cleared_routes(db)
+            process_exercise_runs(db)
 
             db.commit()
 

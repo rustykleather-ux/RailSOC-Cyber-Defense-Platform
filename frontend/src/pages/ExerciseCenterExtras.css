@@ -1,0 +1,28 @@
+.exercise-import {
+  background: #111c30;
+  border: 1px solid #334155;
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 8px;
+}
+
+.exercise-import input {
+  display: none;
+}
+
+.exercise-actions a {
+  align-items: center;
+  background: #111c30;
+  border: 1px solid #334155;
+  border-radius: 7px;
+  color: #e2e8f0;
+  display: flex;
+  gap: 5px;
+  padding: 8px;
+  text-decoration: none;
+}
+
+.run-briefing {
+  margin-top: 10px;
+}

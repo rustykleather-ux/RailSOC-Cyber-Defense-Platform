@@ -24,6 +24,7 @@ import Settings from "./pages/Settings";
 import Vulnerabilities from "./pages/Vulnerabilities";
 import CreateScenario from "./pages/CreateScenario";
 import DispatcherOperations from "./pages/DispatcherOperations";
+import ExerciseCenter from "./pages/ExerciseCenter";
 
 import { getTrains } from "./services/trainService";
 import { getTrackBlocks } from "./services/blockService";
@@ -53,6 +54,7 @@ import {
   FileChartColumn,
   Settings as SettingsIcon,
   TrainFront,
+  BookOpenCheck,
 } from "lucide-react";
 
 import { getDevices } from "./services/deviceService";
@@ -391,6 +393,11 @@ function App() {
               <span>Railroad Topology</span>
             </NavLink>
 
+            <NavLink to="/exercises">
+              <BookOpenCheck size={18} />
+              <span>Exercise Center</span>
+            </NavLink>
+
             <NavLink to="/dispatcher">
               <TrainFront size={18} />
               <span>Dispatcher Operations</span>
@@ -549,6 +556,11 @@ function App() {
                     trackBlocks={trackBlocks}
                   />
                 }
+              />
+
+              <Route
+                path="/exercises"
+                element={<ExerciseCenter />}
               />
 
               <Route

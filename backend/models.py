@@ -571,3 +571,173 @@ class OperationalRestriction(Base):
     cleared_at = Column(DateTime, nullable=True)
     incident_id = Column(Integer, ForeignKey("incidents.id"), nullable=True)
     metadata_json = Column(Text, default="{}")
+
+
+class Exercise(Base):
+    __tablename__ = "exercises"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False, unique=True, index=True)
+    description = Column(Text, default="")
+    category = Column(String, default="Custom", nullable=False, index=True)
+    difficulty = Column(String, default="Medium", nullable=False, index=True)
+    estimated_duration = Column(Integer, default=20)
+    recommended_players = Column(Integer, default=1)
+    enabled = Column(Boolean, default=True, nullable=False)
+    favorite = Column(Boolean, default=False, nullable=False)
+    known_intelligence = Column(Text, default="")
+    success_criteria = Column(Text, default="")
+    failure_conditions = Column(Text, default="")
+    metadata_json = Column(Text, default="{}")
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
+
+    objectives = relationship(
+        "ExerciseObjective", back_populates="exercise",
+        cascade="all, delete-orphan", order_by="ExerciseObjective.sort_order"
+    )
+    script_events = relationship(
+        "ExerciseScriptEvent", back_populates="exercise",
+        cascade="all, delete-orphan", order_by="ExerciseScriptEvent.offset_seconds"
+    )
+    hints = relationship(
+        "ExerciseHint", back_populates="exercise",
+        cascade="all, delete-orphan", order_by="ExerciseHint.available_after_seconds"
+    )
+
+
+class ExerciseObjective(Base):
+    __tablename__ = "exercise_objectives"
+
+    id = Column(Integer, primary_key=True, index=True)
+    exercise_id = Column(Integer, ForeignKey("exercises.id"), nullable=False, index=True)
+    description = Column(Text, nullable=False)
+    objective_type = Column(String, nullable=False)
+    target_type = Column(String, nullable=True)
+    target_id = Column(Integer, nullable=True)
+    target_value = Column(Float, nullable=True)
+    comparison = Column(String, default="eq")
+    optional = Column(Boolean, default=False)
+    hidden = Column(Boolean, default=False)
+    weight = Column(Float, default=1.0)
+    sort_order = Column(Integer, default=0)
+    metadata_json = Column(Text, default="{}")
+
+    exercise = relationship("Exercise", back_populates="objectives")
+
+
+class ExerciseScriptEvent(Base):
+    __tablename__ = "exercise_script_events"
+
+    id = Column(Integer, primary_key=True, index=True)
+    exercise_id = Column(Integer, ForeignKey("exercises.id"), nullable=False, index=True)
+    event_type = Column(String, nullable=False)
+    offset_seconds = Column(Integer, default=0, nullable=False)
+    condition_json = Column(Text, default="{}")
+    payload_json = Column(Text, default="{}")
+    one_time = Column(Boolean, default=True)
+    sort_order = Column(Integer, default=0)
+
+    exercise = relationship("Exercise", back_populates="script_events")
+
+
+class ExerciseHint(Base):
+    __tablename__ = "exercise_hints"
+
+    id = Column(Integer, primary_key=True, index=True)
+    exercise_id = Column(Integer, ForeignKey("exercises.id"), nullable=False, index=True)
+    message = Column(Text, nullable=False)
+    available_after_seconds = Column(Integer, default=0)
+    automatic = Column(Boolean, default=False)
+    condition_json = Column(Text, default="{}")
+
+    exercise = relationship("Exercise", back_populates="hints")
+
+
+class ExerciseRun(Base):
+    __tablename__ = "exercise_runs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    exercise_id = Column(Integer, ForeignKey("exercises.id"), nullable=False, index=True)
+    status = Column(String, default="Ready", nullable=False, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    started_at = Column(DateTime, nullable=True)
+    paused_at = Column(DateTime, nullable=True)
+    completed_at = Column(DateTime, nullable=True)
+    elapsed_seconds = Column(Integer, default=0)
+    accumulated_seconds = Column(Integer, default=0)
+    score = Column(Float, default=100.0)
+    cyber_score = Column(Float, default=100.0)
+    operations_score = Column(Float, default=100.0)
+    safety_score = Column(Float, default=100.0)
+    availability_score = Column(Float, default=100.0)
+    response_score = Column(Float, default=100.0)
+    current_phase = Column(String, default="Mission Briefing")
+    metadata_json = Column(Text, default="{}")
+
+    exercise = relationship("Exercise")
+    objectives = relationship(
+        "ExerciseRunObjective", back_populates="run",
+        cascade="all, delete-orphan"
+    )
+    event_states = relationship(
+        "ExerciseRunEvent", back_populates="run",
+        cascade="all, delete-orphan"
+    )
+    checkpoints = relationship(
+        "ExerciseCheckpoint", back_populates="run",
+        cascade="all, delete-orphan"
+    )
+
+
+class ExerciseRunObjective(Base):
+    __tablename__ = "exercise_run_objectives"
+
+    id = Column(Integer, primary_key=True, index=True)
+    run_id = Column(Integer, ForeignKey("exercise_runs.id"), nullable=False, index=True)
+    objective_id = Column(
+        Integer, ForeignKey("exercise_objectives.id"), nullable=False
+    )
+    status = Column(String, default="Pending")
+    progress = Column(Float, default=0.0)
+    current_value = Column(Float, nullable=True)
+    completed_at = Column(DateTime, nullable=True)
+    failed_at = Column(DateTime, nullable=True)
+    metadata_json = Column(Text, default="{}")
+
+    run = relationship("ExerciseRun", back_populates="objectives")
+    objective = relationship("ExerciseObjective")
+
+
+class ExerciseRunEvent(Base):
+    __tablename__ = "exercise_run_events"
+    __table_args__ = (
+        UniqueConstraint("run_id", "script_event_id", name="uq_run_script_event"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    run_id = Column(Integer, ForeignKey("exercise_runs.id"), nullable=False, index=True)
+    script_event_id = Column(
+        Integer, ForeignKey("exercise_script_events.id"), nullable=False
+    )
+    status = Column(String, default="Pending")
+    executed_at = Column(DateTime, nullable=True)
+    result_json = Column(Text, default="{}")
+
+    run = relationship("ExerciseRun", back_populates="event_states")
+    script_event = relationship("ExerciseScriptEvent")
+
+
+class ExerciseCheckpoint(Base):
+    __tablename__ = "exercise_checkpoints"
+
+    id = Column(Integer, primary_key=True, index=True)
+    run_id = Column(Integer, ForeignKey("exercise_runs.id"), nullable=False, index=True)
+    name = Column(String, default="Checkpoint")
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    elapsed_seconds = Column(Integer, default=0)
+    state_json = Column(Text, nullable=False)
+
+    run = relationship("ExerciseRun", back_populates="checkpoints")

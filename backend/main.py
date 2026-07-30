@@ -1,9 +1,11 @@
+import asyncio
+import json
 import random
 from datetime import datetime, timezone
 from typing import Optional, Any, Dict, List
 from urllib import request
 
-from fastapi import FastAPI, Depends, HTTPException, Query
+from fastapi import FastAPI, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -37,6 +39,11 @@ from models import (
     ExerciseCheckpoint,
     DeviceRelationship,
     OTDeviceType,
+    NetworkConnection,
+    NetworkNode,
+    NetworkPath,
+    NetworkTrafficEvent,
+    NetworkZone,
     
 )
 from services.risk_engine import calculate_device_risk
@@ -69,11 +76,30 @@ from seed_track_blocks import assign_signal_controller_track_blocks
 from seed_operational_assets import seed_operational_assets
 from seed_route_topology import seed_route_topology
 from seed_exercises import seed_exercises
+from seed_network_visibility import seed_network_visibility
+from services.network_visibility_service import (
+    NetworkValidationError,
+    apply_connection_action,
+    apply_node_action,
+    get_connection as get_network_connection,
+    get_node as get_network_node,
+    get_topology as get_network_topology,
+    list_events as list_network_events,
+    restore_baseline as restore_network_baseline,
+    run_simulation as run_network_simulation,
+    save_layout as save_network_layout,
+    serialize_connection as serialize_network_connection,
+    serialize_node as serialize_network_node,
+    serialize_zone as serialize_network_zone,
+    trace_path as trace_network_path,
+    websocket_payload as network_websocket_payload,
+)
 from services.exercise_service import (
     ExerciseValidationError,
     after_action_report,
     cancel_run,
     clone_exercise,
+    clear_exercise_history,
     create_exercise,
     create_run,
     pause_run,
@@ -259,6 +285,28 @@ class DeviceCapabilitiesRequest(BaseModel):
 class DeviceEffectRequest(BaseModel):
     effect_id: str
 
+
+class NetworkPathRequest(BaseModel):
+    source_node_id: int
+    destination_node_id: int
+    name: Optional[str] = Field(default=None, max_length=160)
+
+
+class NetworkLayoutPosition(BaseModel):
+    id: int
+    x: float
+    y: float
+
+
+class NetworkLayoutRequest(BaseModel):
+    positions: List[NetworkLayoutPosition] = Field(max_length=250)
+
+
+class NetworkSimulationRequest(BaseModel):
+    simulation_type: str
+    source_node_id: Optional[int] = None
+    target_node_id: Optional[int] = None
+
 # =========================================================
 # FastAPI application
 # =========================================================
@@ -307,12 +355,224 @@ def initialize_track_block_controller_assignments():
         seed_route_topology(db)
         initialize_device_framework(db)
         seed_exercises(db)
+        seed_network_visibility(db)
         db.commit()
     except Exception:
         db.rollback()
         raise
     finally:
         db.close()
+
+
+def _network_http_error(db, exc):
+    db.rollback()
+    if isinstance(exc, NetworkValidationError):
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    raise exc
+
+
+@app.get("/api/network/nodes")
+def network_nodes(db: Session = Depends(get_db)):
+    try:
+        get_network_topology(db, event_limit=1)
+        return [
+            serialize_network_node(node)
+            for node in db.query(NetworkNode).order_by(NetworkNode.id).all()
+        ]
+    except Exception as exc:
+        _network_http_error(db, exc)
+
+
+@app.get("/api/network/nodes/{node_id}")
+def network_node(node_id: int, db: Session = Depends(get_db)):
+    try:
+        return get_network_node(db, node_id)
+    except Exception as exc:
+        _network_http_error(db, exc)
+
+
+@app.get("/api/network/connections")
+def network_connections(db: Session = Depends(get_db)):
+    return [
+        serialize_network_connection(item)
+        for item in db.query(NetworkConnection).order_by(NetworkConnection.id).all()
+    ]
+
+
+@app.get("/api/network/connections/{connection_id}")
+def network_connection(connection_id: int, db: Session = Depends(get_db)):
+    try:
+        return get_network_connection(db, connection_id)
+    except Exception as exc:
+        _network_http_error(db, exc)
+
+
+@app.get("/api/network/zones")
+def network_zones(db: Session = Depends(get_db)):
+    return [
+        serialize_network_zone(zone)
+        for zone in db.query(NetworkZone).order_by(NetworkZone.id).all()
+    ]
+
+
+@app.get("/api/network/topology")
+def network_topology(
+    event_limit: int = Query(default=100, ge=1, le=500),
+    db: Session = Depends(get_db),
+):
+    try:
+        return get_network_topology(db, event_limit)
+    except Exception as exc:
+        _network_http_error(db, exc)
+
+
+@app.get("/api/network/events")
+@app.get("/api/network/traffic")
+def network_events(
+    limit: int = Query(default=100, ge=1, le=500),
+    node_id: Optional[int] = None,
+    connection_id: Optional[int] = None,
+    severity: Optional[str] = None,
+    protocol: Optional[str] = None,
+    event_type: Optional[str] = None,
+    incident_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+):
+    return list_network_events(
+        db,
+        limit=limit,
+        node_id=node_id,
+        connection_id=connection_id,
+        severity=severity,
+        protocol=protocol,
+        event_type=event_type,
+        incident_id=incident_id,
+    )
+
+
+@app.get("/api/network/path")
+def network_paths(db: Session = Depends(get_db)):
+    return [
+        {
+            "id": item.id,
+            "name": item.name,
+            "source_node_id": item.source_node_id,
+            "destination_node_id": item.destination_node_id,
+            "hops": json.loads(item.hops_json or "[]"),
+            "path_status": item.path_status,
+            "total_latency_ms": item.total_latency_ms,
+            "total_packet_loss": item.total_packet_loss,
+            "updated_at": item.updated_at.isoformat() if item.updated_at else None,
+        }
+        for item in db.query(NetworkPath)
+        .order_by(NetworkPath.updated_at.desc(), NetworkPath.id.desc())
+        .limit(50)
+        .all()
+    ]
+
+
+@app.post("/api/network/path/trace")
+def network_trace_path(
+    request: NetworkPathRequest,
+    db: Session = Depends(get_db),
+):
+    try:
+        result = trace_network_path(
+            db,
+            request.source_node_id,
+            request.destination_node_id,
+            request.name,
+        )
+        db.commit()
+        return result
+    except Exception as exc:
+        _network_http_error(db, exc)
+
+
+@app.post("/api/network/layout")
+def network_save_layout(
+    request: NetworkLayoutRequest,
+    db: Session = Depends(get_db),
+):
+    try:
+        result = save_network_layout(
+            db, [position.model_dump() for position in request.positions]
+        )
+        db.commit()
+        return result
+    except Exception as exc:
+        _network_http_error(db, exc)
+
+
+@app.post("/api/network/nodes/{node_id}/{action}")
+def network_node_action(
+    node_id: int,
+    action: str,
+    db: Session = Depends(get_db),
+):
+    try:
+        result = apply_node_action(db, node_id, action)
+        db.commit()
+        return result
+    except Exception as exc:
+        _network_http_error(db, exc)
+
+
+@app.post("/api/network/connections/{connection_id}/{action}")
+def network_connection_action(
+    connection_id: int,
+    action: str,
+    db: Session = Depends(get_db),
+):
+    try:
+        result = apply_connection_action(db, connection_id, action)
+        db.commit()
+        return result
+    except Exception as exc:
+        _network_http_error(db, exc)
+
+
+@app.post("/api/network/simulate")
+def network_simulate(
+    request: NetworkSimulationRequest,
+    db: Session = Depends(get_db),
+):
+    try:
+        result = run_network_simulation(
+            db,
+            request.simulation_type,
+            request.source_node_id,
+            request.target_node_id,
+        )
+        db.commit()
+        return result
+    except Exception as exc:
+        _network_http_error(db, exc)
+
+
+@app.post("/api/network/reset")
+def network_reset(db: Session = Depends(get_db)):
+    try:
+        result = restore_network_baseline(db)
+        db.commit()
+        return result
+    except Exception as exc:
+        _network_http_error(db, exc)
+
+
+@app.websocket("/ws/network")
+async def network_websocket(websocket: WebSocket):
+    await websocket.accept()
+    try:
+        while True:
+            db = SessionLocal()
+            try:
+                await websocket.send_json(network_websocket_payload(db))
+            finally:
+                db.close()
+            await asyncio.sleep(4)
+    except WebSocketDisconnect:
+        return
 
 
 
@@ -543,6 +803,20 @@ def list_exercise_runs(
     runs = query.order_by(ExerciseRun.created_at.desc()).all()
     db.commit()
     return {"runs": [serialize_run(db, item, detail=False) for item in runs]}
+
+
+@app.delete("/exercise-runs")
+def remove_exercise_run_history(db: Session = Depends(get_db)):
+    try:
+        result = clear_exercise_history(db)
+        db.commit()
+        return {
+            "message": "Exercise history cleared.",
+            **result,
+        }
+    except ExerciseValidationError as exc:
+        db.rollback()
+        raise HTTPException(status_code=exc.status_code, detail=str(exc))
 
 
 @app.post("/exercise-runs", status_code=201)
@@ -2483,6 +2757,14 @@ def reset_demo(db: Session = Depends(get_db)):
         applied_dispatch_commands = process_dispatch_commands(
             db, restore=True
         )
+        network_reset_result = restore_network_baseline(db)
+        db.query(NetworkTrafficEvent).update(
+            {
+                NetworkTrafficEvent.related_alert_id: None,
+                NetworkTrafficEvent.related_incident_id: None,
+            },
+            synchronize_session=False,
+        )
         db.query(Incident).delete(synchronize_session=False)
         db.query(Alert).delete(synchronize_session=False)
         record_event(
@@ -2507,6 +2789,9 @@ def reset_demo(db: Session = Depends(get_db)):
             "restored_crossings": restored_crossings,
             "resumed_trains": resumed_trains,
             "applied_dispatch_commands": len(applied_dispatch_commands),
+            "network_baseline_restored": (
+                network_reset_result["simulation_type"] == "restore_baseline"
+            ),
         }
     except Exception:
         db.rollback()

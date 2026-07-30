@@ -69,6 +69,164 @@ class OTDevice(Base):
         back_populates="source_device",
         cascade="all, delete-orphan",
     )
+    network_nodes = relationship("NetworkNode", back_populates="ot_device")
+
+
+class NetworkZone(Base):
+    __tablename__ = "network_zones"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False, unique=True, index=True)
+    zone_type = Column(String, nullable=False, index=True)
+    description = Column(Text, default="")
+    trust_level = Column(String, default="Medium")
+    color_key = Column(String, default="#38bdf8")
+    security_policy = Column(Text, default="")
+    location = Column(String, default="")
+
+    nodes = relationship("NetworkNode", back_populates="zone")
+
+
+class NetworkNode(Base):
+    __tablename__ = "network_nodes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    zone_id = Column(Integer, ForeignKey("network_zones.id"), nullable=False, index=True)
+    ot_device_id = Column(Integer, ForeignKey("ot_devices.id"), nullable=True, index=True)
+    name = Column(String, nullable=False, unique=True, index=True)
+    display_name = Column(String, nullable=False)
+    node_type = Column(String, nullable=False, index=True)
+    device_type = Column(String, default="")
+    security_zone = Column(String, nullable=False, index=True)
+    network_segment = Column(String, default="")
+    ip_address = Column(String, default="")
+    hostname = Column(String, default="")
+    operating_system = Column(String, default="")
+    vendor = Column(String, default="")
+    model = Column(String, default="")
+    firmware_version = Column(String, default="")
+    protocol = Column(String, default="")
+    status = Column(String, default="Healthy", index=True)
+    health = Column(String, default="Healthy")
+    risk_level = Column(String, default="Low", index=True)
+    criticality = Column(String, default="Medium")
+    location = Column(String, default="")
+    latitude = Column(Float, nullable=True)
+    longitude = Column(Float, nullable=True)
+    last_seen = Column(DateTime, default=datetime.utcnow)
+    is_managed = Column(Boolean, default=True)
+    is_ot_asset = Column(Boolean, default=False)
+    layout_x = Column(Float, nullable=True)
+    layout_y = Column(Float, nullable=True)
+    metadata_json = Column(Text, default="{}")
+
+    zone = relationship("NetworkZone", back_populates="nodes")
+    ot_device = relationship("OTDevice", back_populates="network_nodes")
+    outgoing_connections = relationship(
+        "NetworkConnection",
+        foreign_keys="NetworkConnection.source_node_id",
+        back_populates="source_node",
+        cascade="all, delete-orphan",
+    )
+    incoming_connections = relationship(
+        "NetworkConnection",
+        foreign_keys="NetworkConnection.target_node_id",
+        back_populates="target_node",
+        cascade="all, delete-orphan",
+    )
+
+
+class NetworkConnection(Base):
+    __tablename__ = "network_connections"
+    __table_args__ = (
+        UniqueConstraint(
+            "source_node_id",
+            "target_node_id",
+            "connection_type",
+            name="uq_network_connection",
+        ),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    source_node_id = Column(
+        Integer, ForeignKey("network_nodes.id"), nullable=False, index=True
+    )
+    target_node_id = Column(
+        Integer, ForeignKey("network_nodes.id"), nullable=False, index=True
+    )
+    connection_type = Column(String, nullable=False)
+    protocol = Column(String, default="")
+    port = Column(Integer, nullable=True)
+    direction = Column(String, default="Bidirectional")
+    bandwidth_mbps = Column(Float, default=100.0)
+    latency_ms = Column(Float, default=1.0)
+    packet_loss_percent = Column(Float, default=0.0)
+    status = Column(String, default="Healthy", index=True)
+    encrypted = Column(Boolean, default=True)
+    security_boundary_crossing = Column(Boolean, default=False)
+    last_activity = Column(DateTime, default=datetime.utcnow)
+    risk_level = Column(String, default="Low")
+    metadata_json = Column(Text, default="{}")
+
+    source_node = relationship(
+        "NetworkNode",
+        foreign_keys=[source_node_id],
+        back_populates="outgoing_connections",
+    )
+    target_node = relationship(
+        "NetworkNode",
+        foreign_keys=[target_node_id],
+        back_populates="incoming_connections",
+    )
+
+
+class NetworkTrafficEvent(Base):
+    __tablename__ = "network_traffic_events"
+
+    id = Column(Integer, primary_key=True, index=True)
+    timestamp = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    source_node_id = Column(
+        Integer, ForeignKey("network_nodes.id"), nullable=True, index=True
+    )
+    target_node_id = Column(
+        Integer, ForeignKey("network_nodes.id"), nullable=True, index=True
+    )
+    connection_id = Column(
+        Integer, ForeignKey("network_connections.id"), nullable=True, index=True
+    )
+    network_path_id = Column(
+        Integer, ForeignKey("network_paths.id"), nullable=True, index=True
+    )
+    protocol = Column(String, default="")
+    port = Column(Integer, nullable=True)
+    bytes_sent = Column(Integer, default=0)
+    bytes_received = Column(Integer, default=0)
+    severity = Column(String, default="Info", index=True)
+    event_type = Column(String, nullable=False, index=True)
+    description = Column(Text, default="")
+    related_alert_id = Column(Integer, ForeignKey("alerts.id"), nullable=True, index=True)
+    related_incident_id = Column(
+        Integer, ForeignKey("incidents.id"), nullable=True, index=True
+    )
+    is_suspicious = Column(Boolean, default=False, index=True)
+
+
+class NetworkPath(Base):
+    __tablename__ = "network_paths"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    source_node_id = Column(
+        Integer, ForeignKey("network_nodes.id"), nullable=False, index=True
+    )
+    destination_node_id = Column(
+        Integer, ForeignKey("network_nodes.id"), nullable=False, index=True
+    )
+    hops_json = Column(Text, default="[]")
+    path_status = Column(String, default="Healthy")
+    total_latency_ms = Column(Float, default=0.0)
+    total_packet_loss = Column(Float, default=0.0)
+    updated_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
 
 class DeviceRelationship(Base):

@@ -25,6 +25,7 @@ import Vulnerabilities from "./pages/Vulnerabilities";
 import CreateScenario from "./pages/CreateScenario";
 import DispatcherOperations from "./pages/DispatcherOperations";
 import ExerciseCenter from "./pages/ExerciseCenter";
+import NetworkVisibility from "./pages/NetworkVisibility";
 
 import { getTrains } from "./services/trainService";
 import { getTrackBlocks } from "./services/blockService";
@@ -55,6 +56,7 @@ import {
   Settings as SettingsIcon,
   TrainFront,
   BookOpenCheck,
+  Waypoints,
 } from "lucide-react";
 
 import { getDevices } from "./services/deviceService";
@@ -393,6 +395,11 @@ function App() {
               <span>Railroad Topology</span>
             </NavLink>
 
+            <NavLink to="/network">
+              <Waypoints size={18} />
+              <span>Network Visibility</span>
+            </NavLink>
+
             <NavLink to="/exercises">
               <BookOpenCheck size={18} />
               <span>Exercise Center</span>
@@ -561,6 +568,11 @@ function App() {
               <Route
                 path="/exercises"
                 element={<ExerciseCenter />}
+              />
+
+              <Route
+                path="/network"
+                element={<NetworkVisibility />}
               />
 
               <Route

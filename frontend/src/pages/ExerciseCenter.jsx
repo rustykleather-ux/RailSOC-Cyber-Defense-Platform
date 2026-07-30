@@ -13,9 +13,11 @@ import {
   Square,
   Target,
   TimerReset,
+  Trash2,
 } from "lucide-react";
 import {
   cloneExercise,
+  clearExerciseRuns,
   createCheckpoint,
   createExercise,
   createExerciseRun,
@@ -106,6 +108,19 @@ export default function ExerciseCenter() {
       return null;
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function clearHistory() {
+    const confirmed = window.confirm(
+      "Clear all exercise run history, checkpoints, scores, and run timelines? Exercise definitions will be preserved.",
+    );
+    if (!confirmed) return;
+    const result = await act(() => clearExerciseRuns());
+    if (result) {
+      setRun(null);
+      setReport(null);
+      setRuns([]);
     }
   }
 
@@ -317,7 +332,29 @@ export default function ExerciseCenter() {
           </div>}
         </main>
       </div>
-      <section className="exercise-history"><h2>Exercise History</h2>{runs.slice(0,8).map((item)=><button key={item.id} onClick={async()=>setRun(await getExerciseRun(item.id))}><strong>{item.exercise_name}</strong><span>{item.status} · Score {item.score} · {clock(item.elapsed_seconds)}</span></button>)}</section>
+      <section className="exercise-history">
+        <div className="exercise-history__header">
+          <div>
+            <h2>Exercise History</h2>
+            <span>Saved runs, scores, checkpoints, and after-action records.</span>
+          </div>
+          <button
+            className="exercise-history__clear"
+            disabled={busy || runs.some((item) =>
+              ["Running", "Paused"].includes(item.status)
+            )}
+            onClick={clearHistory}
+            title="Active exercises must be cancelled or completed first."
+          >
+            <Trash2 size={14} />
+            Clear history
+          </button>
+        </div>
+        {runs.length === 0 && (
+          <p className="exercise-history__empty">No exercise history recorded.</p>
+        )}
+        {runs.slice(0,8).map((item)=><button key={item.id} onClick={async()=>setRun(await getExerciseRun(item.id))}><strong>{item.exercise_name}</strong><span>{item.status} · Score {item.score} · {clock(item.elapsed_seconds)}</span></button>)}
+      </section>
     </section>
   );
 }

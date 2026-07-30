@@ -7,10 +7,11 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "oxlint",
-    "test": "node --test src/components/railroad-map/*.test.js",
+    "test": "node --test src/components/railroad-map/*.test.js src/components/network-visibility/*.test.js",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@xyflow/react": "^12.11.2",
     "axios": "^1.18.1",
     "lucide-react": "^1.24.0",
     "react": "^19.2.7",

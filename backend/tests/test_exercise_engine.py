@@ -15,7 +15,10 @@ from database import Base
 from models import (
     ActivityLog,
     Exercise,
+    ExerciseCheckpoint,
     ExerciseRun,
+    ExerciseRunEvent,
+    ExerciseRunObjective,
     Incident,
     OTDevice,
     Train,
@@ -26,6 +29,7 @@ from seed_track_blocks import seed_track_blocks
 from services.exercise_service import (
     after_action_report,
     cancel_run,
+    clear_exercise_history,
     clone_exercise,
     create_exercise,
     create_run,
@@ -37,6 +41,8 @@ from services.exercise_service import (
     simple_pdf,
     start_run,
 )
+from services.operational_impact import get_operational_impact
+from services.timeline_service import record_event
 from services.timeline_service import utc_now
 
 
@@ -260,6 +266,75 @@ class ExerciseEngineTests(unittest.TestCase):
         ).one()
         self.assertEqual(restored.status, "Ready")
         self.assertEqual(len(restored.objectives), 1)
+
+    def test_clear_history_removes_run_state_and_preserves_definitions(self):
+        exercise = create_exercise(self.db, self.definition())
+        run = create_run(self.db, exercise.id)
+        run_id = run.id
+        start_run(self.db, run.id)
+        save_checkpoint(self.db, run.id, "Before clear")
+        cancel_run(self.db, run.id)
+        self.db.commit()
+
+        result = clear_exercise_history(self.db)
+        self.db.commit()
+
+        self.assertEqual(result["deleted_runs"], 1)
+        self.assertEqual(result["deleted_checkpoints"], 1)
+        self.assertEqual(self.db.query(ExerciseRun).count(), 0)
+        self.assertEqual(self.db.query(ExerciseRunObjective).count(), 0)
+        self.assertEqual(self.db.query(ExerciseRunEvent).count(), 0)
+        self.assertEqual(self.db.query(ExerciseCheckpoint).count(), 0)
+        self.assertEqual(self.db.query(Exercise).count(), 1)
+        self.assertEqual(self.db.query(Exercise).one().name, "Test Exercise")
+        self.assertEqual(
+            self.db.query(ActivityLog).filter(
+                ActivityLog.scenario_id == str(run_id)
+            ).count(),
+            0,
+        )
+
+    def test_clear_history_rejects_active_runs(self):
+        exercise = create_exercise(self.db, self.definition())
+        run = create_run(self.db, exercise.id)
+        start_run(self.db, run.id)
+
+        with self.assertRaisesRegex(
+            RuntimeError, "Cancel or complete all active exercises"
+        ):
+            clear_exercise_history(self.db)
+
+        self.assertEqual(self.db.query(ExerciseRun).count(), 1)
+
+    def test_starting_exercise_resets_delay_measurement_window(self):
+        stopped = record_event(
+            self.db,
+            event_type="train_stopped_signal",
+            title="Historical stop",
+            message="Historical train delay",
+            train_id=self.train.id,
+        )
+        stopped.timestamp = utc_now() - timedelta(minutes=10)
+        resumed = record_event(
+            self.db,
+            event_type="train_resumed",
+            title="Historical resume",
+            message="Historical train resumed",
+            train_id=self.train.id,
+        )
+        resumed.timestamp = utc_now() - timedelta(minutes=5)
+        self.db.flush()
+        self.assertGreater(
+            get_operational_impact(self.db)["cumulative_delay_minutes"], 0
+        )
+
+        run = create_run(
+            self.db, create_exercise(self.db, self.definition()).id
+        )
+        start_run(self.db, run.id)
+        impact = get_operational_impact(self.db)
+        self.assertEqual(impact["cumulative_delay_minutes"], 0)
+        self.assertEqual(impact["delay_window_reason"], "exercise_started")
 
 
 if __name__ == "__main__":

@@ -2,6 +2,45 @@
   <img src="https://raw.githubusercontent.com/rustykleather-ux/RailSOC-Cyber-Defense-Platform/main/frontend/src/assets/TrackSintinel-Banner.png" alt="TrackSentinel Banner" width="100%">
 </p>
 
+---
+
+# Network Visibility
+
+TrackSentinel includes a live, interactive IT/OT network map at
+`http://localhost:5173/network`. The map combines existing OT device state with
+an idempotently seeded simulated railroad network containing Enterprise IT,
+Dispatch, Railroad OT, Communications, Security, and External zones.
+
+Key capabilities include:
+
+- React Flow topology with drag, zoom, pan, fit, zone collapse, saved layout,
+  search, filters, and fullscreen mode
+- WebSocket updates every four seconds with five-second polling fallback
+- Node and connection details, simulated isolate/restore/fail controls, and
+  historical network events
+- Deterministic latency-weighted path tracing with cumulative packet-loss
+  calculation and security-boundary reporting
+- Simulated scans, lateral movement, remote access, latency, loss, fiber,
+  radio, and firewall conditions
+- Alert, Incident Center, exercise-state, digital-twin, and timeline
+  integration through existing TrackSentinel services
+
+All topology and telemetry are simulated or projected from approved
+TrackSentinel database state. The feature does **not** scan a host network,
+send packets, capture traffic, contact arbitrary endpoints, execute operating
+system commands, or modify real devices or firewall rules.
+
+The REST API is under `/api/network`; live state is available at
+`/ws/network`. Start the normal FastAPI and Vite development servers, open
+Network Visibility from the sidebar, and use the Simulation Controls panel to
+generate safe training telemetry.
+
+See [the Network Visibility design](docs/network-visibility.md) for the data
+model, API list, path logic, incident integration, security boundaries, and
+known limitations.
+
+Screenshot placeholder: `Screenshots/network-visibility.png`
+
 # 🚂 TrackSentinel
 
 ![Python](https://img.shields.io/badge/Python-3.12-blue?logo=python)

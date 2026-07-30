@@ -458,6 +458,10 @@ class SignalControllerWorkflowTests(unittest.TestCase):
             },
         )
         self.assertEqual(get_operational_impact(self.db)["affected_blocks"], 0)
+        self.assertEqual(
+            get_operational_impact(self.db)["cumulative_delay_minutes"],
+            0,
+        )
 
 
 if __name__ == "__main__":

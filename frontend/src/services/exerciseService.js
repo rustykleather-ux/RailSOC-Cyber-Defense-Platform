@@ -11,6 +11,8 @@ export const createExerciseRun = async (exerciseId) =>
   (await API.post("/exercise-runs", { exercise_id: exerciseId })).data;
 export const getExerciseRuns = async () =>
   (await API.get("/exercise-runs")).data?.runs || [];
+export const clearExerciseRuns = async () =>
+  (await API.delete("/exercise-runs")).data;
 export const getExerciseRun = async (id) =>
   (await API.get(`/exercise-runs/${id}`)).data;
 export const exerciseRunAction = async (id, action) =>

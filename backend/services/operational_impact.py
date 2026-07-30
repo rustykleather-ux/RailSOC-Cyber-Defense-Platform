@@ -27,17 +27,35 @@ def _event_timestamp(event):
     return timestamp
 
 
+def get_delay_window(db):
+    boundary = (
+        db.query(ActivityLog)
+        .filter(
+            ActivityLog.event_type.in_(["demo_reset", "exercise_started"])
+        )
+        .order_by(ActivityLog.timestamp.desc(), ActivityLog.id.desc())
+        .first()
+    )
+    return {
+        "timestamp": _event_timestamp(boundary) if boundary else None,
+        "event_type": boundary.event_type if boundary else "platform_history",
+        "event_id": boundary.id if boundary else None,
+    }
+
+
 def calculate_cumulative_delay_minutes(db):
-    events = (
+    window = get_delay_window(db)
+    query = (
         db.query(ActivityLog)
         .filter(
             ActivityLog.event_type.in_(
                 ["train_stopped_signal", "train_resumed"]
             )
         )
-        .order_by(ActivityLog.timestamp, ActivityLog.id)
-        .all()
     )
+    if window["timestamp"] is not None:
+        query = query.filter(ActivityLog.timestamp >= window["timestamp"])
+    events = query.order_by(ActivityLog.timestamp, ActivityLog.id).all()
     stopped_at = {}
     total_seconds = 0.0
 
@@ -60,6 +78,14 @@ def calculate_cumulative_delay_minutes(db):
                 )
 
     now = utc_now()
+    active_stopped_ids = {
+        train.id
+        for train in db.query(Train).all()
+        if _normalized(train.status) in STOPPED_STATUSES
+    }
+    for train_id in active_stopped_ids:
+        if train_id not in stopped_at:
+            stopped_at[train_id] = window["timestamp"] or now
     for start in stopped_at.values():
         total_seconds += max(0.0, (now - start).total_seconds())
 
@@ -132,6 +158,7 @@ def get_operational_impact(db):
         )
     ]
     dispatch_metrics = get_dispatch_metrics(db)
+    delay_window = get_delay_window(db)
 
     return {
         "affected_blocks": len(affected_blocks),
@@ -146,6 +173,11 @@ def get_operational_impact(db):
         ],
         "delayed_trains": len(delayed_ids),
         "cumulative_delay_minutes": calculate_cumulative_delay_minutes(db),
+        "delay_window_started_at": (
+            delay_window["timestamp"].isoformat()
+            if delay_window["timestamp"] else None
+        ),
+        "delay_window_reason": delay_window["event_type"],
         "blocked_track_miles": round(blocked_miles, 2),
         "track_availability_percent": round(availability, 1),
         "estimated_recovery": (

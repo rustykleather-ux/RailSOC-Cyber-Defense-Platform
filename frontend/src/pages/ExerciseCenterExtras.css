@@ -26,3 +26,32 @@
 .run-briefing {
   margin-top: 10px;
 }
+
+.exercise-history__header {
+  align-items: center;
+  display: flex;
+  flex-basis: 100%;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.exercise-history__header span,
+.exercise-history__empty {
+  color: #94a3b8;
+  font-size: 11px;
+  margin: 3px 0 0;
+}
+
+.exercise-history .exercise-history__clear {
+  border-color: #7f1d1d;
+  color: #fca5a5;
+}
+
+.exercise-history .exercise-history__clear:hover:not(:disabled) {
+  background: rgba(127, 29, 29, 0.35);
+  border-color: #ef4444;
+}
+
+.exercise-history__empty {
+  flex-basis: 100%;
+}

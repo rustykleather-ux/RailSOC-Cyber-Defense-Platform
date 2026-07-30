@@ -221,6 +221,67 @@ def create_run(db, exercise_id, metadata=None):
     return run
 
 
+def clear_exercise_history(db):
+    """Delete run-specific history without deleting exercise definitions."""
+    active_count = db.query(ExerciseRun).filter(
+        ExerciseRun.status.in_(["Running", "Paused"])
+    ).count()
+    if active_count:
+        raise ExerciseValidationError(
+            "Cancel or complete all active exercises before clearing history.",
+            409,
+        )
+
+    run_ids = [row.id for row in db.query(ExerciseRun.id).all()]
+    if not run_ids:
+        return {
+            "deleted_runs": 0,
+            "deleted_checkpoints": 0,
+            "deleted_objective_states": 0,
+            "deleted_event_states": 0,
+            "deleted_timeline_events": 0,
+            "deleted_dispatch_commands": 0,
+        }
+
+    scenario_ids = [str(run_id) for run_id in run_ids]
+    deleted_checkpoints = db.query(ExerciseCheckpoint).filter(
+        ExerciseCheckpoint.run_id.in_(run_ids)
+    ).delete(synchronize_session=False)
+    deleted_objectives = db.query(ExerciseRunObjective).filter(
+        ExerciseRunObjective.run_id.in_(run_ids)
+    ).delete(synchronize_session=False)
+    deleted_events = db.query(ExerciseRunEvent).filter(
+        ExerciseRunEvent.run_id.in_(run_ids)
+    ).delete(synchronize_session=False)
+    deleted_commands = db.query(DispatchCommand).filter(
+        DispatchCommand.scenario_id.in_(scenario_ids)
+    ).delete(synchronize_session=False)
+    deleted_timeline = db.query(ActivityLog).filter(
+        ActivityLog.scenario_id.in_(scenario_ids)
+    ).delete(synchronize_session=False)
+    deleted_runs = db.query(ExerciseRun).filter(
+        ExerciseRun.id.in_(run_ids)
+    ).delete(synchronize_session=False)
+
+    result = {
+        "deleted_runs": deleted_runs,
+        "deleted_checkpoints": deleted_checkpoints,
+        "deleted_objective_states": deleted_objectives,
+        "deleted_event_states": deleted_events,
+        "deleted_timeline_events": deleted_timeline,
+        "deleted_dispatch_commands": deleted_commands,
+    }
+    record_event(
+        db,
+        event_type="exercise_history_cleared",
+        title="Exercise history cleared",
+        message=f"{deleted_runs} exercise run(s) were removed.",
+        source="Exercise Engine",
+        metadata=result,
+    )
+    return result
+
+
 def _run(db, run_id):
     run = db.query(ExerciseRun).filter(ExerciseRun.id == run_id).first()
     if not run:

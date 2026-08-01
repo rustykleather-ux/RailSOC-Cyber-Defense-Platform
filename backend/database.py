@@ -65,6 +65,21 @@ DISPATCH_COMMAND_COLUMNS = {
     "retry_of_id": "INTEGER",
 }
 
+EXERCISE_RUN_COLUMNS = {
+    "terminal_reason": "TEXT DEFAULT ''",
+    "final_evaluated_at": "DATETIME",
+    "walkthrough_revealed_at": "DATETIME",
+}
+
+EXERCISE_RUN_OBJECTIVE_COLUMNS = {
+    "last_evaluated_at": "DATETIME",
+    "last_state_change_at": "DATETIME",
+}
+
+EXERCISE_ENTITY_SCOPE_COLUMNS = {
+    "exercise_run_id": "INTEGER",
+}
+
 
 def ensure_sqlite_schema():
     """Apply the small additive SQLite changes used by the demo app."""
@@ -76,6 +91,10 @@ def ensure_sqlite_schema():
             "activity_log": ACTIVITY_LOG_COLUMNS,
             "ot_devices": OT_DEVICE_FRAMEWORK_COLUMNS,
             "dispatch_commands": DISPATCH_COMMAND_COLUMNS,
+            "exercise_runs": EXERCISE_RUN_COLUMNS,
+            "exercise_run_objectives": EXERCISE_RUN_OBJECTIVE_COLUMNS,
+            "alerts": EXERCISE_ENTITY_SCOPE_COLUMNS,
+            "incidents": EXERCISE_ENTITY_SCOPE_COLUMNS,
         }
         for table_name, columns in additive_tables.items():
             existing_columns = {

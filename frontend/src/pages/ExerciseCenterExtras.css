@@ -55,3 +55,137 @@
 .exercise-history__empty {
   flex-basis: 100%;
 }
+
+.instructor-mode-toggle {
+  align-items: center;
+  background: rgba(30, 41, 59, 0.9);
+  border: 1px solid #475569;
+  border-radius: 8px;
+  display: flex;
+  font-size: 12px;
+  gap: 7px;
+  padding: 8px 10px;
+}
+
+.exercise-run-tabs {
+  background: rgba(8, 17, 32, 0.95);
+  border: 1px solid #27364f;
+  border-radius: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 12px 0;
+  padding: 7px;
+}
+
+.exercise-run-tabs button {
+  background: transparent;
+  border: 1px solid transparent;
+  color: #94a3b8;
+  text-transform: capitalize;
+}
+
+.exercise-run-tabs button.is-active {
+  background: rgba(14, 165, 233, 0.12);
+  border-color: #0ea5e9;
+  color: #7dd3fc;
+}
+
+.objective-debug {
+  background: #07101f;
+  border-left: 3px solid #38bdf8;
+  margin-top: 8px;
+  padding: 8px;
+}
+
+.objective-debug code,
+.walkthrough-panel code {
+  color: #7dd3fc;
+  font-size: 11px;
+}
+
+.objective-debug p {
+  color: #fbbf24;
+  margin: 5px 0 0;
+}
+
+.walkthrough-spoiler,
+.walkthrough-panel {
+  grid-column: 1 / -1;
+}
+
+.walkthrough-spoiler {
+  padding: 36px;
+  text-align: center;
+}
+
+.walkthrough-heading,
+.walkthrough-panel summary {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.walkthrough-heading p {
+  color: #38bdf8;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  margin: 0;
+}
+
+.walkthrough-panel details {
+  background: #091426;
+  border: 1px solid #27364f;
+  border-radius: 9px;
+  margin: 8px 0;
+  padding: 11px;
+}
+
+.walkthrough-panel summary { cursor: pointer; }
+.walkthrough-panel details p { color: #cbd5e1; font-size: 12px; }
+.walkthrough-panel details a { color: #7dd3fc; font-size: 12px; }
+
+.walkthrough-state {
+  border: 1px solid #475569;
+  border-radius: 999px;
+  font-size: 10px;
+  padding: 4px 8px;
+}
+
+.walkthrough-state.is-completed { border-color: #16a34a; color: #4ade80; }
+.walkthrough-state.is-blocked,
+.walkthrough-state.is-failed { border-color: #dc2626; color: #f87171; }
+.walkthrough-state.is-ready { border-color: #0284c7; color: #7dd3fc; }
+.walkthrough-blockers { background: rgba(127, 29, 29, 0.2); border-left: 3px solid #ef4444; padding: 8px; }
+.instructor-note { background: rgba(124, 58, 237, 0.14); border-left: 3px solid #8b5cf6; padding: 8px; }
+
+.walkthrough-builder {
+  border-top: 1px solid #334155;
+  margin-top: 18px;
+  padding-top: 14px;
+}
+
+.walkthrough-builder article {
+  display: grid;
+  gap: 7px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 9px 0;
+}
+
+.walkthrough-builder article input,
+.walkthrough-builder article select { min-width: 0; }
+
+.exercise-validation {
+  border: 1px solid #475569;
+  border-radius: 9px;
+  display: grid;
+  gap: 5px;
+  margin-top: 12px;
+  padding: 12px;
+}
+
+.exercise-validation.is-ready { border-color: #16a34a; }
+.exercise-validation.has-errors { border-color: #dc2626; }
+.exercise-validation p { font-size: 11px; margin: 0; }

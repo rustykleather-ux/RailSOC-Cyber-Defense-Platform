@@ -104,7 +104,10 @@ from services.exercise_service import (
     create_run,
     pause_run,
     process_exercise_runs,
+    finish_run,
+    request_objective_reevaluation,
     request_hint,
+    reveal_walkthrough,
     restart_run,
     restore_checkpoint,
     resume_run,
@@ -113,9 +116,11 @@ from services.exercise_service import (
     serialize_exercise,
     serialize_run,
     serialize_score,
+    serialize_walkthrough,
     simple_pdf,
     start_run,
     update_exercise,
+    validate_exercise_configuration,
 )
 from services.dispatch_service import (
     DispatchValidationError,
@@ -222,6 +227,7 @@ class ExerciseDefinitionRequest(BaseModel):
     objectives: List[Dict[str, Any]] = []
     script_events: List[Dict[str, Any]] = []
     hints: List[Dict[str, Any]] = []
+    walkthrough: Optional[Dict[str, Any]] = None
     metadata: Dict[str, Any] = {}
 
 
@@ -236,6 +242,10 @@ class ExerciseCheckpointRequest(BaseModel):
 
 class ExerciseCloneRequest(BaseModel):
     name: Optional[str] = None
+
+
+class ExerciseFinishRequest(BaseModel):
+    confirm_cancel: bool = False
 
 
 class DeviceTypeRequest(BaseModel):
@@ -343,6 +353,13 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+def _active_exercise_run_id(db):
+    run = db.query(ExerciseRun).filter(
+        ExerciseRun.status.in_(["Running", "Paused"])
+    ).order_by(ExerciseRun.started_at.desc(), ExerciseRun.id.desc()).first()
+    return run.id if run else None
 
 
 @app.on_event("startup")
@@ -670,6 +687,7 @@ def list_exercises(
     enabled: Optional[bool] = None,
     favorite: Optional[bool] = None,
     completed: Optional[bool] = None,
+    instructor: bool = False,
     db: Session = Depends(get_db),
 ):
     query = db.query(Exercise)
@@ -695,7 +713,9 @@ def list_exercises(
         ]
     return {
         "exercises": [
-            serialize_exercise(item, include_definition=True)
+            serialize_exercise(
+                item, include_definition=True, instructor=instructor
+            )
             for item in exercises
         ]
     }
@@ -709,7 +729,7 @@ def add_exercise(
     try:
         exercise = create_exercise(db, request.model_dump())
         db.commit()
-        return serialize_exercise(exercise, include_definition=True)
+        return serialize_exercise(exercise, include_definition=True, instructor=True)
     except ExerciseValidationError as exc:
         db.rollback()
         raise HTTPException(status_code=exc.status_code, detail=str(exc))
@@ -734,7 +754,7 @@ def edit_exercise(
     try:
         exercise = update_exercise(db, exercise, request.model_dump())
         db.commit()
-        return serialize_exercise(exercise, include_definition=True)
+        return serialize_exercise(exercise, include_definition=True, instructor=True)
     except ExerciseValidationError as exc:
         db.rollback()
         raise HTTPException(status_code=exc.status_code, detail=str(exc))
@@ -769,18 +789,24 @@ def clone_exercise_endpoint(
     try:
         cloned = clone_exercise(db, exercise, request.name)
         db.commit()
-        return serialize_exercise(cloned, include_definition=True)
+        return serialize_exercise(cloned, include_definition=True, instructor=True)
     except ExerciseValidationError as exc:
         db.rollback()
         raise HTTPException(status_code=exc.status_code, detail=str(exc))
 
 
 @app.get("/exercises/{exercise_id}/export")
-def export_exercise(exercise_id: int, db: Session = Depends(get_db)):
+def export_exercise(
+    exercise_id: int,
+    instructor: bool = False,
+    db: Session = Depends(get_db),
+):
     exercise = db.query(Exercise).filter(Exercise.id == exercise_id).first()
     if not exercise:
         raise HTTPException(status_code=404, detail="Exercise not found.")
-    return serialize_exercise(exercise, include_definition=True)
+    return serialize_exercise(
+        exercise, include_definition=True, instructor=instructor
+    )
 
 
 @app.post("/exercises/import", status_code=201)
@@ -834,13 +860,17 @@ def add_exercise_run(
 
 
 @app.get("/exercise-runs/{run_id}")
-def get_exercise_run(run_id: int, db: Session = Depends(get_db)):
+def get_exercise_run(
+    run_id: int,
+    instructor: bool = False,
+    db: Session = Depends(get_db),
+):
     run = db.query(ExerciseRun).filter(ExerciseRun.id == run_id).first()
     if not run:
         raise HTTPException(status_code=404, detail="Exercise run not found.")
     process_exercise_runs(db)
     db.commit()
-    return serialize_run(db, run)
+    return serialize_run(db, run, instructor=instructor)
 
 
 def _exercise_run_action(db, action, run_id):
@@ -871,6 +901,21 @@ def resume_exercise_run(run_id: int, db: Session = Depends(get_db)):
 @app.post("/exercise-runs/{run_id}/cancel")
 def cancel_exercise_run(run_id: int, db: Session = Depends(get_db)):
     return _exercise_run_action(db, cancel_run, run_id)
+
+
+@app.post("/exercise-runs/{run_id}/finish")
+def finish_exercise_run(
+    run_id: int,
+    request: ExerciseFinishRequest,
+    db: Session = Depends(get_db),
+):
+    try:
+        run = finish_run(db, run_id, confirm_cancel=request.confirm_cancel)
+        db.commit()
+        return serialize_run(db, run)
+    except ExerciseValidationError as exc:
+        db.rollback()
+        raise HTTPException(status_code=exc.status_code, detail=str(exc))
 
 
 @app.post("/exercise-runs/{run_id}/restart", status_code=201)
@@ -952,6 +997,55 @@ def request_exercise_hint(run_id: int, db: Session = Depends(get_db)):
     except ExerciseValidationError as exc:
         db.rollback()
         raise HTTPException(status_code=exc.status_code, detail=str(exc))
+
+
+@app.get("/exercises/{exercise_id}/walkthrough")
+def get_exercise_walkthrough(
+    exercise_id: int,
+    instructor: bool = False,
+    run_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+):
+    exercise = db.query(Exercise).filter(Exercise.id == exercise_id).first()
+    if not exercise:
+        raise HTTPException(status_code=404, detail="Exercise not found.")
+    run = None
+    if run_id is not None:
+        run = db.query(ExerciseRun).filter(
+            ExerciseRun.id == run_id,
+            ExerciseRun.exercise_id == exercise.id,
+        ).first()
+        if not run:
+            raise HTTPException(status_code=404, detail="Exercise run not found.")
+        request_objective_reevaluation(db, "walkthrough_view")
+    if not instructor and not (run and run.walkthrough_revealed_at):
+        return {"available": exercise.walkthrough is not None, "revealed": False}
+    return serialize_walkthrough(exercise.walkthrough, run=run, instructor=instructor)
+
+
+@app.post("/exercise-runs/{run_id}/walkthrough/reveal")
+def reveal_exercise_walkthrough(run_id: int, db: Session = Depends(get_db)):
+    try:
+        result = reveal_walkthrough(db, run_id)
+        db.commit()
+        return result
+    except ExerciseValidationError as exc:
+        db.rollback()
+        raise HTTPException(status_code=exc.status_code, detail=str(exc))
+
+
+@app.post("/exercises/{exercise_id}/validate")
+def validate_exercise(
+    exercise_id: int,
+    instructor: bool = Query(default=False),
+    db: Session = Depends(get_db),
+):
+    if not instructor:
+        raise HTTPException(status_code=403, detail="Instructor mode is required.")
+    exercise = db.query(Exercise).filter(Exercise.id == exercise_id).first()
+    if not exercise:
+        raise HTTPException(status_code=404, detail="Exercise not found.")
+    return validate_exercise_configuration(db, exercise)
 
 
 @app.get("/exercise-runs/{run_id}/after-action-report")
@@ -1241,6 +1335,7 @@ def create_dispatch_command(
             command = create_dispatch_command_service(
                 db, request.model_dump()
             )
+        request_objective_reevaluation(db, "dispatch_command_changed")
         db.commit()
         db.refresh(command)
         return serialize_command(command)
@@ -1260,6 +1355,7 @@ def cancel_dispatch_command(
 ):
     try:
         command = cancel_command(db, command_id, request.requested_by)
+        request_objective_reevaluation(db, "dispatch_command_cancelled")
         db.commit()
         return serialize_command(command)
     except DispatchValidationError as exc:
@@ -1275,6 +1371,7 @@ def retry_dispatch_command(
 ):
     try:
         command = retry_command(db, command_id, request.requested_by)
+        request_objective_reevaluation(db, "dispatch_command_retried")
         db.commit()
         return serialize_command(command)
     except DispatchValidationError as exc:
@@ -1307,6 +1404,20 @@ def request_dispatch_route(
 ):
     try:
         route = create_route(db, request.model_dump())
+        if route.status == "Blocked":
+            active_run_id = _active_exercise_run_id(db)
+            if active_run_id:
+                record_event(
+                    db,
+                    event_type="dispatch_route_blocked",
+                    title="Unsafe or invalid route prevented",
+                    message=route.blocking_reason or "A route request was blocked.",
+                    severity="High",
+                    source="Exercise Engine",
+                    scenario_id=str(active_run_id),
+                    metadata={"route_id": route.id, "safety_violation": True},
+                )
+        request_objective_reevaluation(db, "dispatch_route_changed")
         db.commit()
         return serialize_route(route)
     except DispatchValidationError as exc:
@@ -1337,6 +1448,7 @@ def add_dispatch_restriction(
 ):
     try:
         item = create_restriction(db, request.model_dump())
+        request_objective_reevaluation(db, "restriction_applied")
         db.commit()
         return serialize_restriction(item)
     except DispatchValidationError as exc:
@@ -1352,6 +1464,7 @@ def clear_dispatch_restriction(
 ):
     try:
         item = clear_restriction(db, restriction_id, request.requested_by)
+        request_objective_reevaluation(db, "restriction_cleared")
         db.commit()
         return serialize_restriction(item)
     except DispatchValidationError as exc:
@@ -1365,7 +1478,10 @@ def dispatch_recovery_action(
     db: Session = Depends(get_db),
 ):
     try:
-        result = perform_recovery_action(db, request.model_dump())
+        payload = request.model_dump()
+        payload["exercise_run_id"] = _active_exercise_run_id(db)
+        result = perform_recovery_action(db, payload)
+        request_objective_reevaluation(db, "recovery_action_completed")
         db.commit()
         return result
     except DispatchValidationError as exc:
@@ -1400,6 +1516,7 @@ def set_dispatch_status(
         asset_name=device.name,
         metadata={"status": normalized},
     )
+    request_objective_reevaluation(db, "dispatch_status_changed")
     db.commit()
     return {"device": device.name, "status": device.status}
 
@@ -1556,7 +1673,9 @@ def launch_custom_scenario(
             db=db,
             attack=attack,
             targets=targets,
+            exercise_run_id=_active_exercise_run_id(db),
         )
+        request_objective_reevaluation(db, "attack_launched")
         db.commit()
 
         for target in targets:
@@ -1828,6 +1947,7 @@ def run_device_effect(
             device_id=device.id,
             metadata={"effect_id": request.effect_id},
         )
+        request_objective_reevaluation(db, "device_effect_applied")
         db.commit()
         return result
     except DigitalTwinConflictError as exc:
@@ -1939,7 +2059,7 @@ def close_incident(
 
     incident.status = "Closed"
     incident.closed_by = request.closed_by
-    incident.closed_at = datetime.utcnow()
+    incident.closed_at = datetime.now(timezone.utc)
     record_event(
         db,
         event_type="incident_closed",
@@ -1951,7 +2071,12 @@ def close_incident(
         asset_name=incident.device or "",
         device_id=incident.device_id,
         incident_id=incident.id,
+        scenario_id=(
+            str(incident.exercise_run_id) if incident.exercise_run_id else None
+        ),
     )
+
+    request_objective_reevaluation(db, "incident_closed")
 
     db.commit()
     db.refresh(incident)
@@ -2196,6 +2321,7 @@ def simulate_attack(attack_type: str, db: Session = Depends(get_db)):
                     "",
                 ),
             },
+            exercise_run_id=_active_exercise_run_id(db),
         )
         record_event(
             db,
@@ -2209,6 +2335,8 @@ def simulate_attack(attack_type: str, db: Session = Depends(get_db)):
             incident_id=getattr(alert, "created_incident_id", None),
             metadata={"attack_type": attack_type},
         )
+
+        request_objective_reevaluation(db, "attack_launched")
 
         db.commit()
 
@@ -2488,6 +2616,7 @@ def get_incidents(db: Session = Depends(get_db)):
             "id": incident.id,
             "alert_id": incident.alert_id,
             "device_id": incident.device_id,
+            "exercise_run_id": incident.exercise_run_id,
             "time": (
                 incident.time.isoformat()
                 if incident.time
@@ -2543,7 +2672,12 @@ def acknowledge_incident(
         asset_name=incident.device or "",
         device_id=incident.device_id,
         incident_id=incident.id,
+        scenario_id=(
+            str(incident.exercise_run_id) if incident.exercise_run_id else None
+        ),
     )
+
+    request_objective_reevaluation(db, "incident_acknowledged")
 
     db.commit()
     db.refresh(incident)
@@ -2587,6 +2721,8 @@ def update_incident_notes(
 
     incident.investigation_notes = request.investigation_notes
 
+    request_objective_reevaluation(db, "incident_notes_updated")
+
     db.commit()
     db.refresh(incident)
 
@@ -2615,6 +2751,8 @@ def assign_incident(
         )
 
     incident.assigned_to = request.assigned_to
+
+    request_objective_reevaluation(db, "incident_assigned")
 
     db.commit()
     db.refresh(incident)
@@ -2767,6 +2905,7 @@ def reset_demo(db: Session = Depends(get_db)):
         )
         db.query(Incident).delete(synchronize_session=False)
         db.query(Alert).delete(synchronize_session=False)
+        request_objective_reevaluation(db, "demo_reset")
         record_event(
             db,
             event_type="demo_reset",

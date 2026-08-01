@@ -656,6 +656,8 @@ def _restore_device(db, device):
 
 def perform_recovery_action(db, data):
     action = str(data.get("action_type", "")).upper()
+    scenario_id = data.get("scenario_id") or data.get("exercise_run_id")
+    scenario_id = str(scenario_id) if scenario_id else None
     allowed = {
         "ISOLATE_DEVICE", "RESTORE_COMMUNICATIONS", "RESTORE_KNOWN_GOOD",
         "TRANSFER_TO_BACKUP", "PLACE_IN_SAFE_MODE", "REVOKE_REMOTE_ACCESS",
@@ -666,7 +668,8 @@ def perform_recovery_action(db, data):
     device = _target(db, "OT_DEVICE", data.get("target_id"))
     record_event(db, event_type="dispatch_recovery_started", title="Recovery action started",
                  message=f"{action.replace('_', ' ').title()} started for {device.name}.",
-                 device_id=device.id, incident_id=data.get("incident_id"))
+                 device_id=device.id, incident_id=data.get("incident_id"),
+                 scenario_id=scenario_id)
     if action == "ISOLATE_DEVICE":
         device.status, device.risk_level = "Isolated", "High"
     elif action in {"RESTORE_COMMUNICATIONS", "RESTORE_KNOWN_GOOD", "CLEAR_ATTACK_EFFECT"}:
@@ -695,6 +698,7 @@ def perform_recovery_action(db, data):
                  title="Recovery action completed",
                  message=f"{action.replace('_', ' ').title()} completed for {device.name}.",
                  device_id=device.id, incident_id=incident_id,
+                 scenario_id=scenario_id,
                  metadata={"action_type": action, "target_id": device.id})
     return {"action_type": action, "target_id": device.id, "status": "Completed"}
 

@@ -7,6 +7,7 @@ def apply_attack(
     db,
     attack,
     targets,
+    exercise_run_id=None,
 ):
     simulation_results = []
 
@@ -30,6 +31,7 @@ def apply_attack(
             db=db,
             device=target,
             attack=attack,
+            exercise_run_id=exercise_run_id,
         )
         record_event(
             db,
@@ -41,7 +43,11 @@ def apply_attack(
             asset_name=target.name,
             device_id=target.id,
             incident_id=getattr(alert, "created_incident_id", None),
-            metadata={"attack_id": attack.get("attack_id")},
+            scenario_id=str(exercise_run_id) if exercise_run_id else None,
+            metadata={
+                "attack_id": attack.get("attack_id"),
+                "exercise_run_id": exercise_run_id,
+            },
         )
 
         simulation_results.append(

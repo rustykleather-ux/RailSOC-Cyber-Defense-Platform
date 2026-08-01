@@ -5,6 +5,7 @@ import {
   Clock3,
   Copy,
   FileDown,
+  GraduationCap,
   Lightbulb,
   Pause,
   Play,
@@ -32,6 +33,10 @@ import {
   requestExerciseHint,
   restoreCheckpoint,
   updateExercise,
+  finishExerciseRun,
+  getExerciseWalkthrough,
+  revealExerciseWalkthrough,
+  validateExercise,
 } from "../services/exerciseService";
 import "./ExerciseCenter.css";
 import "./ExerciseCenterExtras.css";
@@ -41,11 +46,42 @@ const blankExercise = {
   estimated_duration: 20, recommended_players: 1, enabled: true,
   known_intelligence: "", success_criteria: "", failure_conditions: "",
   objectives: [], script_events: [], hints: [], metadata: {},
+  walkthrough: {
+    overview: "", prerequisites: [], troubleshooting: [],
+    expected_end_state: [], instructor_notes: "", steps: [],
+  },
 };
 
 function clock(seconds = 0) {
   const minutes = Math.floor(seconds / 60);
   return `${String(minutes).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
+}
+
+function WalkthroughPanel({ walkthrough, instructorMode, onReveal }) {
+  if (!walkthrough?.steps) {
+    return <section className="exercise-panel walkthrough-spoiler">
+      <GraduationCap size={24}/><h3>Answer Sheet / Walkthrough</h3>
+      <p>{walkthrough?.available===false?"No walkthrough provided.":"This instructor answer sheet contains mission spoilers."}</p>
+      {walkthrough?.available!==false&&<button onClick={onReveal}>Reveal answer sheet</button>}
+    </section>;
+  }
+  return <section className="exercise-panel walkthrough-panel">
+    <div className="walkthrough-heading"><div><p>INSTRUCTOR-GUIDED ANSWER SHEET</p><h3>Walkthrough</h3></div><span>{walkthrough.steps.filter((step)=>step.verification_status==="Completed").length}/{walkthrough.steps.length} verified</span></div>
+    <p>{walkthrough.overview}</p>
+    {walkthrough.steps.map((step)=><details key={step.id||step.step_number} open={step.verification_status==="Blocked"}>
+      <summary><b>{step.step_number}. {step.title}</b><span className={`walkthrough-state is-${step.verification_status.toLowerCase().replace(" ","-")}`}>{step.verification_status}</span></summary>
+      <p><strong>Purpose:</strong> {step.purpose}</p>
+      <p><strong>Required action:</strong> {step.player_action}</p>
+      <p><strong>Expected result:</strong> {step.expected_result}</p>
+      <code>{step.verification_condition}</code>
+      {step.blocking_reasons?.length>0&&<div className="walkthrough-blockers"><strong>Current blocker</strong>{step.blocking_reasons.map((reason)=><p key={`${reason.type}-${reason.id||reason.label}`}>{reason.label} · {reason.status}</p>)}</div>}
+      {step.common_mistakes?.length>0&&<p><strong>Common mistakes:</strong> {step.common_mistakes.join("; ")}</p>}
+      {step.recovery_path&&<p><strong>Recovery path:</strong> {step.recovery_path}</p>}
+      {step.hint&&<p><strong>Hint:</strong> {step.hint}</p>}
+      {instructorMode&&step.instructor_notes&&<p className="instructor-note"><strong>Instructor:</strong> {step.instructor_notes}</p>}
+      {step.navigation_location&&<a href={step.navigation_location}>Open relevant panel</a>}
+    </details>)}
+  </section>;
 }
 
 export default function ExerciseCenter() {
@@ -59,11 +95,15 @@ export default function ExerciseCenter() {
   const [draft, setDraft] = useState(blankExercise);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [instructorMode, setInstructorMode] = useState(false);
+  const [activeTab, setActiveTab] = useState("live");
+  const [walkthrough, setWalkthrough] = useState(null);
+  const [validation, setValidation] = useState(null);
 
   const loadLibrary = useCallback(async () => {
     try {
       const [items, history] = await Promise.all([
-        getExercises(filters), getExerciseRuns(),
+        getExercises({ ...filters, instructor: instructorMode }), getExerciseRuns(),
       ]);
       setExercises(items);
       setRuns(history);
@@ -73,20 +113,25 @@ export default function ExerciseCenter() {
     } catch (err) {
       setError(err.response?.data?.detail || err.message);
     }
-  }, [filters]);
+  }, [filters, instructorMode]);
 
   const loadRun = useCallback(async () => {
     if (!run?.id) return;
     try {
-      const next = await getExerciseRun(run.id);
+      const next = await getExerciseRun(run.id, instructorMode);
       setRun(next);
+      if (instructorMode || next.walkthrough_revealed) {
+        setWalkthrough(await getExerciseWalkthrough(
+          next.exercise_id, next.id, instructorMode,
+        ));
+      }
       if (["Completed", "Failed", "Cancelled"].includes(next.status)) {
         setReport(await getAfterActionReport(next.id));
       }
     } catch (err) {
       setError(err.response?.data?.detail || err.message);
     }
-  }, [run?.id]);
+  }, [run?.id, instructorMode]);
 
   useEffect(() => { loadLibrary(); }, [loadLibrary]);
   useEffect(() => {
@@ -171,6 +216,40 @@ export default function ExerciseCenter() {
       }],
     }));
   }
+  function addWalkthroughStep() {
+    setDraft((item) => ({
+      ...item,
+      walkthrough: {
+        ...(item.walkthrough || blankExercise.walkthrough),
+        steps: [...(item.walkthrough?.steps || []), {
+          title: "New walkthrough step",
+          player_action: "",
+          navigation_location: "/exercises",
+          expected_result: "",
+          verification_condition: "",
+          action_id: "VIEW_OBJECTIVES",
+          objective_index: 0,
+          common_mistakes: [],
+          player_visible: true,
+        }],
+      },
+    }));
+  }
+
+  async function finishCurrentRun() {
+    try {
+      const finished = await finishExerciseRun(run.id, false);
+      setRun(finished);
+    } catch (err) {
+      if (err.response?.status === 409 && window.confirm(
+        `${err.response.data.detail}\n\nCancel this incomplete exercise?`,
+      )) {
+        setRun(await finishExerciseRun(run.id, true));
+      } else if (err.response?.status !== 409) {
+        setError(err.response?.data?.detail || err.message);
+      }
+    }
+  }
 
   return (
     <section className="exercise-center">
@@ -181,6 +260,14 @@ export default function ExerciseCenter() {
         <button onClick={() => setBuilderOpen((value) => !value)}>
           <Plus size={16} /> Visual Exercise Builder
         </button>
+        <label className="instructor-mode-toggle">
+          <input
+            type="checkbox"
+            checked={instructorMode}
+            onChange={(event) => setInstructorMode(event.target.checked)}
+          />
+          <GraduationCap size={15} /> Instructor Mode
+        </label>
         <label className="exercise-import">
           Import JSON
           <input type="file" accept="application/json" onChange={async(e)=>{
@@ -214,7 +301,7 @@ export default function ExerciseCenter() {
             <div><h3>Objectives</h3>{draft.objectives.map((item,index)=><article key={index}>
               <select value={item.objective_type} onChange={(e)=>{
                 const next=[...draft.objectives]; next[index]={...item,objective_type:e.target.value}; setDraft({...draft,objectives:next});
-              }}>{["device_status","communications_restored","track_availability_min","train_delay_max","dispatch_availability_min","no_unsafe_routing","incidents_resolved","command_queue_max","elapsed_max"].map((x)=><option key={x}>{x}</option>)}</select>
+              }}>{["device_status","communications_restored","track_availability_min","train_delay_max","dispatch_availability_min","no_unsafe_routing","incidents_resolved","command_queue_max","elapsed_max","action_count","event_sequence","sustained_metric"].map((x)=><option key={x}>{x}</option>)}</select>
               <input value={item.description} onChange={(e)=>{const next=[...draft.objectives];next[index]={...item,description:e.target.value};setDraft({...draft,objectives:next});}}/>
               <input type="number" placeholder="Target value" value={item.target_value ?? ""} onChange={(e)=>{const next=[...draft.objectives];next[index]={...item,target_value:Number(e.target.value)};setDraft({...draft,objectives:next});}}/>
               {["device_status","communications_restored"].includes(item.objective_type)&&
@@ -254,6 +341,37 @@ export default function ExerciseCenter() {
               <input type="number" min="0" value={item.available_after_seconds} onChange={(e)=>{const next=[...draft.hints];next[index]={...item,available_after_seconds:Number(e.target.value)};setDraft({...draft,hints:next});}}/>
             </article>)}<button onClick={addHint}><Plus size={14}/>Hint</button></div>
           </div>
+          <section className="walkthrough-builder">
+            <h3>Answer Sheet / Walkthrough</h3>
+            <label>Overview<textarea
+              value={draft.walkthrough?.overview || ""}
+              onChange={(e)=>setDraft({...draft,walkthrough:{...(draft.walkthrough||{}),overview:e.target.value}})}
+            /></label>
+            {(draft.walkthrough?.steps || []).map((step,index)=><article key={index}>
+              <input value={step.title} placeholder="Step title" onChange={(e)=>{
+                const steps=[...draft.walkthrough.steps];steps[index]={...step,title:e.target.value};setDraft({...draft,walkthrough:{...draft.walkthrough,steps}});
+              }}/>
+              <input value={step.player_action} placeholder="Required player action" onChange={(e)=>{
+                const steps=[...draft.walkthrough.steps];steps[index]={...step,player_action:e.target.value};setDraft({...draft,walkthrough:{...draft.walkthrough,steps}});
+              }}/>
+              <select value={step.navigation_location} onChange={(e)=>{
+                const steps=[...draft.walkthrough.steps];steps[index]={...step,navigation_location:e.target.value};setDraft({...draft,walkthrough:{...draft.walkthrough,steps}});
+              }}>{["/exercises","/incidents","/assets","/dispatcher","/topology","/network"].map((x)=><option key={x}>{x}</option>)}</select>
+              <select value={step.action_id} onChange={(e)=>{
+                const steps=[...draft.walkthrough.steps];steps[index]={...step,action_id:e.target.value};setDraft({...draft,walkthrough:{...draft.walkthrough,steps}});
+              }}>{["VIEW_ASSET","ACKNOWLEDGE_INCIDENT","ASSIGN_INCIDENT","ADD_INVESTIGATION_NOTES","ISOLATE_DEVICE","RESTORE_KNOWN_GOOD","RESTORE_COMMUNICATIONS","CLOSE_INCIDENT","VIEW_OPERATIONAL_IMPACT","VIEW_OBJECTIVES","FINISH_EXERCISE"].map((x)=><option key={x}>{x}</option>)}</select>
+              <select value={step.objective_index ?? ""} onChange={(e)=>{
+                const steps=[...draft.walkthrough.steps];steps[index]={...step,objective_index:e.target.value===""?null:Number(e.target.value)};setDraft({...draft,walkthrough:{...draft.walkthrough,steps}});
+              }}><option value="">No linked objective</option>{draft.objectives.map((objective,objectiveIndex)=><option value={objectiveIndex} key={objectiveIndex}>{objective.description}</option>)}</select>
+              <input value={step.expected_result} placeholder="Expected result" onChange={(e)=>{
+                const steps=[...draft.walkthrough.steps];steps[index]={...step,expected_result:e.target.value};setDraft({...draft,walkthrough:{...draft.walkthrough,steps}});
+              }}/>
+              <input value={step.verification_condition} placeholder="Verification condition" onChange={(e)=>{
+                const steps=[...draft.walkthrough.steps];steps[index]={...step,verification_condition:e.target.value};setDraft({...draft,walkthrough:{...draft.walkthrough,steps}});
+              }}/>
+            </article>)}
+            <button type="button" onClick={addWalkthroughStep}><Plus size={14}/>Walkthrough step</button>
+          </section>
           <button disabled={busy || !draft.name} onClick={async()=>{
             const created=await act(()=>(draft.id
               ? updateExercise(draft.id,draft)
@@ -284,7 +402,7 @@ export default function ExerciseCenter() {
             <h3>Success criteria</h3><p>{selected.success_criteria}</p><h3>Failure conditions</h3><p>{selected.failure_conditions}</p>
             <div className="exercise-actions"><button disabled={busy} onClick={async()=>{
               const created=await act(()=>createExerciseRun(selected.id));
-              if(created) setRun(created);
+              if(created){setRun(created);setActiveTab("live");setWalkthrough(null);}
             }}><Play size={15}/>Create run</button>
             <button onClick={()=>act(()=>cloneExercise(selected.id,`${selected.name} Custom`).then((r)=>r.data))}><Copy size={15}/>Clone</button></div>
             <div className="exercise-actions">
@@ -293,10 +411,20 @@ export default function ExerciseCenter() {
                 const removed=await act(()=>deleteExercise(selected.id));
                 if(removed)setSelected(null);
               }}>Delete</button>
-              <a href={exerciseExportUrl(selected.id)}>
+              <a href={exerciseExportUrl(selected.id, instructorMode)}>
                 <FileDown size={14}/>Export JSON
               </a>
+              {instructorMode && <button onClick={async()=>{
+                const result=await act(()=>validateExercise(selected.id));
+                if(result)setValidation(result);
+              }}><BookOpenCheck size={14}/>Validate Exercise</button>}
             </div>
+            {validation?.exercise_id===selected.id&&<section className={`exercise-validation ${validation.completion_readiness?"is-ready":"has-errors"}`}>
+              <strong>{validation.completion_readiness?"Completion ready":"Configuration needs attention"}</strong>
+              <span>{validation.objective_coverage.covered}/{validation.objective_coverage.required} required objectives covered</span>
+              {validation.errors.map((item)=><p key={item}>{item}</p>)}
+              {validation.warnings.map((item)=><p key={item}>Warning: {item}</p>)}
+            </section>}
           </section>}
 
           {run && <div className="running-exercise">
@@ -305,6 +433,7 @@ export default function ExerciseCenter() {
               <div>{run.status==="Ready"&&<button onClick={()=>act(()=>exerciseRunAction(run.id,"start"))}><Play size={14}/>Start</button>}
                 {run.status==="Running"&&<button onClick={()=>act(()=>exerciseRunAction(run.id,"pause"))}><Pause size={14}/>Pause</button>}
                 {run.status==="Paused"&&<button onClick={()=>act(()=>exerciseRunAction(run.id,"resume"))}><Play size={14}/>Resume</button>}
+                {!["Completed","Failed","Cancelled"].includes(run.status)&&<button onClick={finishCurrentRun}><BookOpenCheck size={14}/>Finish</button>}
                 {!["Completed","Failed","Cancelled"].includes(run.status)&&<button onClick={()=>act(()=>exerciseRunAction(run.id,"cancel"))}><Square size={14}/>Cancel</button>}
                 <button onClick={()=>act(()=>exerciseRunAction(run.id,"restart"))}><RotateCcw size={14}/>Restart</button>
               </div>
@@ -321,13 +450,31 @@ export default function ExerciseCenter() {
               <article><Clock3 size={17}/><span>Objectives</span><strong>{completedObjectives}/{run.objectives.length}</strong></article>
               <article><Target size={17}/><span>Active incidents</span><strong>{activeIncidents}</strong></article>
             </section>
+            <nav className="exercise-run-tabs">
+              {["live","objectives","timeline","score","walkthrough","after-action"].map((tab)=><button
+                key={tab}
+                className={activeTab===tab?"is-active":""}
+                onClick={async()=>{
+                  setActiveTab(tab);
+                  if(tab==="walkthrough"&&(instructorMode||run.walkthrough_revealed)){
+                    setWalkthrough(await getExerciseWalkthrough(run.exercise_id,run.id,instructorMode));
+                  }
+                }}
+              >{tab==="walkthrough"?"Answer Sheet":tab.replace("-"," ")}</button>)}
+            </nav>
             <div className="run-grid">
-              <section className="exercise-panel"><h3>Objectives</h3>{visibleObjectives.map((item)=><article className="objective" key={item.run_objective_id}><div><strong>{item.description}</strong><span>{item.status}</span></div><progress max="100" value={item.progress}/><small>{item.progress}% complete</small></article>)}</section>
-              <section className="exercise-panel"><h3>Hints</h3><button disabled={busy} onClick={()=>act(()=>requestExerciseHint(run.id))}><Lightbulb size={14}/>Request hint</button>{run.timeline.filter((x)=>x.event_type==="exercise_hint"||x.event_type==="exercise_display_hint").map((x)=><article key={x.id}><strong>{x.title}</strong><span>{x.message}</span></article>)}</section>
-              <section className="exercise-panel"><h3>Checkpoints</h3><button onClick={()=>act(()=>createCheckpoint(run.id,`Checkpoint ${run.checkpoints.length+1}`))}><TimerReset size={14}/>Save checkpoint</button>{run.checkpoints.map((item)=><article key={item.id}><strong>{item.name}</strong><span>{clock(item.elapsed_seconds)}</span><button onClick={()=>act(()=>restoreCheckpoint(run.id,item.id))}>Restore</button></article>)}</section>
-              <section className="exercise-panel exercise-timeline"><h3>Exercise Timeline</h3>{run.timeline.map((item)=><article key={item.id}><time>{new Date(item.timestamp).toLocaleTimeString()}</time><strong>{item.title}</strong><span>{item.message}</span></article>)}</section>
+              {activeTab==="objectives"&&<section className="exercise-panel exercise-objective-diagnostics"><h3>Objectives</h3>{visibleObjectives.map((item)=><article className="objective" key={item.run_objective_id}><div><strong>{item.description}</strong><span>{item.status}</span></div><progress max="100" value={item.progress}/><small>{item.progress}% complete · {item.mode}</small>{instructorMode&&<div className="objective-debug"><code>{item.expected_condition}</code>{item.blocking_reasons?.map((reason)=><p key={`${reason.type}-${reason.id||reason.label}`}>{reason.label} · {reason.status}</p>)}</div>}</article>)}</section>}
+              {activeTab==="live"&&<><section className="exercise-panel"><h3>Hints</h3><button disabled={busy} onClick={()=>act(()=>requestExerciseHint(run.id))}><Lightbulb size={14}/>Request hint</button>{run.timeline.filter((x)=>x.event_type==="exercise_hint"||x.event_type==="exercise_display_hint").map((x)=><article key={x.id}><strong>{x.title}</strong><span>{x.message}</span></article>)}</section><section className="exercise-panel"><h3>Checkpoints</h3><button onClick={()=>act(()=>createCheckpoint(run.id,`Checkpoint ${run.checkpoints.length+1}`))}><TimerReset size={14}/>Save checkpoint</button>{run.checkpoints.map((item)=><article key={item.id}><strong>{item.name}</strong><span>{clock(item.elapsed_seconds)}</span><button onClick={()=>act(()=>restoreCheckpoint(run.id,item.id))}>Restore</button></article>)}</section></>}
+              {activeTab==="timeline"&&<section className="exercise-panel exercise-timeline"><h3>Exercise Timeline</h3>{run.timeline.map((item)=><article key={item.id}><time>{new Date(item.timestamp).toLocaleTimeString()}</time><strong>{item.title}</strong><span>{item.message}</span></article>)}</section>}
+              {activeTab==="score"&&<section className="exercise-panel"><h3>Scoring</h3>{scoreboard.map(([label,value])=><article key={label}><strong>{label}</strong><span>{Number(value||0).toFixed(1)}</span></article>)}{run.terminal_reason&&<p><strong>Final reason:</strong> {run.terminal_reason}</p>}</section>}
+              {activeTab==="walkthrough"&&<WalkthroughPanel walkthrough={walkthrough||run.walkthrough||{available:run.walkthrough_available}} instructorMode={instructorMode} onReveal={async()=>{
+                if(window.confirm("Reveal the answer sheet? This contains spoilers and may apply a score penalty.")){
+                  const revealed=await act(()=>revealExerciseWalkthrough(run.id));
+                  if(revealed)setWalkthrough(revealed);
+                }
+              }}/>}
             </div>
-            {report && <section className="after-action"><h2>After-Action Report</h2><p>{report.mission_summary}</p><div><a href={reportDownloadUrl(run.id,"markdown")}><FileDown size={14}/>Markdown</a><a href={reportDownloadUrl(run.id,"pdf")}><FileDown size={14}/>PDF</a><a href={reportDownloadUrl(run.id,"json")}><FileDown size={14}/>JSON</a></div><pre>{report.markdown}</pre></section>}
+            {activeTab==="after-action"&&report&&<section className="after-action"><h2>After-Action Report</h2><p>{report.mission_summary}</p><p><strong>Final reason:</strong> {report.completion_reason||report.failure_reason||report.cancellation_reason}</p><div><a href={reportDownloadUrl(run.id,"markdown")}><FileDown size={14}/>Markdown</a><a href={reportDownloadUrl(run.id,"pdf")}><FileDown size={14}/>PDF</a><a href={reportDownloadUrl(run.id,"json")}><FileDown size={14}/>JSON</a></div><pre>{report.markdown}</pre></section>}
             <button className="return-library" onClick={()=>{setRun(null);setReport(null);}}>Return to library</button>
           </div>}
         </main>
@@ -353,7 +500,7 @@ export default function ExerciseCenter() {
         {runs.length === 0 && (
           <p className="exercise-history__empty">No exercise history recorded.</p>
         )}
-        {runs.slice(0,8).map((item)=><button key={item.id} onClick={async()=>setRun(await getExerciseRun(item.id))}><strong>{item.exercise_name}</strong><span>{item.status} · Score {item.score} · {clock(item.elapsed_seconds)}</span></button>)}
+        {runs.slice(0,8).map((item)=><button key={item.id} onClick={async()=>setRun(await getExerciseRun(item.id,instructorMode))}><strong>{item.exercise_name}</strong><span>{item.status} · Score {item.score} · {clock(item.elapsed_seconds)}</span></button>)}
       </section>
     </section>
   );

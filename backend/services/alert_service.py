@@ -5,11 +5,13 @@ def create_alert(
     db,
     device,
     attack,
+    exercise_run_id=None,
 ):
     print("CREATE_ALERT CALLED")
 
     alert = Alert(
         device_id=device.id,
+        exercise_run_id=exercise_run_id,
         severity=attack["severity"],
         alert_type=attack["name"],
         message=attack["description"],
@@ -21,6 +23,7 @@ def create_alert(
     incident = Incident(
         alert_id=alert.id,
         device_id=device.id,
+        exercise_run_id=exercise_run_id,
         severity=alert.severity,
         device=device.name,
         alert_type=alert.alert_type,

@@ -258,6 +258,9 @@ class Alert(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     device_id = Column(Integer, ForeignKey("ot_devices.id"), nullable=True)
+    exercise_run_id = Column(
+        Integer, ForeignKey("exercise_runs.id"), nullable=True, index=True
+    )
 
     severity = Column(String, nullable=False)
     alert_type = Column(String, default="General")
@@ -291,6 +294,9 @@ class Incident(Base):
         ForeignKey("ot_devices.id"),
         nullable=True,
         index=True
+    )
+    exercise_run_id = Column(
+        Integer, ForeignKey("exercise_runs.id"), nullable=True, index=True
     )
 
     time = Column(
@@ -764,6 +770,64 @@ class Exercise(Base):
         "ExerciseHint", back_populates="exercise",
         cascade="all, delete-orphan", order_by="ExerciseHint.available_after_seconds"
     )
+    walkthrough = relationship(
+        "ExerciseWalkthrough", back_populates="exercise",
+        cascade="all, delete-orphan", uselist=False
+    )
+
+
+class ExerciseWalkthrough(Base):
+    __tablename__ = "exercise_walkthroughs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    exercise_id = Column(
+        Integer, ForeignKey("exercises.id"), nullable=False, unique=True, index=True
+    )
+    overview = Column(Text, default="")
+    prerequisites_json = Column(Text, default="[]")
+    troubleshooting_json = Column(Text, default="[]")
+    expected_end_state_json = Column(Text, default="[]")
+    instructor_notes = Column(Text, default="")
+    version = Column(Integer, default=1, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
+
+    exercise = relationship("Exercise", back_populates="walkthrough")
+    steps = relationship(
+        "ExerciseWalkthroughStep", back_populates="walkthrough",
+        cascade="all, delete-orphan", order_by="ExerciseWalkthroughStep.step_number"
+    )
+
+
+class ExerciseWalkthroughStep(Base):
+    __tablename__ = "exercise_walkthrough_steps"
+
+    id = Column(Integer, primary_key=True, index=True)
+    walkthrough_id = Column(
+        Integer, ForeignKey("exercise_walkthroughs.id"), nullable=False, index=True
+    )
+    step_number = Column(Integer, nullable=False)
+    title = Column(String, nullable=False)
+    purpose = Column(Text, default="")
+    player_action = Column(Text, default="")
+    navigation_location = Column(String, default="")
+    target_asset = Column(String, default="")
+    expected_result = Column(Text, default="")
+    verification_condition = Column(String, default="")
+    linked_objective_id = Column(
+        Integer, ForeignKey("exercise_objectives.id"), nullable=True, index=True
+    )
+    action_id = Column(String, default="")
+    hint = Column(Text, default="")
+    common_mistakes_json = Column(Text, default="[]")
+    recovery_path = Column(Text, default="")
+    instructor_notes = Column(Text, default="")
+    player_visible = Column(Boolean, default=True)
+
+    walkthrough = relationship("ExerciseWalkthrough", back_populates="steps")
+    linked_objective = relationship("ExerciseObjective")
 
 
 class ExerciseObjective(Base):
@@ -833,6 +897,9 @@ class ExerciseRun(Base):
     availability_score = Column(Float, default=100.0)
     response_score = Column(Float, default=100.0)
     current_phase = Column(String, default="Mission Briefing")
+    terminal_reason = Column(Text, default="")
+    final_evaluated_at = Column(DateTime, nullable=True)
+    walkthrough_revealed_at = Column(DateTime, nullable=True)
     metadata_json = Column(Text, default="{}")
 
     exercise = relationship("Exercise")
@@ -863,6 +930,8 @@ class ExerciseRunObjective(Base):
     current_value = Column(Float, nullable=True)
     completed_at = Column(DateTime, nullable=True)
     failed_at = Column(DateTime, nullable=True)
+    last_evaluated_at = Column(DateTime, nullable=True)
+    last_state_change_at = Column(DateTime, nullable=True)
     metadata_json = Column(Text, default="{}")
 
     run = relationship("ExerciseRun", back_populates="objectives")

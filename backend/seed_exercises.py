@@ -1,6 +1,6 @@
 import json
 
-from models import Exercise, OTDevice
+from models import Exercise, ExerciseHint, OTDevice
 from services.exercise_service import _replace_walkthrough, create_exercise
 
 
@@ -67,27 +67,40 @@ def seed_exercises(db):
                     "objective_type": "device_status",
                     "target_type": "OT_DEVICE",
                     "target_id": target_id,
-                    "metadata": {"status": "Online"},
+                    "metadata": {
+                        "status": "Online",
+                        "activate_after_event_type": "launch_attack",
+                    },
                 },
                 {
                     "description": "Maintain track availability at or above 90%.",
                     "objective_type": "track_availability_min",
                     "target_value": 90,
                     "comparison": "gte",
+                    "metadata": {
+                        "activate_after_event_type": "launch_attack",
+                    },
                 },
                 {
                     "description": "Prevent unsafe switch or routing conditions.",
                     "objective_type": "no_unsafe_routing",
                     "target_value": 0,
                     "comparison": "eq",
-                    "metadata": {"mode": "prevention"},
+                    "metadata": {
+                        "mode": "prevention",
+                        "activate_after_event_type": "launch_attack",
+                    },
                 },
                 {
                     "description": "Resolve all active incidents.",
                     "objective_type": "incidents_resolved",
                     "target_value": 0,
                     "comparison": "eq",
-                    "metadata": {"mode": "resolution", "scope": "exercise_run"},
+                    "metadata": {
+                        "mode": "resolution",
+                        "scope": "exercise_run",
+                        "activate_after_event_type": "inject_alert",
+                    },
                 },
             ],
             "script_events": [
@@ -119,10 +132,14 @@ def seed_exercises(db):
                 },
                 {
                     "event_type": "display_hint",
-                    "offset_seconds": 300,
+                    "offset_seconds": 150,
                     "payload": {
                         "title": "Instructor hint",
-                        "message": f"Review the security and communications state of {target_name}.",
+                        "message": (
+                            f"The attack inject has run. Open Dispatcher Operations, "
+                            f"select OT_DEVICE and {target_name}, then use Restore selected "
+                            "device to known-good. Close the run incident only after recovery."
+                        ),
                     },
                 },
                 {
@@ -134,16 +151,7 @@ def seed_exercises(db):
                     },
                 },
             ],
-            "hints": [
-                {
-                    "message": f"Investigate {target_name} and its controlled assets.",
-                    "available_after_seconds": 180,
-                },
-                {
-                    "message": "Compare dispatcher, incident, and operational-impact state before recovery.",
-                    "available_after_seconds": 360,
-                },
-            ],
+            "hints": _hint_definitions(target_name),
         })
         _replace_walkthrough(db, exercise, _walkthrough_definition(exercise, target_name))
         seeded.append(exercise)
@@ -160,13 +168,23 @@ def _reconcile_seeded_exercise(db, exercise, target_name):
         except (TypeError, ValueError):
             metadata = {}
         if objective.objective_type == "no_unsafe_routing":
-            metadata["mode"] = "prevention"
+            metadata.update({
+                "mode": "prevention",
+                "activate_after_event_type": "launch_attack",
+            })
         if objective.objective_type == "incidents_resolved":
-            metadata.update({"mode": "resolution", "scope": "exercise_run"})
+            metadata.update({
+                "mode": "resolution",
+                "scope": "exercise_run",
+                "activate_after_event_type": "inject_alert",
+            })
+        if objective.objective_type == "track_availability_min":
+            metadata["activate_after_event_type"] = "launch_attack"
         if objective.objective_type in {"device_status", "communications_restored"}:
             objective.target_type = "OT_DEVICE"
             objective.target_id = target.id if target else objective.target_id
             metadata["status"] = "Online"
+            metadata["activate_after_event_type"] = "launch_attack"
         objective.metadata_json = json.dumps(metadata)
     for event in exercise.script_events:
         if event.event_type == "end_exercise":
@@ -174,8 +192,65 @@ def _reconcile_seeded_exercise(db, exercise, target_name):
                 "status": "Failed",
                 "reason": "Exercise timer expired before completion.",
             })
-    if not exercise.walkthrough:
-        _replace_walkthrough(db, exercise, _walkthrough_definition(exercise, target_name))
+        elif event.event_type == "display_hint":
+            event.offset_seconds = 150
+            event.payload_json = json.dumps({
+                "title": "Instructor hint",
+                "message": (
+                    f"The attack inject has run. Open Dispatcher Operations, "
+                    f"select OT_DEVICE and {target_name}, then use Restore selected "
+                    "device to known-good. Close the run incident only after recovery."
+                ),
+            })
+    hint_definitions = _hint_definitions(target_name)
+    existing_hints = sorted(exercise.hints, key=lambda item: item.id or 0)
+    for index, definition in enumerate(hint_definitions):
+        if index < len(existing_hints):
+            hint = existing_hints[index]
+            hint.message = definition["message"]
+            hint.available_after_seconds = definition["available_after_seconds"]
+            hint.automatic = definition.get("automatic", False)
+        else:
+            exercise.hints.append(ExerciseHint(**definition))
+    _replace_walkthrough(db, exercise, _walkthrough_definition(exercise, target_name))
+
+
+def _hint_definitions(target_name):
+    return [
+        {
+            "message": (
+                "First, open Exercise Timeline and wait for the Launch Attack entry. "
+                "Restore, availability, and safety objectives intentionally remain "
+                "Waiting until that inject runs."
+            ),
+            "available_after_seconds": 0,
+        },
+        {
+            "message": (
+                f"Open Incident Center and select the incident for {target_name} "
+                "that belongs to this exercise run. Acknowledge it, assign an analyst, "
+                "and add an investigation note. Do not close it until recovery is verified."
+            ),
+            "available_after_seconds": 30,
+        },
+        {
+            "message": (
+                f"After Launch Attack appears in the timeline, open Dispatcher Operations. "
+                f"In Command center choose Target type OT_DEVICE, select {target_name}, "
+                "and click Restore selected device to known-good."
+            ),
+            "available_after_seconds": 120,
+        },
+        {
+            "message": (
+                "Finish by checking Operational impact in Dispatcher Operations: track "
+                "availability must be at least 90% and no unsafe route request may have "
+                "been attempted. Then close only this run's incidents in Incident Center "
+                "and return to Exercise Center; completion is automatic."
+            ),
+            "available_after_seconds": 150,
+        },
+    ]
 
 
 def _walkthrough_definition(exercise, target_name):
@@ -199,8 +274,10 @@ def _walkthrough_definition(exercise, target_name):
             "The run transitions automatically to Completed.",
         ],
         "troubleshooting": [
-            "Use Show current blocker to identify an unresolved incident or unsafe condition.",
-            "If recovery is blocked, review the Incident Center and Dispatcher Operations state.",
+            "If an objective says Waiting, keep the run active until Exercise Timeline shows Launch Attack.",
+            "If Restore is disabled, choose Target type OT_DEVICE and select the named target first.",
+            "If recovery is rejected, read the error and clear the named operational restriction before retrying.",
+            "A blocked unsafe route request is still a safety violation; restart the run if one was attempted.",
         ],
         "instructor_notes": (
             "This answer sheet is configuration guidance, not an automated playbook. "
@@ -210,19 +287,27 @@ def _walkthrough_definition(exercise, target_name):
             {
                 "title": "Inspect the affected asset",
                 "purpose": "Confirm the scripted cyber and operational condition.",
-                "player_action": f"Open OT Assets and inspect {target_name}.",
+                "player_action": (
+                    "In Exercise Center, open Timeline and wait for Launch Attack. "
+                    f"Then open OT Assets, find {target_name}, and review its Status, "
+                    "Risk, and controlled systems."
+                ),
                 "navigation_location": "/assets",
                 "target_asset": target_name,
                 "expected_result": "The affected status, risk, and relationships are visible.",
                 "verification_condition": "device_exists",
                 "action_id": "VIEW_ASSET",
-                "hint": "Compare the asset with its controlled operational systems.",
+                "hint": "The recovery objective should remain Waiting until Launch Attack executes.",
                 "common_mistakes": ["Restoring before reviewing the incident and impact."],
             },
             {
                 "title": "Triage the exercise incident",
                 "purpose": "Establish incident ownership before recovery.",
-                "player_action": "Open Incident Center, acknowledge the run incident, assign an analyst, and add notes.",
+                "player_action": (
+                    f"Open Incident Center, select the incident for {target_name} created "
+                    "by this run, click Acknowledge, assign an analyst, and save an "
+                    "investigation note. Leave the incident open for now."
+                ),
                 "navigation_location": "/incidents",
                 "target_asset": target_name,
                 "expected_result": "The incident is acknowledged and has an owner and investigation notes.",
@@ -233,7 +318,11 @@ def _walkthrough_definition(exercise, target_name):
             {
                 "title": "Restore trusted asset state",
                 "purpose": "Return the targeted controller or gateway to its trusted baseline.",
-                "player_action": "Use the approved Restore Known Good recovery action.",
+                "player_action": (
+                    "Open Dispatcher Operations. Under Command center, set Target type "
+                    f"to OT_DEVICE, select {target_name}, and click Restore selected "
+                    "device to known-good."
+                ),
                 "navigation_location": "/dispatcher",
                 "target_asset": target_name,
                 "expected_result": f"{target_name} reports Online.",
@@ -245,7 +334,11 @@ def _walkthrough_definition(exercise, target_name):
             {
                 "title": "Verify operational availability",
                 "purpose": "Confirm the railroad remains available after recovery.",
-                "player_action": "Review Operational Impact and controlled assets.",
+                "player_action": (
+                    "In Dispatcher Operations, read Operational impact. Confirm Track "
+                    "available is 90% or higher. If it already meets 90% after the attack, "
+                    "no dispatch command is required."
+                ),
                 "navigation_location": "/dispatcher",
                 "target_asset": target_name,
                 "expected_result": "Track availability is at least 90%.",
@@ -256,7 +349,11 @@ def _walkthrough_definition(exercise, target_name):
             {
                 "title": "Maintain routing safety",
                 "purpose": "Preserve the prevention objective throughout the run.",
-                "player_action": "Do not issue a conflicting route or move a switch beneath a train.",
+                "player_action": (
+                    "Do not submit a route that crosses an occupied, restricted, or "
+                    "reserved block, and do not move a switch on an occupied block. "
+                    "No action is required while the unsafe-operation count stays zero."
+                ),
                 "navigation_location": "/dispatcher",
                 "expected_result": "Unsafe-operation count remains zero and the objective shows Maintained/Completed.",
                 "verification_condition": "unsafe_operation_count == 0",
@@ -267,7 +364,11 @@ def _walkthrough_definition(exercise, target_name):
             {
                 "title": "Close run incidents",
                 "purpose": "Resolve only the incidents generated by this exercise run.",
-                "player_action": "Close every remaining exercise incident in Incident Center.",
+                "player_action": (
+                    f"After {target_name} is Online, return to Incident Center. Filter or "
+                    "identify incidents from the current exercise run and set each one to "
+                    "Closed. Do not close unrelated historical incidents."
+                ),
                 "navigation_location": "/incidents",
                 "target_asset": target_name,
                 "expected_result": "Exercise open incident count is zero.",

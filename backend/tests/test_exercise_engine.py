@@ -190,6 +190,34 @@ class ExerciseEngineTests(unittest.TestCase):
         self.assertEqual(state.status, "Failed")
         self.assertEqual(run.status, "Failed")
 
+    def test_numeric_equality_objective_survives_database_reload(self):
+        exercise = create_exercise(self.db, self.definition(
+            name="Persisted Numeric Equality",
+            objectives=[{
+                "description": "No unsafe route",
+                "objective_type": "no_unsafe_routing",
+                "target_value": 0,
+                "comparison": "eq",
+            }],
+            script_events=[],
+        ))
+        run = create_run(self.db, exercise.id)
+        start_run(self.db, run.id)
+        self.db.commit()
+        run_id = run.id
+        self.db.expire_all()
+
+        restored = self.db.get(ExerciseRun, run_id)
+        evaluate_objectives(self.db, restored)
+        state = restored.objectives[0]
+        serialized = serialize_run(self.db, restored, instructor=True)[
+            "objectives"
+        ][0]
+
+        self.assertEqual(state.current_value, 0)
+        self.assertEqual(state.status, "Completed")
+        self.assertEqual(serialized["blocking_reasons"], [])
+
     def test_incident_resolution_is_run_scoped_and_event_driven(self):
         historical = Incident(
             device="Historical Asset", alert_type="Old Incident",
@@ -362,6 +390,51 @@ class ExerciseEngineTests(unittest.TestCase):
         result = validate_exercise_configuration(self.db, broken)
         self.assertFalse(result["completion_readiness"])
         self.assertTrue(any("unsupported evaluator" in error for error in result["errors"]))
+
+    def test_seeded_objectives_wait_for_their_scripted_injects(self):
+        exercises = seed_exercises(self.db)
+        for exercise in exercises:
+            with self.subTest(exercise=exercise.name):
+                run = create_run(self.db, exercise.id)
+                start_run(self.db, run.id)
+                statuses = {
+                    state.objective.objective_type: state.status
+                    for state in run.objectives
+                }
+                self.assertEqual(statuses["device_status"], "Pending")
+                self.assertEqual(statuses["track_availability_min"], "Pending")
+                self.assertEqual(statuses["no_unsafe_routing"], "Pending")
+                self.assertEqual(statuses["incidents_resolved"], "Pending")
+                self.assertEqual(run.status, "Running")
+
+                hints = sorted(
+                    exercise.hints,
+                    key=lambda item: item.available_after_seconds,
+                )
+                self.assertGreaterEqual(len(hints), 4)
+                self.assertEqual(hints[0].available_after_seconds, 0)
+                self.assertIn("Launch Attack", hints[0].message)
+                self.assertTrue(any(
+                    "Dispatcher Operations" in hint.message
+                    and exercise.objectives[0].target_id is not None
+                    for hint in hints
+                ))
+
+    def test_seeded_restore_objective_opens_after_attack_inject(self):
+        exercise = seed_exercises(self.db)[0]
+        run = create_run(self.db, exercise.id)
+        start_run(self.db, run.id)
+        run.started_at = utc_now() - timedelta(seconds=121)
+        process_run(self.db, run)
+
+        states = {
+            state.objective.objective_type: state
+            for state in run.objectives
+        }
+        self.assertNotEqual(states["device_status"].status, "Completed")
+        self.assertGreaterEqual(states["incidents_resolved"].current_value, 1)
+        self.assertEqual(states["incidents_resolved"].status, "In Progress")
+        self.assertEqual(run.status, "Running")
 
     def test_after_action_report_refreshes_final_diagnostics(self):
         exercise = create_exercise(self.db, self.definition(

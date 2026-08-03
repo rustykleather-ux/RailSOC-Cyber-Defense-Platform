@@ -532,6 +532,7 @@ def _condition_met(db, condition, run):
 
 
 def _compare(value, expected, operator):
+    operator = str(operator or "eq").lower()
     if operator == "gte":
         return float(value) >= float(expected)
     if operator == "lte":
@@ -540,9 +541,11 @@ def _compare(value, expected, operator):
         return float(value) > float(expected)
     if operator == "lt":
         return float(value) < float(expected)
-    if operator == "ne":
-        return value != expected
-    return str(value).lower() == str(expected).lower()
+    try:
+        equal = float(value) == float(expected)
+    except (TypeError, ValueError):
+        equal = str(value).strip().casefold() == str(expected).strip().casefold()
+    return not equal if operator == "ne" else equal
 
 
 def process_exercise_runs(db):
@@ -760,18 +763,60 @@ def evaluate_objectives(db, run):
         complete, failed, current, progress = False, False, None, 0.0
         now = utc_now()
         metadata = _loads(state.metadata_json, {})
+        objective_config = _loads(objective.metadata_json, {})
         diagnostics = {
             "mode": OBJECTIVE_MODES.get(objective.objective_type, "achievement"),
             "blocking_reasons": [],
         }
+        activation_event_type = objective_config.get("activate_after_event_type")
+        if activation_event_type:
+            activation_events = [
+                item for item in run.event_states
+                if item.script_event.event_type == activation_event_type
+            ]
+            if not any(item.status == "Executed" for item in activation_events):
+                previous_status = state.status
+                state.current_value = None
+                state.progress = 0
+                state.status = "Hidden" if objective.hidden else "Pending"
+                state.last_evaluated_at = now
+                if state.status != previous_status:
+                    state.last_state_change_at = now
+                diagnostics.update({
+                    "expected_condition": (
+                        f"Wait for the {activation_event_type.replace('_', ' ')} "
+                        "exercise inject before evaluating this objective."
+                    ),
+                    "target_value": objective.target_value,
+                    "current_value": None,
+                    "activation_event_type": activation_event_type,
+                    "completion_guidance": (
+                        "Keep the exercise running and watch Timeline. This objective "
+                        f"will begin after {activation_event_type.replace('_', ' ').title()}."
+                    ),
+                    "blocking_reasons": [{
+                        "type": "exercise_phase",
+                        "label": "Scripted exercise inject",
+                        "status": "Waiting",
+                    }],
+                    "last_evaluated_at": now.isoformat(),
+                })
+                state.metadata_json = json.dumps(
+                    {**metadata, "diagnostics": diagnostics}, default=str
+                )
+                continue
         if objective.objective_type in {"device_status", "communications_restored"}:
             device = db.query(OTDevice).filter(OTDevice.id == objective.target_id).first()
             current = device.status if device else "Missing"
-            target = _loads(objective.metadata_json, {}).get("status", "Online")
+            target = objective_config.get("status", "Online")
             complete = device is not None and str(current).lower() == str(target).lower()
             progress = 100 if complete else 25
             diagnostics["expected_condition"] = f"device_status == {target}"
             diagnostics["target_value"] = target
+            diagnostics["completion_guidance"] = (
+                f"Restore {device.name if device else 'the target device'} until its "
+                f"Status reads {target}."
+            )
             if not complete:
                 diagnostics["blocking_reasons"] = [{
                     "type": "device", "id": objective.target_id,
@@ -871,6 +916,20 @@ def evaluate_objectives(db, run):
                 f"{metric} {objective.comparison or default_operator} {target}"
             )
             diagnostics["target_value"] = target
+            if objective.objective_type == "track_availability_min":
+                diagnostics["completion_guidance"] = (
+                    f"In Dispatcher Operations, keep Track available at {target:g}% or higher."
+                )
+            elif objective.objective_type == "no_unsafe_routing":
+                diagnostics["completion_guidance"] = (
+                    "Do not submit conflicting routes or switch movements on occupied "
+                    "track; the unsafe-operation count must remain zero."
+                )
+            elif objective.objective_type == "incidents_resolved":
+                diagnostics["completion_guidance"] = (
+                    "After recovery is verified, close every incident created by this "
+                    "exercise run in Incident Center."
+                )
             if objective.objective_type == "incidents_resolved" and not complete:
                 diagnostics["blocking_reasons"] = [
                     {
@@ -1270,7 +1329,11 @@ def validate_exercise_configuration(db, exercise):
         errors.append(f"Duplicate objective IDs: {sorted(duplicates)}")
     steps = list(exercise.walkthrough.steps) if exercise.walkthrough else []
     covered = {step.linked_objective_id for step in steps if step.linked_objective_id}
+    configured_event_types = {
+        event.event_type for event in exercise.script_events
+    }
     for objective in exercise.objectives:
+        objective_metadata = _loads(objective.metadata_json, {})
         if objective.objective_type not in OBJECTIVE_TYPES:
             errors.append(
                 f"Objective {objective.id} uses unsupported evaluator {objective.objective_type}."
@@ -1282,7 +1345,7 @@ def validate_exercise_configuration(db, exercise):
                 f"Objective {objective.id} uses unsupported comparison {objective.comparison}."
             )
         if objective.objective_type in {"device_status", "communications_restored"}:
-            status = str(_loads(objective.metadata_json, {}).get("status", "Online"))
+            status = str(objective_metadata.get("status", "Online"))
             if status.strip().lower() not in SUPPORTED_DEVICE_STATUSES:
                 errors.append(
                     f"Objective {objective.id} uses unsupported device status '{status}'."
@@ -1294,11 +1357,16 @@ def validate_exercise_configuration(db, exercise):
         if not objective.optional and not visible_coverage:
             errors.append(f"Required objective {objective.id} has no walkthrough coverage.")
         if objective.objective_type == "incidents_resolved":
-            metadata = _loads(objective.metadata_json, {})
-            if metadata.get("scope", "exercise_run") != "exercise_run":
+            if objective_metadata.get("scope", "exercise_run") != "exercise_run":
                 warnings.append(
                     f"Objective {objective.id} should use exercise_run incident scope."
                 )
+        activation_event_type = objective_metadata.get("activate_after_event_type")
+        if activation_event_type and activation_event_type not in configured_event_types:
+            errors.append(
+                f"Objective {objective.id} waits for missing script event "
+                f"{activation_event_type}."
+            )
     for event in exercise.script_events:
         if event.event_type not in EVENT_TYPES:
             errors.append(f"Script event {event.id} has unsupported handler {event.event_type}.")
@@ -1562,6 +1630,7 @@ def serialize_run_objective(item):
         ),
         "target_value_display": diagnostics.get("target_value"),
         "expected_condition": diagnostics.get("expected_condition", ""),
+        "completion_guidance": diagnostics.get("completion_guidance", ""),
         "blocking_reasons": diagnostics.get("blocking_reasons", []),
         "last_evaluated_at": (
             item.last_evaluated_at.isoformat() if item.last_evaluated_at else None

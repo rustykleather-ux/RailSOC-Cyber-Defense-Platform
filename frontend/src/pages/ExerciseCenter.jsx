@@ -156,6 +156,11 @@ export default function ExerciseCenter() {
     }
   }
 
+  async function requestNextHint() {
+    const result = await act(() => requestExerciseHint(run.id));
+    if (result) await loadRun();
+  }
+
   async function clearHistory() {
     const confirmed = window.confirm(
       "Clear all exercise run history, checkpoints, scores, and run timelines? Exercise definitions will be preserved.",
@@ -463,8 +468,18 @@ export default function ExerciseCenter() {
               >{tab==="walkthrough"?"Answer Sheet":tab.replace("-"," ")}</button>)}
             </nav>
             <div className="run-grid">
-              {activeTab==="objectives"&&<section className="exercise-panel exercise-objective-diagnostics"><h3>Objectives</h3>{visibleObjectives.map((item)=><article className="objective" key={item.run_objective_id}><div><strong>{item.description}</strong><span>{item.status}</span></div><progress max="100" value={item.progress}/><small>{item.progress}% complete · {item.mode}</small>{instructorMode&&<div className="objective-debug"><code>{item.expected_condition}</code>{item.blocking_reasons?.map((reason)=><p key={`${reason.type}-${reason.id||reason.label}`}>{reason.label} · {reason.status}</p>)}</div>}</article>)}</section>}
-              {activeTab==="live"&&<><section className="exercise-panel"><h3>Hints</h3><button disabled={busy} onClick={()=>act(()=>requestExerciseHint(run.id))}><Lightbulb size={14}/>Request hint</button>{run.timeline.filter((x)=>x.event_type==="exercise_hint"||x.event_type==="exercise_display_hint").map((x)=><article key={x.id}><strong>{x.title}</strong><span>{x.message}</span></article>)}</section><section className="exercise-panel"><h3>Checkpoints</h3><button onClick={()=>act(()=>createCheckpoint(run.id,`Checkpoint ${run.checkpoints.length+1}`))}><TimerReset size={14}/>Save checkpoint</button>{run.checkpoints.map((item)=><article key={item.id}><strong>{item.name}</strong><span>{clock(item.elapsed_seconds)}</span><button onClick={()=>act(()=>restoreCheckpoint(run.id,item.id))}>Restore</button></article>)}</section></>}
+              {activeTab==="objectives"&&<section className="exercise-panel exercise-objective-diagnostics">
+                <h3>Objectives</h3>
+                {visibleObjectives.map((item)=><article className="objective" key={item.run_objective_id}>
+                  <div><strong>{item.description}</strong><span>{item.status}</span></div>
+                  <progress max="100" value={item.progress}/>
+                  <small>{item.progress}% complete · {item.mode}</small>
+                  {item.completion_guidance&&<p className="objective-guidance"><strong>What to do:</strong> {item.completion_guidance}</p>}
+                  {item.blocking_reasons?.length>0&&<div className="objective-blockers"><strong>Current status</strong>{item.blocking_reasons.map((reason)=><p key={`${reason.type}-${reason.id||reason.label}`}>{reason.label} · {reason.status}</p>)}</div>}
+                  {instructorMode&&<div className="objective-debug"><code>{item.expected_condition}</code></div>}
+                </article>)}
+              </section>}
+              {activeTab==="live"&&<><section className="exercise-panel"><h3>Hints</h3><p>Hints now follow the exercise in order and name the exact panel and control to use.</p><button disabled={busy} onClick={requestNextHint}><Lightbulb size={14}/>Show next hint</button>{run.timeline.filter((x)=>x.event_type==="exercise_hint"||x.event_type==="exercise_display_hint").map((x)=><article key={x.id}><strong>{x.title}</strong><span>{x.message}</span></article>)}</section><section className="exercise-panel"><h3>Checkpoints</h3><button onClick={()=>act(()=>createCheckpoint(run.id,`Checkpoint ${run.checkpoints.length+1}`))}><TimerReset size={14}/>Save checkpoint</button>{run.checkpoints.map((item)=><article key={item.id}><strong>{item.name}</strong><span>{clock(item.elapsed_seconds)}</span><button onClick={()=>act(()=>restoreCheckpoint(run.id,item.id))}>Restore</button></article>)}</section></>}
               {activeTab==="timeline"&&<section className="exercise-panel exercise-timeline"><h3>Exercise Timeline</h3>{run.timeline.map((item)=><article key={item.id}><time>{new Date(item.timestamp).toLocaleTimeString()}</time><strong>{item.title}</strong><span>{item.message}</span></article>)}</section>}
               {activeTab==="score"&&<section className="exercise-panel"><h3>Scoring</h3>{scoreboard.map(([label,value])=><article key={label}><strong>{label}</strong><span>{Number(value||0).toFixed(1)}</span></article>)}{run.terminal_reason&&<p><strong>Final reason:</strong> {run.terminal_reason}</p>}</section>}
               {activeTab==="walkthrough"&&<WalkthroughPanel walkthrough={walkthrough||run.walkthrough||{available:run.walkthrough_available}} instructorMode={instructorMode} onReveal={async()=>{

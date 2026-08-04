@@ -10,14 +10,14 @@ function IncidentTimeline({ incidents, events = [] }) {
     operationalItems.length > 0 ? operationalItems : incidents || []
   )
     .slice()
-    .sort((a, b) => new Date(a.time) - new Date(b.time));
+    .sort((a, b) => new Date(b.time) - new Date(a.time));
 
   return (
     <section className="timeline-page">
       <div className="timeline-header">
         <h2>Incident Timeline</h2>
         <p>
-          Chronological view of simulated RailSOC security events and analyst workflow.
+          Latest-first view of simulated RailSOC security events and analyst workflow.
         </p>
       </div>
 

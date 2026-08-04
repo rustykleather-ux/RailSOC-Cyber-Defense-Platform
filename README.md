@@ -43,6 +43,8 @@ Screenshot placeholder: `Screenshots/network-visibility.png`
 
 # 🚂 TrackSentinel
 
+### Railroad OT Cybersecurity Digital Twin & Purple Team Training Platform
+
 ![Python](https://img.shields.io/badge/Python-3.12-blue?logo=python)
 ![FastAPI](https://img.shields.io/badge/FastAPI-Backend-009688?logo=fastapi)
 ![React](https://img.shields.io/badge/React-Frontend-61DAFB?logo=react)
@@ -50,7 +52,8 @@ Screenshot placeholder: `Screenshots/network-visibility.png`
 ![SQLite](https://img.shields.io/badge/SQLite-Database-003B57?logo=sqlite)
 ![MITRE ATT&CK ICS](https://img.shields.io/badge/MITRE-ATT%26CK%20ICS-red)
 ![Status](https://img.shields.io/badge/Status-Active-success)
-![Portfolio](https://img.shields.io/badge/Portfolio-Project-orange)
+![License](https://img.shields.io/badge/License-MIT-green)
+
 ### RailSOC Training & Simulation Platform
 
 ### Operational Technology Cybersecurity • Railroad Infrastructure • Industrial Control Systems
@@ -75,74 +78,89 @@ A full-stack Operational Technology (OT) cybersecurity platform simulating a mod
 
 # Overview
 
-TrackSentinel is a modern Operational Technology (OT) cybersecurity platform developed to demonstrate cybersecurity monitoring, incident response, threat intelligence, executive reporting, and purple team exercises within a simulated railroad environment.
+TrackSentinel is a full-stack cybersecurity training platform that combines a live railroad digital twin, Operational Technology (OT) cybersecurity monitoring, Purple Team exercises, dispatcher operations, AI-assisted incident analysis, and operational impact simulation into a single interactive environment.
 
-Unlike traditional SOC dashboards that focus exclusively on IT infrastructure, TrackSentinel models a railroad Operational Technology network consisting of SCADA systems, signaling infrastructure, Positive Train Control (PTC), communications equipment, engineering workstations, environmental monitoring, safety systems, and critical railroad infrastructure.
+Unlike traditional SOC dashboards that focus solely on enterprise IT, TrackSentinel models a modern railroad Operational Technology environment where cybersecurity events directly influence train operations, signaling infrastructure, communications systems, dispatcher workflows, and critical railroad assets.
 
-The platform combines cybersecurity operations with operational awareness, allowing simulated cyber events to influence operational telemetry, incident workflows, asset health, and executive security posture.
+The platform is designed for cybersecurity education, professional portfolio demonstration, tabletop exercises, and security research while remaining completely isolated from real railroad infrastructure.
+
 
 Although inspired by real OT security concepts, all attacks, alerts, telemetry, vulnerabilities, and incidents are fully simulated for educational, training, and portfolio purposes.
 
 ---
 
-# ✨ Key Features
+# ✨ Platform Highlights
 
-- 🚂 Interactive railroad operations map with live train simulation
-- 🚦 Dynamic signal and track block occupancy simulation
-- 🛡️ OT cybersecurity monitoring and incident response workflows
-- 📊 Executive cybersecurity dashboard with operational KPIs
-- 🎯 Custom attack scenario builder
-- 🚨 Real-time security alerts with MITRE ATT&CK for ICS mappings
-- 📝 Incident management with analyst assignments and investigation notes
-- 📈 Simulated operational telemetry across railroad OT assets
-- 🔄 Purple team exercise simulation
-- 🎮 Train simulation controls (Start, Stop, Restart, Reset)
-- 📚 Recent scenario activity tracking
-- ⚡ FastAPI REST API with React frontend
+- 🚂 Interactive Railroad Digital Twin
+- 🚦 Live Train Movement & Dispatcher Operations
+- 🛤 Dynamic Track Block Occupancy
+- 🚥 Signal, Switch & Grade Crossing Simulation
+- 🌐 Interactive Railroad IT / OT Network Visibility
+- 🛡 Operational Technology Cybersecurity Monitoring
+- 🚨 AI-Assisted Incident Response
+- 📊 Executive Security Dashboard
+- 📝 Incident Management Workflow
+- 🎯 Purple Team Exercise Library
+- 🎮 Custom Scenario Builder
+- 🤖 AI Executive & Technical Incident Analysis
+- 📈 Operational Impact Simulation
+- 📚 After Action Reporting
+- ⚡ FastAPI REST API
+- ⚛ React Frontend
 
 ---
 
-# 🆕 Latest Features
+# 🆕 Current Capabilities
 
-### Railroad Operations
-
-- Interactive train simulation
-- Dynamic train movement
-- Track block occupancy visualization
-- Live signal state updates
-- Operator train controls
-
-### Scenario Management
-
-- Custom Scenario Builder
-- Scenario execution history
-- Recent activity timeline
-
-### Dashboard Improvements
-
-- Environment Overview
-- Railroad Operations Map
-- Executive dashboard enhancements
-- Live operational telemetry
+| Capability | Status |
+|------------|--------|
+| Railroad Digital Twin | ✅ |
+| Live Train Simulation | ✅ |
+| Dispatcher Console | ✅ |
+| Track Block Occupancy | ✅ |
+| Signal Controllers | ✅ |
+| Switch Controllers | ✅ |
+| Grade Crossings | ✅ |
+| Positive Train Control (PTC) Simulation | ✅ |
+| Railroad Communications | ✅ |
+| Interactive Network Visibility | ✅ |
+| Operational Impact Engine | ✅ |
+| Incident Response Center | ✅ |
+| Purple Team Exercise Library | ✅ |
+| Custom Exercise Builder | ✅ |
+| AI Incident Analysis | ✅ |
+| Executive Security Dashboard | ✅ |
+| MITRE ATT&CK for ICS Mapping | ✅ |
+| Custom OT Device Builder | ✅ |
+| Exercise Walkthroughs | 🚧 |
+| AI Adversary | 🚧 |
+| Blue Team Coach | Planned |
+| Multi-User Exercises | Planned |
 
 ---
 
 
 # Why TrackSentinel?
 
-Industrial environments differ significantly from enterprise IT environments.
+Operational Technology environments present unique cybersecurity challenges where maintaining safe and reliable operations is often just as important as protecting data.
 
-Operational Technology systems prioritize:
+TrackSentinel demonstrates how cyber incidents affect real railroad operations by combining:
 
-- Availability
-- Safety
-- Reliability
-- Continuous operations
-- Physical process control
+- Operational Technology (OT)
+- Industrial Control Systems (ICS)
+- Railroad Digital Twins
+- Cybersecurity Operations
+- Dispatcher Operations
+- Operational Impact Analysis
+- Executive Reporting
+- Purple Team Exercises
+- AI-Assisted Incident Response
 
-rather than traditional confidentiality-focused enterprise security.
+into a single unified platform.
 
-TrackSentinel demonstrates how cybersecurity analysts can monitor, investigate, and respond to cyber threats affecting railroad operational technology while balancing operational continuity and safety.
+Rather than simulating isolated alerts, TrackSentinel models the cascading operational effects of cybersecurity incidents across trains, signaling infrastructure, communications systems, and railroad operations.
+
+This allows analysts to understand both the cybersecurity implications and the operational consequences of attacks in a realistic training environment.
 
 The platform brings together:
 
@@ -192,7 +210,7 @@ Telemetry automatically changes during simulated attack scenarios to reflect the
 
 ---
 
-# 📊 Executive Security Operations Dashboard
+# 📊 Executive Security Dashboard
 
 > Executive-level cybersecurity posture and operational risk overview.
 
@@ -224,7 +242,7 @@ Telemetry automatically changes during simulated attack scenarios to reflect the
 
 ---
 
-# 🚦 RailSOC Dashboard
+# 🚦 RailSOC Operations Dashboard
 
 > The operational command center used by analysts during daily monitoring.
 
@@ -253,7 +271,7 @@ Telemetry automatically changes during simulated attack scenarios to reflect the
 
 ---
 
-# 🚂 Interactive Railroad Operations Map
+# 🚂 Railroad Digital Twin
 
 > A digital visualization of the simulated railroad operational environment.
 

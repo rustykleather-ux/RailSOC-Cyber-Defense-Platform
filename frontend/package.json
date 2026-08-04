@@ -8,6 +8,7 @@
     "build": "vite build",
     "lint": "oxlint",
     "test": "node --test src/components/railroad-map/*.test.js src/components/network-visibility/*.test.js",
+    "screenshots": "node scripts/capture-screenshots.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -23,6 +24,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.3",
     "oxlint": "^1.71.0",
+    "playwright": "^1.62.1",
     "vite": "^8.1.1"
   }
 }

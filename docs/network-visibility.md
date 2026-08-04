@@ -1,5 +1,7 @@
 # Network Visibility design
 
+**Status:** Available · **Scope:** simulation only · [Back to project README](../README.md)
+
 ## Purpose
 
 Network Visibility is a simulated IT/OT architecture and telemetry view for
@@ -25,7 +27,8 @@ invoke shell commands, use nmap or sniffers, change firewall rules, or call
 arbitrary HTTP endpoints. External-looking addresses use documentation ranges
 and describe simulated nodes only.
 
-Frontend requests are limited to the existing TrackSentinel API base URL.
+Frontend requests are limited to the configured TrackSentinel API base URL
+(`VITE_API_BASE_URL`, default `http://127.0.0.1:8000`).
 Mutation requests use server-side allow-lists. Unknown actions return a
 controlled error and the transaction is rolled back.
 
@@ -43,8 +46,8 @@ The implementation adds five additive SQLAlchemy tables:
 - `network_paths`: saved path-trace results and aggregate health.
 
 Node layout coordinates are presentation state, not network-derived
-geolocation. The idempotent seed contains six zones, more than thirty nodes,
-and more than thirty connections. Startup fills missing static topology
+geolocation. The idempotent seed contains six zones, 34 nodes,
+and 36 connections. Startup fills missing static topology
 without resetting an active simulated link condition.
 
 ## Existing TrackSentinel integration

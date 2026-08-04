@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { API_BASE_URL } from "../api";
 
 
 function IncidentCenter({
@@ -53,7 +54,7 @@ function IncidentCenter({
 
     try {
       const response = await fetch(
-        `http://localhost:8000/incidents/${selectedIncident.id}/analysis`,
+        `${API_BASE_URL}/incidents/${selectedIncident.id}/analysis`,
         {
           signal: controller.signal,
         }

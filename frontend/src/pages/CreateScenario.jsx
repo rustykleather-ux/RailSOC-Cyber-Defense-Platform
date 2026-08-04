@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { API_BASE_URL } from "../api";
 import ScenarioResultsDrawer from "../components/ScenarioResultsDrawer";
 
 
@@ -27,8 +28,8 @@ function CreateScenario() {
       setError("");
 
       const [attackResponse, deviceResponse] = await Promise.all([
-        fetch("http://127.0.0.1:8000/attacks"),
-        fetch("http://127.0.0.1:8000/devices"),
+        fetch(`${API_BASE_URL}/attacks`),
+        fetch(`${API_BASE_URL}/devices`),
       ]);
 
       if (!attackResponse.ok) {
@@ -330,7 +331,7 @@ function CreateScenario() {
       setResult(null);
 
       const response = await fetch(
-        "http://127.0.0.1:8000/training/custom-scenario",
+        `${API_BASE_URL}/training/custom-scenario`,
         {
           method: "POST",
           headers: {

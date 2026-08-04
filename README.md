@@ -1,1537 +1,355 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/rustykleather-ux/RailSOC-Cyber-Defense-Platform/main/frontend/src/assets/TrackSintinel-Banner.png" alt="TrackSentinel Banner" width="100%">
+  <img src="frontend/src/assets/TrackSintinel-Banner.png" alt="TrackSentinel Banner" width="100%">
 </p>
 
----
-
-# Network Visibility
-
-TrackSentinel includes a live, interactive IT/OT network map at
-`http://localhost:5173/network`. The map combines existing OT device state with
-an idempotently seeded simulated railroad network containing Enterprise IT,
-Dispatch, Railroad OT, Communications, Security, and External zones.
-
-Key capabilities include:
-
-- React Flow topology with drag, zoom, pan, fit, zone collapse, saved layout,
-  search, filters, and fullscreen mode
-- WebSocket updates every four seconds with five-second polling fallback
-- Node and connection details, simulated isolate/restore/fail controls, and
-  historical network events
-- Deterministic latency-weighted path tracing with cumulative packet-loss
-  calculation and security-boundary reporting
-- Simulated scans, lateral movement, remote access, latency, loss, fiber,
-  radio, and firewall conditions
-- Alert, Incident Center, exercise-state, digital-twin, and timeline
-  integration through existing TrackSentinel services
-
-All topology and telemetry are simulated or projected from approved
-TrackSentinel database state. The feature does **not** scan a host network,
-send packets, capture traffic, contact arbitrary endpoints, execute operating
-system commands, or modify real devices or firewall rules.
-
-The REST API is under `/api/network`; live state is available at
-`/ws/network`. Start the normal FastAPI and Vite development servers, open
-Network Visibility from the sidebar, and use the Simulation Controls panel to
-generate safe training telemetry.
-
-See [the Network Visibility design](docs/network-visibility.md) for the data
-model, API list, path logic, incident integration, security boundaries, and
-known limitations.
-
-Screenshot placeholder: `Screenshots/network-visibility.png`
-
-# 🚂 TrackSentinel
+# TrackSentinel
 
 ### Railroad OT Cybersecurity Digital Twin & Purple Team Training Platform
 
-![Python](https://img.shields.io/badge/Python-3.12-blue?logo=python)
-![FastAPI](https://img.shields.io/badge/FastAPI-Backend-009688?logo=fastapi)
-![React](https://img.shields.io/badge/React-Frontend-61DAFB?logo=react)
-![Vite](https://img.shields.io/badge/Vite-Build-646CFF?logo=vite)
-![SQLite](https://img.shields.io/badge/SQLite-Database-003B57?logo=sqlite)
-![MITRE ATT&CK ICS](https://img.shields.io/badge/MITRE-ATT%26CK%20ICS-red)
-![Status](https://img.shields.io/badge/Status-Active-success)
-![License](https://img.shields.io/badge/License-MIT-green)
-
-### RailSOC Training & Simulation Platform
-
-### Operational Technology Cybersecurity • Railroad Infrastructure • Industrial Control Systems
-
+<p>
+  <img alt="Python" src="https://img.shields.io/badge/Python-3.14_verified-3776AB?logo=python&logoColor=white">
+  <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-0.116-009688?logo=fastapi&logoColor=white">
+  <img alt="React" src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=111827">
+  <img alt="Vite" src="https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=white">
+  <img alt="SQLite" src="https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white">
+  <img alt="SQLAlchemy" src="https://img.shields.io/badge/SQLAlchemy-2.0-D71F00">
+  <img alt="MITRE ATT&CK for ICS" src="https://img.shields.io/badge/MITRE-ATT%26CK_for_ICS-E34F26">
+  <img alt="Status" src="https://img.shields.io/badge/status-active_development-2563EB">
+  <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-green"></a>
 </p>
 
-<p align="center">
+TrackSentinel is a full-stack railroad Operational Technology (OT) cybersecurity training platform. It combines an interactive railroad digital twin, live train simulation, Purple Team scenarios, dispatcher operations, network visibility, incident response, deterministic analysis, and operational-impact modeling in one local application. It is a simulation: it does not connect to or control real railroad systems, and all attacks, telemetry, incidents, and operational effects remain inside the application.
 
-A full-stack Operational Technology (OT) cybersecurity platform simulating a modern Railroad Security Operations Center (RailSOC) used for monitoring, detection, investigation, incident response, executive reporting, and purple team exercises across railroad operational technology environments.
+## Platform highlights
 
-</p>
+- Live schematic territory with trains, track blocks, signals, switches, crossings, mileposts, and OT assets
+- Dispatcher route validation, queued commands, restrictions, recovery actions, and simulated SCADA delay/blocking
+- Six-zone IT/OT topology with 34 seeded nodes, 36 connections, path tracing, simulated traffic, and live updates
+- Purple Team attack catalog and a data-driven custom scenario builder
+- Eight seeded exercises with objectives, scoring, hints, checkpoints, walkthroughs, and after-action reports
+- Incident Center workflows for acknowledgement, assignment, investigation notes, closure, and MITRE ATT&CK for ICS context
+- Rule-based incident and operations analysis with technical recommendations and operational-impact metrics
+- Extensible OT device types, capabilities, relationships, and supported simulated effects
 
----
+## Capability status
 
-<p align="center">
+| Capability | Status | Notes |
+|---|---|---|
+| Railroad Digital Twin | Available | Simulation-backed operational map |
+| Live Train Simulation | Available | Start, stop, restart, and reset controls |
+| Dispatcher Console | Available | Route, command, restriction, and recovery workflows |
+| Network Visibility | Available | Simulated topology and telemetry only |
+| Purple Team Attack Library | Available | Catalog-driven simulated effects |
+| Custom Scenario Builder | Available | Select attacks and target assets |
+| Custom OT Device Framework | Available | Types, capabilities, relationships, and effects |
+| Exercise Mode | Available | Objectives, scoring, events, hints, and checkpoints |
+| Walkthroughs and AAR | Beta | Instructor answer sheets and exportable reports |
+| Incident Analysis | Available | Deterministic, rule-based analysis; no external LLM |
+| AI Adversary | Planned | No autonomous adversary is implemented |
+| Authentication / Multi-user Exercises | Planned | Current application is a local single-user demo |
 
+## Quick demonstration workflow
 
+1. Open the dashboard and review the seeded railroad territory.
+2. Launch a catalog attack from **Scenario Builder**.
+3. Observe the affected train, block, signal, crossing, or OT asset in the **Railroad Digital Twin**.
+4. Review route constraints and recovery options in **Dispatcher Operations**.
+5. Open the generated incident, assign it, add investigation notes, and review its analysis.
+6. Start an exercise, follow the objective guidance, request hints, and inspect the walkthrough or after-action report.
 
-</p>
+## Screenshots
 
----
+### Digital twin territory
 
-# Overview
+![TrackSentinel Railroad Digital Twin](docs/screenshots/digital-twin.png)
 
-TrackSentinel is a full-stack cybersecurity training platform that combines a live railroad digital twin, Operational Technology (OT) cybersecurity monitoring, Purple Team exercises, dispatcher operations, AI-assisted incident analysis, and operational impact simulation into a single interactive environment.
+### IT/OT network topology
 
-Unlike traditional SOC dashboards that focus solely on enterprise IT, TrackSentinel models a modern railroad Operational Technology environment where cybersecurity events directly influence train operations, signaling infrastructure, communications systems, dispatcher workflows, and critical railroad assets.
+![TrackSentinel Network Visibility](docs/screenshots/network-visibility.png)
 
-The platform is designed for cybersecurity education, professional portfolio demonstration, tabletop exercises, and security research while remaining completely isolated from real railroad infrastructure.
+### Dispatcher console
 
+![TrackSentinel Dispatcher Console](docs/screenshots/dispatcher-console.png)
 
-Although inspired by real OT security concepts, all attacks, alerts, telemetry, vulnerabilities, and incidents are fully simulated for educational, training, and portfolio purposes.
+### Purple Team Library
 
----
+![TrackSentinel Purple Team Library](docs/screenshots/purple-team-library.png)
 
-# ✨ Platform Highlights
+### Incident Analysis
 
-- 🚂 Interactive Railroad Digital Twin
-- 🚦 Live Train Movement & Dispatcher Operations
-- 🛤 Dynamic Track Block Occupancy
-- 🚥 Signal, Switch & Grade Crossing Simulation
-- 🌐 Interactive Railroad IT / OT Network Visibility
-- 🛡 Operational Technology Cybersecurity Monitoring
-- 🚨 AI-Assisted Incident Response
-- 📊 Executive Security Dashboard
-- 📝 Incident Management Workflow
-- 🎯 Purple Team Exercise Library
-- 🎮 Custom Scenario Builder
-- 🤖 AI Executive & Technical Incident Analysis
-- 📈 Operational Impact Simulation
-- 📚 After Action Reporting
-- ⚡ FastAPI REST API
-- ⚛ React Frontend
+![TrackSentinel Incident Analysis](docs/screenshots/incident-analysis.png)
 
----
+### Exercise Mode
 
-# 🆕 Current Capabilities
+![TrackSentinel Running Exercise](docs/screenshots/exercise-running.png)
 
-| Capability | Status |
-|------------|--------|
-| Railroad Digital Twin | ✅ |
-| Live Train Simulation | ✅ |
-| Dispatcher Console | ✅ |
-| Track Block Occupancy | ✅ |
-| Signal Controllers | ✅ |
-| Switch Controllers | ✅ |
-| Grade Crossings | ✅ |
-| Positive Train Control (PTC) Simulation | ✅ |
-| Railroad Communications | ✅ |
-| Interactive Network Visibility | ✅ |
-| Operational Impact Engine | ✅ |
-| Incident Response Center | ✅ |
-| Purple Team Exercise Library | ✅ |
-| Custom Exercise Builder | ✅ |
-| AI Incident Analysis | ✅ |
-| Executive Security Dashboard | ✅ |
-| MITRE ATT&CK for ICS Mapping | ✅ |
-| Custom OT Device Builder | ✅ |
-| Exercise Walkthroughs | 🚧 |
-| AI Adversary | 🚧 |
-| Blue Team Coach | Planned |
-| Multi-User Exercises | Planned |
+![TrackSentinel Exercise Walkthrough](docs/screenshots/exercise-walkthrough.png)
 
----
+### OT device framework
 
+![TrackSentinel Custom OT Device Form](docs/screenshots/custom-ot-devices.png)
 
-# Why TrackSentinel?
+The complete gallery and reproducible capture details are in [docs/screenshots/README.md](docs/screenshots/README.md).
 
-Operational Technology environments present unique cybersecurity challenges where maintaining safe and reliable operations is often just as important as protecting data.
-
-TrackSentinel demonstrates how cyber incidents affect real railroad operations by combining:
-
-- Operational Technology (OT)
-- Industrial Control Systems (ICS)
-- Railroad Digital Twins
-- Cybersecurity Operations
-- Dispatcher Operations
-- Operational Impact Analysis
-- Executive Reporting
-- Purple Team Exercises
-- AI-Assisted Incident Response
-
-into a single unified platform.
-
-Rather than simulating isolated alerts, TrackSentinel models the cascading operational effects of cybersecurity incidents across trains, signaling infrastructure, communications systems, and railroad operations.
-
-This allows analysts to understand both the cybersecurity implications and the operational consequences of attacks in a realistic training environment.
-
-The platform brings together:
-
-- Executive Cybersecurity Dashboards
-- SOC Monitoring
-- OT Asset Management
-- Vulnerability Management
-- Live Operational Telemetry
-- Incident Response
-- Investigation Workspaces
-- Threat Intelligence
-- Purple Team Exercises
-- MITRE ATT&CK for ICS mappings
-
-within a single unified training platform.
-
----
-
-# 🚀 Feature Showcase
-
-TrackSentinel provides a complete Operational Technology (OT) cybersecurity training environment modeled after a modern Railroad Security Operations Center (RailSOC).
-
-The platform combines cybersecurity monitoring, operational awareness, incident response, executive reporting, and purple team exercises into a unified experience.
-
----
-
-
-# 📊 Operational Telemetry
-
-TrackSentinel dynamically simulates telemetry for each operational asset.
-<p align="center">
-  <img src="https://raw.githubusercontent.com/rustykleather-ux/RailSOC-Cyber-Defense-Platform/main/Screenshots/telemetry.jpg" alt="TrackSentinel Banner" width="100%">
-</p>
-Examples include:
-
-| Category | Example Metrics |
-|----------|-----------------|
-| Operations | CPU, Memory, Active Sessions |
-| Signals | Controller CPU, Temperature |
-| Communications | Signal Quality, Packet Loss |
-| Power | Voltage, Runtime, Load |
-| Environmental | Gas PPM, Humidity, Water Detection |
-| Infrastructure | Bridge Vibration, Bearing Temperature |
-| Security | Failed Logins, Door State, Tamper Status |
-
-Telemetry automatically changes during simulated attack scenarios to reflect the operational impact of cybersecurity events.
-
----
-
-# 📊 Executive Security Dashboard
-
-> Executive-level cybersecurity posture and operational risk overview.
-
-<p align="center">
-  <img src="https://raw.githubusercontent.com/rustykleather-ux/RailSOC-Cyber-Defense-Platform/main/Screenshots/executive-dashboard.jpg" alt="TrackSentinel Banner" width="100%">
-</p>
-
-
-### Capabilities
-
-- Dynamic Overall Security Score
-- Current Threat Level
-- Protected Asset Percentage
-- Mean Time to Detect (MTTD)
-- Mean Time to Respond (MTTR)
-- Compliance Status
-- Open Incidents
-- Critical Alerts
-- Executive Recommendations
-- Security Trend Indicators
-
-### Demonstrates
-
-- Executive Reporting
-- Security Metrics
-- Risk Communication
-- Leadership Dashboards
-- Operational Risk
-
----
-
-# 🚦 RailSOC Operations Dashboard
-
-> The operational command center used by analysts during daily monitoring.
-
-<p align="center">
-  <img src="https://raw.githubusercontent.com/rustykleather-ux/RailSOC-Cyber-Defense-Platform/main/Screenshots/dashboard2.0.jpg" alt="Dashboard" width="100%">
-</p>
-
-
-
-### Capabilities
-
-- Environment Overview
-- Railroad Operations Map
-- Recent Incidents
-- Top Active Alerts
-- Live Asset Status
-- Dynamic Threat Level
-- Security KPIs
-
-### Demonstrates
-
-- Security Operations Center (SOC)
-- Operational Technology Monitoring
-- Threat Visualization
-- Executive Awareness
-
----
-
-# 🚂 Railroad Digital Twin
-
-> A digital visualization of the simulated railroad operational environment.
-
-<p align="center">
-  <img src="https://raw.githubusercontent.com/rustykleather-ux/RailSOC-Cyber-Defense-Platform/main/Screenshots\operations-map.jpg" alt="Operations" width="100%">
-</p>
-
-
-
-### Capabilities
-
-- Dispatch Operations Center
-- Railroad Signal Controllers
-- Grade Crossing Controllers
-- Positive Train Control (PTC)
-- Communications Infrastructure
-- Safety Systems
-- Environmental Monitoring
-- Bridge Monitoring
-- Hot Bearing Detection
-- Asset Detail Panel
-- Incident Indicators
-- Live Asset Health
-
-### Demonstrates
-
-- Operational Awareness
-- Railroad Infrastructure
-- OT Asset Monitoring
-- Infrastructure Visualization
-
----
-
-# 📡 Live Railroad Telemetry
-
-> Real-time operational telemetry grouped by asset category.
-
-<p align="center">
-  <img src="https://raw.githubusercontent.com/rustykleather-ux/RailSOC-Cyber-Defense-Platform/main/Screenshots/telemetry.jpg" alt="TrackSentinel Banner" width="100%">
-</p>
-
-
-
-### Asset Categories
-
-#### Operations Systems
-
-- Dispatch SCADA
-- Operations Historian
-- OT Jump Server
-
-#### Signal & Crossing Systems
-
-- Signal Controllers
-- Grade Crossing Controllers
-- Switch Controllers
-
-#### Communications
-
-- PTC Gateway
-- Microwave Radio
-- Fiber Distribution
-
-#### Power Systems
-
-- UPS
-- Generator PLC
-
-#### Safety & Environmental
-
-- Fire Detection
-- Hydrogen Gas Detection
-- Flood Detection
-- Cabinet Intrusion
-
-#### Infrastructure
-
-- Bridge Structural Monitoring
-- Hot Bearing Detection
-
-#### Engineering
-
-- Engineering Workstations
-
-### Telemetry Includes
-
-- CPU Usage
-- Memory Usage
-- Network Latency
-- Active Sessions
-- Failed Logins
-- Voltage
-- Signal Quality
-- Packet Loss
-- Battery Runtime
-- Gas Concentration
-- Water Detection
-- Door State
-- Bridge Vibration
-- Bearing Temperature
-
-### Demonstrates
-
-- Operational Monitoring
-- ICS Telemetry
-- OT Health Monitoring
-- Environmental Monitoring
-
----
-
-# 🌐 Railroad OT Network Topology
-
-> Interactive visualization of the simulated railroad OT network.
-
-<p align="center">
-  <img src="https://raw.githubusercontent.com/rustykleather-ux/RailSOC-Cyber-Defense-Platform/main/Screenshots/topology.jpg" alt="TrackSentinel Banner" width="100%">
-</p>
-
-
-
-### Network Zones
-
-- Enterprise / OT Firewall
-- Operations Core
-- Signal & Train Control
-- Communications
-- Power Systems
-- Safety Systems
-- Engineering Access
-
-Each node dynamically reflects:
-
-- Operational Status
-- Risk Level
-- IP Address
-- Device Type
-
-### Demonstrates
-
-- Network Segmentation
-- Purdue Model Concepts
-- OT Architecture
-- Asset Relationships
-
----
-
-# 🚨 Security Alerts
-
-> Centralized monitoring of simulated cybersecurity events.
-
-<p align="center">
-  <img src="https://raw.githubusercontent.com/rustykleather-ux/RailSOC-Cyber-Defense-Platform/main/Screenshots\security-alerts.jpg" alt="TrackSentinel Banner" width="100%">
-</p>
-
-
-### Alert Types
-
-- OT Network Reconnaissance
-- Unauthorized Logic Modification
-- PTC Communication Failure
-- Unauthorized Engineering Login
-- Denial of Service (Simulated)
-- Malware Activity (Simulated)
-
-Each alert includes
-
-- Severity
-- Device
-- Timestamp
-- Description
-- Status
-- MITRE Technique
-
-### Demonstrates
-
-- Security Monitoring
-- Detection Engineering
-- Alert Triage
-
----
-
-# 📝 Incident Response Center
-
-> Central workspace for managing operational cybersecurity incidents.
-
-<p align="center">
-  <img src="https://raw.githubusercontent.com/rustykleather-ux/RailSOC-Cyber-Defense-Platform/main/Screenshots/incident-center.jpg" alt="TrackSentinel Banner" width="100%">
-</p>
-
-
-
-### Capabilities
-
-- Incident Queue
-- Acknowledge
-- Assignment
-- Investigation Notes
-- Close Incident
-- Analyst Tracking
-- Timeline
-- MITRE Mapping
-
-### Demonstrates
-
-- Incident Response
-- Case Management
-- Analyst Workflow
-- Documentation
-
----
-
-# 🔍 Investigation Workspace
-
-> Analyst-focused investigation environment.
-
-<p align="center">
-  <img src="https://raw.githubusercontent.com/rustykleather-ux/RailSOC-Cyber-Defense-Platform/main/Screenshots/investigation-workspace.jpg" alt="TrackSentinel Banner" width="100%">
-</p>
-
-
-
-### Capabilities
-
-- IOC Review
-- Timeline
-- Device Information
-- Threat Summary
-- Evidence Collection
-- Analyst Notes
-- Recommended Actions
-- MITRE ATT&CK for ICS Mapping
-
-### Demonstrates
-
-- Digital Forensics
-- Incident Investigation
-- Threat Analysis
-- OT Security Operations
-
----
-
-# 🚂 Simulated Railroad OT Environment
-
-TrackSentinel models a realistic railroad Operational Technology (OT) environment consisting of dispatch systems, signaling infrastructure, communications, power systems, safety devices, engineering workstations, and infrastructure monitoring.
-
-The environment is intentionally designed to represent the types of assets commonly found in modern freight and passenger railroad operations while remaining entirely fictional for training and demonstration purposes.
-
----
-
-# 🖥️ Operations Control Center
-
-The Operations Control Center (OCC) serves as the operational heart of the railroad environment.
-
-### Dispatch SCADA Server
-
-The Dispatch SCADA Server provides centralized visibility into railroad operational assets.
-
-Responsibilities include:
-
-- Operational monitoring
-- Signal supervision
-- Device status monitoring
-- Communications aggregation
-- Alarm generation
-
-### Operations Historian
-
-The Historian stores operational telemetry for reporting and historical analysis.
-
-Collected information includes:
-
-- Device health
-- Operational telemetry
-- Environmental data
-- Historical trends
-- Alarm history
-
-### OT Jump Server
-
-The Jump Server provides controlled administrative access into the OT environment.
-
-Security considerations include:
-
-- Multi-factor authentication
-- Privileged access
-- Session auditing
-- Remote maintenance
-
----
-
-# 🚦 Signal & Train Control
-
-Signal systems are responsible for the safe movement of trains across the subdivision.
-
-## Signal Controller 14A
-
-Controls:
-
-- Wayside signal indications
-- Route logic
-- Track occupancy response
-
-## Signal Controller 14B
-
-Provides additional signal control for adjacent territory.
-
-## Signal Controller 15C
-
-Controls western subdivision signal infrastructure.
-
-### Security Risks
-
-- Unauthorized logic modification
-- Firmware tampering
-- Remote engineering access
-- Configuration drift
-
----
-
-# 🚧 Grade Crossing Protection
-
-TrackSentinel includes multiple simulated highway grade crossings.
-
-### Grade Crossing Controller MP 82.4
-
-Responsible for:
-
-- Flashing lights
-- Crossing gates
-- Audible warning devices
-- Train detection
-
-### Grade Crossing Controller MP 87.1
-
-Provides identical protection for a second roadway crossing.
-
-### Security Risks
-
-- Logic manipulation
-- Communication failure
-- Loss of train detection
-- Safety system disruption
-
----
-
-# 📡 Railroad Communications
-
-Reliable communications are essential for railroad operations.
-
-## Positive Train Control (PTC) Radio Gateway
-
-Responsible for:
-
-- PTC communications
-- Wayside connectivity
-- Dispatcher communications
-- Operational messaging
-
-## Microwave Radio
-
-Provides long-distance wireless communications between field assets.
-
-## Fiber Distribution Switch
-
-Serves as the communications backbone connecting operational systems.
-
-### Security Risks
-
-- Denial of service
-- Network reconnaissance
-- Communication loss
-- Unauthorized access
-
----
-
-# ⚡ Power Systems
-
-Operational Technology environments require highly available power systems.
-
-### UPS System
-
-Provides uninterrupted power during utility interruptions.
-
-### Backup Generator PLC
-
-Controls emergency generator operations.
-
-Telemetry includes:
-
-- Voltage
-- Battery runtime
-- Load percentage
-- Generator status
-
-### Security Risks
-
-- Generator failure
-- PLC manipulation
-- Battery degradation
-- Power loss
-
----
-
-# 🔥 Safety Systems
-
-Safety systems protect personnel and critical facilities.
-
-## Fire Detection Panel
-
-Monitors:
-
-- Smoke detection
-- Heat alarms
-- Fire panel health
-
-### Hydrogen Gas Detector
-
-Protects battery rooms by monitoring hydrogen concentrations.
-
-### Flood Detection Sensor
-
-Detects water intrusion into communications vaults and equipment rooms.
-
-### Cabinet Intrusion Sensor
-
-Detects unauthorized access to field equipment cabinets.
-
-### Security Risks
-
-- Disabled safety monitoring
-- False alarms
-- Environmental damage
-- Physical intrusion
-
----
-
-# 🌉 Railroad Infrastructure Monitoring
-
-Infrastructure monitoring provides additional operational awareness.
-
-## Bridge Structural Monitor
-
-Monitors:
-
-- Structural vibration
-- Temperature
-- Infrastructure health
-
-## Hot Bearing Detector
-
-Monitors train bearings for overheating conditions.
-
-Telemetry includes:
-
-- Bearing temperature
-- Equipment health
-- Alarm conditions
-
-### Security Risks
-
-- False sensor readings
-- Monitoring failure
-- Missed safety events
-
----
-
-# 💻 Engineering Systems
-
-Engineering workstations provide maintenance access into operational technology environments.
-
-## Rail Engineering Workstation
-
-Supports:
-
-- Controller programming
-- Firmware updates
-- Maintenance activities
-- Configuration management
-
-### Security Risks
-
-- Credential compromise
-- Malware
-- Unauthorized engineering access
-- Lateral movement
-
----
-
-# 📊 Operational Telemetry
-
-TrackSentinel dynamically simulates telemetry for each operational asset.
-
-Examples include:
-
-| Category | Example Metrics |
-|----------|-----------------|
-| Operations | CPU, Memory, Active Sessions |
-| Signals | Controller CPU, Temperature |
-| Communications | Signal Quality, Packet Loss |
-| Power | Voltage, Runtime, Load |
-| Environmental | Gas PPM, Humidity, Water Detection |
-| Infrastructure | Bridge Vibration, Bearing Temperature |
-| Security | Failed Logins, Door State, Tamper Status |
-
-Telemetry automatically changes during simulated attack scenarios to reflect the operational impact of cybersecurity events.
-
----
-
----
-
-# 📈 Executive Security Dashboard
-
-The Executive Security Dashboard provides leadership with a high-level view of the organization's current operational cybersecurity posture.
-
-Unlike the analyst-focused RailSOC Dashboard, this interface emphasizes business risk, operational impact, and security metrics that support executive decision-making.
-
-<p align="center">
-  <img src="https://raw.githubusercontent.com/rustykleather-ux/RailSOC-Cyber-Defense-Platform/main/Screenshots/executive-dashboard.jpg" alt="TrackSentinel Banner" width="100%">
-</p>
-
-## Executive KPIs
-
-The dashboard continuously calculates and updates:
-
-- Overall Security Score
-- Current Threat Level
-- Protected Asset Percentage
-- Open Incidents
-- Critical Alerts
-- High-Risk Assets
-- Mean Time to Detect (MTTD)
-- Mean Time to Respond (MTTR)
-- Compliance Status
-
----
-
-## Threat Level Calculation
-
-The platform dynamically determines the current operational threat level using simulated conditions.
-
-| Threat Level | Description |
-|--------------|-------------|
-| 🟢 Normal | No significant security events detected |
-| 🟡 Guarded | Elevated activity requiring analyst awareness |
-| 🟠 Elevated | Multiple high-risk conditions affecting operations |
-| 🔴 Critical | Active operational security incident impacting railroad systems |
-
-Threat levels automatically update during purple team exercises and incident response activities.
-
----
-
-## Executive Security Score
-
-TrackSentinel calculates an overall security posture score using multiple simulated factors including:
-
-- Asset Health
-- Open Vulnerabilities
-- Active Incidents
-- Critical Alerts
-- Device Availability
-- High-Risk Assets
-- Threat Intelligence
-- Compliance Status
-
-The score provides leadership with an easy-to-understand indicator of overall operational cybersecurity health.
-
----
-
-## Operational Metrics
-
-The Executive Dashboard presents operational metrics commonly reviewed by cybersecurity leadership.
-
-### Mean Time to Detect (MTTD)
-
-Measures how quickly simulated threats are identified.
-
-### Mean Time to Respond (MTTR)
-
-Measures the time required to investigate and resolve simulated incidents.
-
-### Protected Assets
-
-Displays the percentage of operational technology assets currently functioning within expected operational parameters.
-
-### Operational Availability
-
-Reflects the health and availability of simulated railroad operational technology.
-
----
-
-## Executive Recommendations
-
-Based on current platform conditions, TrackSentinel generates executive recommendations such as:
-
-- Prioritize remediation of critical vulnerabilities
-- Investigate active controller anomalies
-- Review engineering workstation authentication activity
-- Validate Positive Train Control communications
-- Schedule maintenance windows for firmware updates
-- Increase monitoring during elevated threat conditions
-
-These recommendations provide leadership with actionable guidance without requiring detailed technical knowledge.
-
----
-
-# ⚠️ Railroad OT Vulnerability Management
-
-TrackSentinel includes a centralized vulnerability management module focused on Operational Technology assets.
-
-*(Insert Screenshot: vulnerability-management.png)*
-
-Each vulnerability includes:
-
-- Device
-- CVE Identifier
-- Severity
-- CVSS Score
-- Current Status
-- Recommended Remediation
-- Operational Impact
-
----
-
-# 🚂 Live Railroad Simulation
-
-TrackSentinel now includes a live railroad operations simulator capable of modeling train movement across a simulated subdivision.
-
-### Features
-
-- Continuous train movement
-- Dynamic speed updates
-- Block occupancy
-- Signal state changes
-- Dispatch visualization
-- Operator controls
-- Automatic scenario interaction
-
-### Operator Controls
-
-- ▶ Start
-- ■ Stop
-- ⟳ Restart
-- ↺ Reset
-
-The simulation provides a realistic operational context for cybersecurity incidents, allowing analysts to understand how cyber events can impact railroad operations.
-
----
-
-# 🎯 Scenario Builder
-
-TrackSentinel allows analysts to launch predefined and custom operational scenarios.
-
-Examples include:
-
-- Signal controller compromise
-- PTC communication failure
-- Unauthorized engineering workstation login
-- OT network reconnaissance
-- Communications outage
-- Track obstruction
-- Equipment malfunction
-
-Running a scenario automatically updates:
-
-- Alerts
-- Incidents
-- Asset health
-- Telemetry
-- Executive metrics
-- Railroad map
-- Train operations
-
---
-
-## Example Vulnerability Workflow
-
-```text
-Vulnerability Identified
-          │
-          ▼
-Risk Assessment
-          │
-          ▼
-Prioritization
-          │
-          ▼
-Engineering Coordination
-          │
-          ▼
-Maintenance Window
-          │
-          ▼
-Validation
-          │
-          ▼
-Closed
-```
-
-Unlike enterprise IT environments, OT vulnerabilities often require coordination with engineering and operations teams to avoid disrupting critical railroad services.
-
----
-
-
-
-# 🏗️ System Architecture
-
-The TrackSentinel platform follows a modular client-server architecture.
-
-```mermaid
-flowchart TD
-
-A[React Frontend]
-
-B[FastAPI REST API]
-
-C[Simulation Engine]
-
-D[Telemetry Engine]
-
-E[SQLite Database]
-
-F[Executive Dashboard]
-
-G[RailSOC Dashboard]
-
-H[Purple Team Library]
-
-I[Incident Response]
-
-J[Vulnerability Management]
-
-A --> B
-
-B --> C
-
-B --> D
-
-B --> E
-
-C --> I
-
-D --> G
-
-E --> F
-
-E --> G
-
-E --> I
-
-E --> J
-
-H --> C
-```
-
----
-
-# 🖥️ Application Architecture
-
-```text
-                     React Frontend
-
- ┌──────────────────────────────────────────────┐
- │ Executive Dashboard                          │
- │ RailSOC Dashboard                            |
- | Railroad Operations Map                      │
- │ Scenario Builder                             |
- | Incident Center                              |
- | Environment Overview                         |
- | Recent Activity                              |
- | Train Controls                               |
- | Live Telemetry                               │
- │ Operations Map                               │
- │                                             │
- │ Investigation Workspace                      │
- │ Vulnerability Management                     │
- │ Purple Team Library                          │
- └──────────────────────────────────────────────┘
-                      |
-                      |
- ┌──────────────────────────────────────────────┐
- │ Simulation Engine                            │
- │ Train Engine                                 |
- | Scenario Engine                              │
- │ Incident Service                             |
- | Alert Service                                |
- | Telemetry Service                            |
- | Executive Metrics                            |
- |                                              |
- │                                              |
- └──────────────────────────────────────────────┘
-                      |
-                      |
-                 SQLite Demonstration DB
-```
-
----
-
-# 💻 Technology Stack
-
-## Frontend
-
-- React
-- React Router
-- Vite
-- CSS3
-- JavaScript (ES6+)
-
----
-
-## Backend
-
-- Python
-- FastAPI
-- SQLAlchemy
-- SQLite
-- Uvicorn
-
----
-
-## Cybersecurity Concepts
-
-TrackSentinel demonstrates practical experience with:
-
-- Operational Technology Security
-- Industrial Control Systems (ICS)
-- SCADA Security
-- Railroad Operations
-- Incident Response
-- Threat Intelligence
-- MITRE ATT&CK for ICS
-- Vulnerability Management
-- Purple Team Exercises
-- Executive Security Reporting
-
----
-
-# 📂 Repository Structure
-
-```text
-TrackSentinel
-│
-├── backend
-│   ├── database.py
-│   ├── main.py
-│   ├── models.py
-│   ├── seed.py
-│   ├── simulation_engine.py
-│   └── services/
-│
-├── frontend
-│   ├── components/
-│   ├── pages/
-│   ├── services/
-│   ├── App.jsx
-│   └── App.css
-│
-├── screenshots/
-│
-├── README.md
-│
-└── LICENSE
-```
-
----
-
----
-
-# ⚙️ Installation
-
-## Prerequisites
-
-Before running TrackSentinel, ensure the following software is installed:
-
-- Python 3.11+
-- Node.js 20+
-- npm
-- Git
-
----
-
-## Clone the Repository
-
-```bash
-git clone https://github.com/YOUR_USERNAME/TrackSentinel.git
-
-cd TrackSentinel
-```
-
----
-
-# 🖥️ Backend Setup
-
-Navigate to the backend folder.
-
-```bash
-cd backend
-```
-
-Create a virtual environment.
-
-```bash
-python -m venv venv
-```
-
-Activate it.
-
-### Windows
-
-```bash
-venv\Scripts\activate
-```
-
-### Linux / macOS
-
-```bash
-source venv/bin/activate
-```
-
-Install dependencies.
-
-```bash
-pip install -r requirements.txt
-```
-
-Initialize the demonstration database.
-
-```bash
-python seed.py
-```
-
-Start the API.
-
-```bash
-uvicorn main:app --reload
-```
-
-The backend will be available at:
-
-```
-http://127.0.0.1:8000
-```
-
-Interactive API documentation:
-
-```
-http://127.0.0.1:8000/docs
-```
-
----
-
-# 💻 Frontend Setup
-
-Open a second terminal.
-
-```bash
-cd frontend
-```
-
-Install packages.
-
-```bash
-npm install
-```
-
-Start the React application.
-
-```bash
-npm run dev
-```
-
-Open:
-
-```
-http://localhost:5173
-```
-
----
-
-# 🎮 Demonstration Workflow
-
-A typical TrackSentinel demonstration follows this workflow:
-
-```text
-Launch Platform
-
-↓
-
-Review Executive Dashboard
-
-↓
-
-Open RailSOC Dashboard
-
-↓
-
-Launch Purple Team Exercise
-
-↓
-
-Observe Alerts
-
-↓
-
-Investigate Incident
-
-↓
-
-Review Live Telemetry
-
-↓
-
-Analyze Threat Intelligence
-
-↓
-
-Document Findings
-
-↓
-
-Close Incident
-
-↓
-
-Generate Executive Report
-```
-
----
-
-# 🟣 Example Purple Team Scenario
-
-### Scenario
-
-Unauthorized Logic Modification
-
-### Simulated Target
-
-Grade Crossing Controller MP 82.4
-
-### Platform Response
-
-✔ Critical Alert Generated
-
-✔ Incident Created
-
-✔ Threat Level Elevated
-
-✔ Telemetry Updated
-
-✔ Investigation Workspace Populated
-
-✔ Executive Dashboard Updated
-
-✔ Timeline Created
-
-✔ MITRE ATT&CK Technique Displayed
-
----
-
-# 🧩 Skills Demonstrated
-
-TrackSentinel showcases practical knowledge across multiple cybersecurity disciplines.
-
-## Operational Technology
-
-- Industrial Control Systems (ICS)
-- SCADA Security
-- Railroad Operational Technology
-- Purdue Model Concepts
-- Asset Monitoring
-- Engineering Workstations
-
----
-
-## Security Operations
-
-- Security Monitoring
-- Incident Response
-- Threat Detection
-- Alert Triage
-- Threat Intelligence
-- Investigation Workflow
-- Purple Team Operations
-
----
-
-## Security Frameworks
-
-- MITRE ATT&CK for ICS
-- Vulnerability Management
-- Risk Assessment
-- Executive Reporting
-- Security Metrics
-
----
-
-## Software Development
-
-### Frontend
-
-- React
-- Vite
-- React Router
-- Component Architecture
-- Responsive Design
-
-### Backend
-
-- FastAPI
-- SQLAlchemy
-- REST APIs
-- SQLite
-- Python
-
----
-
-## Additional Concepts
-
-- Executive Dashboards
-- Telemetry Simulation
-- Operational Risk
-- Asset Inventory
-- Infrastructure Monitoring
-- Environmental Monitoring
-- Safety Systems
-- Network Topology Visualization
-
----
-
-# 🚀 Future Roadmap
-
-TrackSentinel continues to evolve with additional planned capabilities.
-
-## Version 2.0
+## Core features
 
 ### Railroad Digital Twin
 
-- Moving train simulation
-- Live train positioning
-- Signal state changes
-- Operational route visualization
+The digital twin projects authoritative backend state into an interactive SVG territory. A live train moves through seeded East Subdivision blocks while block occupancy, signals, switch position, grade-crossing state, communications health, and security state update around it. Catalog attacks can apply supported effects to related assets, create incidents, restrict operations, and produce timeline and impact records. Reset and recovery actions return simulated state to baseline.
 
-### Operations Map
+### Dispatcher Operations
 
-- Interactive mileposts
-- Expandable railroad locations
-- Asset clustering
-- Geographic overlays
+The dispatcher workspace exposes active trains, target controls, route requests, command queues, active restrictions, recovery actions, and the operations timeline. Route requests are revalidated against block occupancy and required signal/switch states before reservation. Commands can be queued, blocked, retried, or cancelled; a configurable delay models degraded dispatch communications without moving a switch beneath a train or bypassing route-safety checks.
 
-### Enhanced Telemetry
+### Network Visibility
 
-- Historical trending
-- Graphs
-- Performance history
-- Operational baselines
+Network Visibility renders a seeded six-zone IT/OT architecture with interactive nodes and connections. Analysts can filter assets, inspect details, trace deterministic paths, save layouts, generate approved simulated conditions, and review historical generated traffic. A WebSocket provides live snapshots when a compatible client/server WebSocket transport is installed; the UI falls back to polling. The feature performs no discovery, scanning, packet capture, or firewall changes on real networks. See [docs/network-visibility.md](docs/network-visibility.md).
 
-### Security
+### Purple Team and Exercise Mode
 
-- IOC Database
-- Threat Hunting Dashboard
-- SIEM-style searching
-- Audit Logging
-- Role-Based Access Control
+The Purple Team library maps catalog attacks to supported simulated OT effects. The custom scenario builder previews operational impact before targeting seeded devices. Exercise Mode adds mission briefings, visible and hidden objectives, ordered hints, timed/scripted events, checkpoints, five score dimensions, instructor validation, answer-sheet walkthroughs, and downloadable after-action reports. See [docs/exercise-mode.md](docs/exercise-mode.md).
 
----
+### Incident response and analysis
 
-## Version 3.0
+The Incident Center supports acknowledgement, analyst/team assignment, investigation notes, closure, severity, asset context, and MITRE ATT&CK for ICS mapping. Its analysis endpoint produces an executive summary, operational impact, likely-cause assessment, recommendations, and device context. This is transparent rule-based logic in `backend/ai_assistant.py`; the current repository does not call an external LLM.
 
-Future concepts under consideration include:
+### Custom OT devices
 
-- Docker deployment
-- PostgreSQL support
-- Authentication
-- Multi-user analyst environment
-- PDF executive reports
-- AI-assisted investigations
-- Natural language reporting
-- Live threat feeds
-- Multi-subdivision railroad environments
-- GIS integration
+The asset framework creates reusable device types and instances without direct database editing. Types declare capabilities; capabilities expose compatible simulated effects. Devices can be related to track blocks and operational assets so that supported cyber effects appear in the digital twin and impact model.
 
----
+## System architecture
 
-# 🎯 Project Goals
+```mermaid
+flowchart LR
+    UI[React 19 + Vite 8] -->|REST| API[FastAPI application]
+    UI <-->|WebSocket / polling| NET[Network Visibility service]
+    API --> CORE[Application services]
+    CORE --> DT[Digital Twin and train simulation]
+    CORE --> DSP[Dispatcher and route validation]
+    CORE --> EX[Exercise engine]
+    CORE --> IR[Incident and analysis engine]
+    CORE --> NET
+    DT --> ORM[SQLAlchemy 2]
+    DSP --> ORM
+    EX --> ORM
+    IR --> ORM
+    NET --> ORM
+    ORM --> DB[(SQLite)]
 
-TrackSentinel was developed to demonstrate how modern cybersecurity concepts can be applied within Operational Technology environments.
+    ATTACK[Simulated attack engine] --> DT
+    ATTACK --> IR
+    DT --> DSP
+    DT --> IMPACT[Timeline and operational impact]
+    IMPACT --> IR
+```
 
-The project emphasizes:
+TrackSentinel is currently a local monolithic application, not a distributed or cloud architecture. See [docs/architecture.md](docs/architecture.md) for component boundaries and data flow.
 
-- Operational awareness
-- Incident response
-- Cybersecurity visualization
-- Executive reporting
-- Railroad infrastructure protection
-- OT asset monitoring
-- Security operations workflows
+## Technology stack
 
----
+| Area | Technologies |
+|---|---|
+| Frontend | React 19.2, React Router 7.18, Vite 8.1, Axios 1.18, Lucide React |
+| Visualization | `@xyflow/react` 12.11 and a custom SVG railroad map |
+| Backend | Python, FastAPI 0.116.1, Pydantic 2.11.7, Uvicorn 0.35.0 |
+| Persistence | SQLAlchemy 2.0.43 with SQLite |
+| Live updates | FastAPI WebSocket endpoint with polling fallback |
+| Analysis | Deterministic Python rules; no external model dependency |
+| Testing | Python `unittest`, Node test runner, Oxlint, Vite build, Playwright screenshots |
 
-# ⚠️ Safety Notice
+## Requirements
 
-TrackSentinel is a simulated cybersecurity platform.
+- **Python:** 3.14.4 is the repository’s verified local runtime. The project does not currently declare a formal minimum Python version.
+- **Node.js:** `^20.19.0` or `>=22.12.0`, as required by Vite 8. The verified runtime is Node 24.16.0 with npm 11.13.0.
+- **Git** and a current Chromium-, Firefox-, or WebKit-based desktop browser.
+- Windows PowerShell commands are shown below; equivalent Bash activation is included for Linux/macOS.
+- Docker is not required and no Docker configuration is currently included.
 
-The project **does not** perform:
+## Installation
 
-- Real denial-of-service attacks
-- Unauthorized access
-- Malware execution
-- Exploitation
-- Packet flooding
-- Controller manipulation
-- Network intrusion
+```bash
+git clone https://github.com/rustykleather-ux/RailSOC-Cyber-Defense-Platform.git
+cd RailSOC-Cyber-Defense-Platform
+```
 
-All attack scenarios are simulated within the application for educational, portfolio, and demonstration purposes.
+### Backend
 
----
+```powershell
+cd backend
+python -m venv venv
+.\venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+python seed.py
+```
 
-# 👤 About the Author
+Linux/macOS activation:
 
-## Rusty Folsom
+```bash
+cd backend
+python3 -m venv venv
+source venv/bin/activate
+python -m pip install -r requirements.txt
+python seed.py
+```
 
-Technical Services Administrator • Cybersecurity Professional • Operational Technology Security Enthusiast
+`seed.py` recreates the demo device, train, alert, vulnerability, track-block, and operational-asset state. Do not run it against data you need to preserve. Application startup idempotently adds the device framework, route topology, exercise library, and Network Visibility seed data.
 
-Areas of focus include:
+### Frontend
 
-- Operational Technology (OT)
-- Industrial Control Systems (ICS)
-- Railroad Cybersecurity
-- Incident Response
-- Threat Intelligence
-- Purple Team Exercises
-- Network Security
-- SCADA Security
-- Executive Security Reporting
+```bash
+cd frontend
+npm install
+```
 
----
+## Configuration
 
-## Connect
+Safe reference values are provided in [.env.example](.env.example) and [frontend/.env.example](frontend/.env.example). The backend reads process environment variables; set them in your shell or process manager. Vite automatically reads `frontend/.env` files.
 
-- GitHub: https://github.com/YOUR_USERNAME
-- LinkedIn: https://linkedin.com/in/YOUR_PROFILE
+| Variable | Default | Purpose |
+|---|---|---|
+| `TRACKSENTINEL_DATABASE_URL` | `sqlite:///backend/ot_platform.db` (resolved internally) | SQLAlchemy database URL |
+| `TRACKSENTINEL_DISPATCH_DELAY_SECONDS` | `15` | Simulated dispatcher command delay |
+| `TRACKSENTINEL_CORS_ORIGINS` | local Vite origins on port 5173 | Comma-separated approved frontend origins |
+| `VITE_API_BASE_URL` | `http://127.0.0.1:8000` | Frontend REST base; Network Visibility derives its WebSocket host from this URL |
 
----
+There are no AI credentials because the implemented analysis is local and rule based. The current database engine setup is SQLite-specific; PostgreSQL support is planned rather than claimed.
 
-# ⭐ Acknowledgements
+## Running the application
 
-This project draws inspiration from publicly available guidance and best practices related to Operational Technology cybersecurity, industrial control systems, railroad operations, and the MITRE ATT&CK® for ICS framework.
+Terminal 1:
 
-TrackSentinel is an independent portfolio project created for educational and professional demonstration purposes and is not affiliated with any railroad, transportation company, equipment manufacturer, or government agency.
+```powershell
+cd backend
+.\venv\Scripts\Activate.ps1
+uvicorn main:app --reload
+```
 
----
+Terminal 2:
 
-<p align="center">
+```bash
+cd frontend
+npm run dev
+```
 
-## 🚂 TrackSentinel
+| Service | URL |
+|---|---|
+| Frontend | http://localhost:5173 |
+| Backend | http://127.0.0.1:8000 |
+| Swagger UI | http://127.0.0.1:8000/docs |
+| OpenAPI JSON | http://127.0.0.1:8000/openapi.json |
 
-**Operational Technology • Railroad Cybersecurity • Executive Reporting • Purple Team Simulation**
+## API documentation
 
-**Built with React • FastAPI • Python**
+Swagger is the authoritative route reference. Major groups include:
 
-⭐ If you found this project interesting, consider starring the repository.
+| Group | Representative routes |
+|---|---|
+| Digital Twin / operations | `/digital-twin/map`, `/track-blocks`, `/operations/impact`, `/operations/timeline` |
+| Dispatcher | `/dispatch/status`, `/dispatch/commands`, `/dispatch/routes`, `/dispatch/restrictions`, `/dispatch/recovery-actions` |
+| Exercises | `/exercises`, `/exercise-runs`, walkthrough, checkpoint, scoring, and AAR subroutes |
+| Incidents | `/incidents`, `/incidents/{id}/analysis`, acknowledgement, assignment, notes, and close subroutes |
+| Network Visibility | `/api/network/*` |
+| OT device framework | `/devices`, `/device-types`, `/capabilities`, `/relationship-targets` |
+| Simulation | `/attacks`, `/simulate-attack/{attack_type}`, `/train-simulation/*`, `/reset-demo` |
+| Live network snapshots | `ws://127.0.0.1:8000/ws/network` |
 
-</p>
+## Default demo environment
 
+The default seed includes 21 OT devices, one eastbound intermodal train (`TS-218`), ten East Subdivision track blocks (`E80` through `E98`), signal-controlled blocks, Switch E86, Grade Crossing MP 82.4, initial alerts, and two vulnerabilities. Representative devices include the Dispatch SCADA Server, Operations Historian, OT Jump Server, signal controllers 14A/14B/15C, grade-crossing controllers at MP 82.4 and MP 87.1, Switch Machine Controller, PTC Radio Gateway, communications equipment, power controllers, and engineering workstations.
+
+Network Visibility seeds six zones, 34 nodes, and 36 modeled connections. Exercise Mode seeds: Operation Broken Rail, Signal Failure Recovery, Communications Blackout, Dispatch Under Attack, Dark Territory, PTC Outage, Switch Chaos, and Grade Crossing Failure.
+
+## Repository structure
+
+```text
+RailSOC-Cyber-Defense-Platform/
+├── backend/
+│   ├── main.py                    # FastAPI application and routes
+│   ├── models.py                  # SQLAlchemy models
+│   ├── services/                  # Network, exercise, alert, and domain services
+│   ├── tests/                     # Backend unittest suite
+│   ├── seed.py                    # Destructive base demo seed
+│   └── seed_*.py                  # Idempotent domain seed helpers
+├── frontend/
+│   ├── scripts/capture-screenshots.mjs
+│   └── src/
+│       ├── components/            # Digital twin and shared UI
+│       ├── pages/                 # Application workspaces
+│       └── services/              # REST/WebSocket clients
+├── docs/
+│   ├── architecture.md
+│   ├── exercise-mode.md
+│   ├── network-visibility.md
+│   └── screenshots/
+├── Screenshots/                   # Historical project media
+└── README.md
+```
+
+## Safety and simulation boundaries
+
+TrackSentinel does **not** scan real networks, send attack packets, capture real traffic, execute malware, exploit controllers, access railroad systems, manipulate infrastructure, modify firewall rules, or perform real denial-of-service activity.
+
+All assets and effects are application records. Network Visibility uses seeded topology and generated telemetry. Exercise actions are validated application operations. Route safety checks remain active during degraded or adversarial scenarios, and unsafe switch or route requests are recorded as violations rather than treated as harmless successes. TrackSentinel is intended for defensive education, research, training, and portfolio demonstration—not operational railroad use.
+
+## Testing
+
+From `backend` with the virtual environment active:
+
+```bash
+python -m unittest discover -s tests -p "test_*.py"
+```
+
+From `frontend`:
+
+```bash
+npm test
+npm run lint
+npm run build
+npm run screenshots
+```
+
+The screenshot command installs no production dependency, uses Playwright Chromium, seeds an isolated temporary SQLite database, starts local servers on ports 8010 and 4173, writes PNGs to `docs/screenshots/`, reports failed pages, and removes its temporary state. Install its browser once after `npm install` if needed:
+
+```bash
+npx playwright install chromium
+```
+
+## Roadmap
+
+### Available now
+
+- Railroad Digital Twin, live train simulation, and operational-impact modeling
+- Dispatcher Console and route-safety validation
+- Network Visibility, Purple Team scenarios, Exercise Mode, and Incident Center
+- Custom OT devices and deterministic analysis
+
+### In progress
+
+- Exercise content and walkthrough refinement
+- Broader automated UI and documentation validation
+
+### Planned
+
+- External LLM integration and an AI adversary mode
+- Authentication, role-based access, and multi-user exercises
+- Scenario replay and multi-subdivision support
+- PostgreSQL compatibility, containers, and cloud deployment guidance
+
+## Skills demonstrated
+
+Python, FastAPI, React, SQLAlchemy, REST APIs, WebSockets, OT/ICS cybersecurity, railroad operations simulation, digital-twin design, incident response, Purple Team exercise design, MITRE ATT&CK for ICS mapping, deterministic analysis workflows, network visualization, and full-stack test automation.
+
+## Contributing
+
+Issues and focused pull requests are welcome. Please preserve the simulation-only safety boundary, include tests for behavior changes, and update documentation when routes or workflows change. Run the backend tests, frontend tests, lint, and production build before submitting a change.
+
+## License
+
+TrackSentinel is available under the [MIT License](LICENSE).
+
+## Author
+
+**Rusty Folsom**
+
+- GitHub: [rustykleather-ux](https://github.com/rustykleather-ux)
+- LinkedIn: [rusty-folsom-b78a5319](https://www.linkedin.com/in/rusty-folsom-b78a5319)

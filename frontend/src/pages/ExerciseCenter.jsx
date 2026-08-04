@@ -144,7 +144,7 @@ export default function ExerciseCenter() {
     setBusy(true);
     try {
       const result = await callback();
-      if (result?.id && result?.exercise_id) setRun(result);
+      if (result?.id && result?.exercise_id && result?.status) setRun(result);
       await loadLibrary();
       setError("");
       return result;

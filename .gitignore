@@ -1,0 +1,12 @@
+# Python runtime artifacts
+__pycache__/
+*.py[cod]
+backend/venv/
+
+# Frontend dependencies and build output
+frontend/node_modules/
+frontend/dist/
+
+# Local environment overrides (examples remain tracked)
+.env
+frontend/.env
